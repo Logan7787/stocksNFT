@@ -205,13 +205,14 @@ class NiftyMarketDataService {
   }
 
   /**
-   * Helper to get upcoming weekly Thursday expiry (YYYY-MM-DD)
+   * Helper to get upcoming weekly Tuesday/Thursday expiry (YYYY-MM-DD)
    */
-  private getUpcomingExpiryDate(): string {
+  public getUpcomingExpiryDate(): string {
     const d = new Date();
-    const day = d.getDay(); // 0 is Sun, 4 is Thu
+    const day = d.getDay(); // 0 is Sun, 1 is Mon, 2 is Tue, 4 is Thu
+    // If today is Monday (1) or Tuesday (2), default to current week's Thursday (or user selected date)
     const diff = (4 - day + 7) % 7;
-    const target = new Date(d.getTime() + diff * 86400000);
+    const target = new Date(d.getTime() + (diff === 0 ? 0 : diff) * 86400000);
     const yyyy = target.getFullYear();
     const mm = String(target.getMonth() + 1).padStart(2, '0');
     const dd = String(target.getDate()).padStart(2, '0');
@@ -219,24 +220,39 @@ class NiftyMarketDataService {
   }
 
   /**
+   * Resolve target URL based on broker provider and user input
+   */
+  public resolveBrokerUrl(config: BrokerApiConfig): string {
+    let url = config.proxyUrl?.trim() || '';
+
+    // If user accidentally pasted the Pro web URL (pro.upstox.com), strip it to use the API
+    if (url.includes('pro.upstox.com')) {
+      url = '';
+    }
+
+    if (config.provider === 'upstox') {
+      if (!url || url.includes('api.upstox.com') || url.includes('/api/upstox')) {
+        const expiry = config.expiryDate?.trim() || this.getUpcomingExpiryDate();
+        const symbolKey = config.symbol === 'BANKNIFTY' ? 'NSE_INDEX|Nifty Bank' : 'NSE_INDEX|Nifty 50';
+        url = `/api/upstox/v2/option/chain?instrument_key=${encodeURIComponent(symbolKey)}&expiry_date=${expiry}`;
+      }
+    }
+
+    // Auto-route Upstox direct URLs through local proxy to prevent CORS errors
+    if (url.startsWith('https://api.upstox.com')) {
+      url = url.replace('https://api.upstox.com', '/api/upstox');
+    }
+
+    return url;
+  }
+
+  /**
    * Fetch from External Broker API / Proxy (Upstox, Custom Proxy)
    */
   private async fetchBrokerData() {
-    let targetUrl = this.brokerConfig.proxyUrl?.trim();
+    const targetUrl = this.resolveBrokerUrl(this.brokerConfig);
 
-    // Default Upstox URL if Upstox selected
-    if (!targetUrl && this.brokerConfig.provider === 'upstox') {
-      const expiry = this.brokerConfig.expiryDate || this.getUpcomingExpiryDate();
-      const symbolKey = this.brokerConfig.symbol === 'BANKNIFTY' ? 'NSE_INDEX|Nifty Bank' : 'NSE_INDEX|Nifty 50';
-      targetUrl = `/api/upstox/v2/option/chain?instrument_key=${encodeURIComponent(symbolKey)}&expiry_date=${expiry}`;
-    }
-
-    // Auto-route Upstox direct URLs through local Vite proxy to prevent CORS errors
-    if (targetUrl && targetUrl.startsWith('https://api.upstox.com')) {
-      targetUrl = targetUrl.replace('https://api.upstox.com', '/api/upstox');
-    }
-
-    if (!targetUrl) {
+    if (!targetUrl || !this.brokerConfig.apiKey) {
       this.tickSimulation();
       return;
     }
@@ -244,7 +260,7 @@ class NiftyMarketDataService {
     try {
       const response = await fetch(targetUrl, {
         headers: {
-          'Authorization': `Bearer ${this.brokerConfig.apiKey}`,
+          'Authorization': `Bearer ${this.brokerConfig.apiKey.trim()}`,
           'Accept': 'application/json',
           'Content-Type': 'application/json',
         },
@@ -259,46 +275,54 @@ class NiftyMarketDataService {
             this.spotPrice = round2(Number(json.data[0].underlying_spot_price));
           }
 
-          this.rawData = json.data.map((item: any) => {
-            const callMd = item.call_options?.market_data;
-            const putMd = item.put_options?.market_data;
-            const callGreeks = item.call_options?.option_greeks;
-            const putGreeks = item.put_options?.option_greeks;
+          const parsed = json.data
+            .filter((item: any) => item && (item.strike_price !== undefined || item.strike !== undefined))
+            .map((item: any) => {
+              const callMd = item.call_options?.market_data;
+              const putMd = item.put_options?.market_data;
+              const callGreeks = item.call_options?.option_greeks;
+              const putGreeks = item.put_options?.option_greeks;
 
-            const callClose = callMd?.ltp ?? callMd?.close_price ?? 0;
-            const callLow = callMd?.low_price || callClose;
-            const callHigh = callMd?.high_price || callClose;
+              const callClose = callMd?.ltp ?? callMd?.close_price ?? 0;
+              const callLow = callMd?.low_price || callClose;
+              const callHigh = callMd?.high_price || callClose;
 
-            const putClose = putMd?.ltp ?? putMd?.close_price ?? 0;
-            const putLow = putMd?.low_price || putClose;
-            const putHigh = putMd?.high_price || putClose;
+              const putClose = putMd?.ltp ?? putMd?.close_price ?? 0;
+              const putLow = putMd?.low_price || putClose;
+              const putHigh = putMd?.high_price || putClose;
 
-            return {
-              strike: Number(item.strike_price),
-              call_low: round2(callLow),
-              call_high: round2(callHigh),
-              call_close: round2(callClose),
-              call_volume: Number(callMd?.volume || 0),
-              call_oi: Number(callMd?.oi || 0),
-              call_iv: callGreeks?.iv ? round2(callGreeks.iv) : undefined,
-              put_low: round2(putLow),
-              put_high: round2(putHigh),
-              put_close: round2(putClose),
-              put_volume: Number(putMd?.volume || 0),
-              put_oi: Number(putMd?.oi || 0),
-              put_iv: putGreeks?.iv ? round2(putGreeks.iv) : undefined,
-            };
-          });
+              return {
+                strike: Number(item.strike_price ?? item.strike),
+                call_low: round2(callLow),
+                call_high: round2(callHigh),
+                call_close: round2(callClose),
+                call_volume: Number(callMd?.volume || 0),
+                call_oi: Number(callMd?.oi || 0),
+                call_iv: callGreeks?.iv ? round2(callGreeks.iv) : undefined,
+                put_low: round2(putLow),
+                put_high: round2(putHigh),
+                put_close: round2(putClose),
+                put_volume: Number(putMd?.volume || 0),
+                put_oi: Number(putMd?.oi || 0),
+                put_iv: putGreeks?.iv ? round2(putGreeks.iv) : undefined,
+              };
+            });
 
-          this.recalculateAll();
-          return;
+          // Sort strikes ascending
+          parsed.sort((a: any, b: any) => a.strike - b.strike);
+
+          if (parsed.length > 0) {
+            this.rawData = parsed;
+            this.recalculateAll();
+            return;
+          }
         }
 
         // 2. Custom Proxy format
         if (json.spotPrice) {
           this.spotPrice = round2(Number(json.spotPrice));
         }
-        if (Array.isArray(json.data)) {
+        if (Array.isArray(json.data) && json.data.length > 0) {
           this.rawData = json.data;
           this.recalculateAll();
           return;
@@ -317,3 +341,113 @@ class NiftyMarketDataService {
 }
 
 export const niftyMarketService = new NiftyMarketDataService();
+
+/**
+ * Diagnostic tool to test broker API connection and provide clear feedback
+ */
+export async function testBrokerConnection(config: BrokerApiConfig): Promise<{
+  success: boolean;
+  message: string;
+  statusCode?: number;
+  spotPrice?: number;
+  strikesCount?: number;
+  expiryDate?: string;
+  urlUsed?: string;
+  rawDetails?: string;
+}> {
+  if (!config.apiKey?.trim()) {
+    return {
+      success: false,
+      message: 'Access Token / API Key is empty. Please generate and paste your token.',
+    };
+  }
+
+  const url = niftyMarketService.resolveBrokerUrl(config);
+
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${config.apiKey.trim()}`,
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+    });
+
+    const responseText = await response.text();
+    let json: any = null;
+    try {
+      json = JSON.parse(responseText);
+    } catch {
+      // response wasn't JSON
+    }
+
+    if (!response.ok) {
+      const errMsg = json?.errors?.[0]?.message || json?.message || `HTTP ${response.status} ${response.statusText}`;
+      return {
+        success: false,
+        statusCode: response.status,
+        urlUsed: url,
+        message: `Upstox API Error (${response.status}): ${errMsg}`,
+        rawDetails: responseText.slice(0, 300),
+      };
+    }
+
+    if (json && Array.isArray(json.data) && json.data.length > 0) {
+      const spot = json.data[0].underlying_spot_price || json.spotPrice;
+      const expiry = json.data[0].expiry || config.expiryDate;
+      return {
+        success: true,
+        statusCode: 200,
+        urlUsed: url,
+        spotPrice: spot ? Number(spot) : undefined,
+        strikesCount: json.data.length,
+        expiryDate: expiry,
+        message: `Successfully connected to Upstox! Spot Price: ₹${spot?.toLocaleString('en-IN') || 'N/A'}, Loaded ${json.data.length} option strikes (Expiry: ${expiry}).`,
+      };
+    }
+
+    return {
+      success: false,
+      statusCode: response.status,
+      urlUsed: url,
+      message: `Connected to API, but no option contracts were found for expiry date '${config.expiryDate || '2026-10-08'}'. In Upstox, please switch Target Option Expiry Date to '2026-10-06' (or click the '06-Oct' quick button).`,
+      rawDetails: responseText.slice(0, 300),
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      urlUsed: url,
+      message: `Network Error: ${err.message || 'Failed to connect'}.`,
+    };
+  }
+}
+
+/**
+ * Fetch available live option contract expiry dates directly from Upstox
+ */
+export async function fetchUpstoxExpiryDates(apiKey: string, symbol: string = 'NIFTY'): Promise<string[]> {
+  if (!apiKey?.trim()) return [];
+  const symbolKey = symbol === 'BANKNIFTY' ? 'NSE_INDEX|Nifty Bank' : 'NSE_INDEX|Nifty 50';
+  const url = `/api/upstox/v2/option/contract?instrument_key=${encodeURIComponent(symbolKey)}`;
+
+  try {
+    const res = await fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${apiKey.trim()}`,
+        'Accept': 'application/json',
+      },
+    });
+
+    if (res.ok) {
+      const json = await res.json();
+      if (Array.isArray(json.data)) {
+        const expiries = Array.from(new Set(json.data.map((d: any) => d.expiry).filter(Boolean))) as string[];
+        expiries.sort();
+        return expiries;
+      }
+    }
+  } catch (e) {
+    console.warn('Error fetching Upstox contract expiries:', e);
+  }
+  return ['2026-10-06', '2026-10-13', '2026-10-19', '2026-10-27', '2026-11-03'];
+}

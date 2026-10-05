@@ -9,6 +9,7 @@ import {
   Save
 } from 'lucide-react';
 import { getSupabaseCredentials, saveSupabaseCredentials, getSupabase } from '../../services/supabaseClient';
+import { testBrokerConnection } from '../../services/niftyApi';
 import type { BrokerApiConfig } from '../../types/optionChain';
 
 interface SettingsModalProps {
@@ -43,6 +44,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   // Broker config state
   const [broker, setBroker] = useState<BrokerApiConfig>({ ...brokerConfig });
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isTestingBroker, setIsTestingBroker] = useState<boolean>(false);
+  const [brokerTestResult, setBrokerTestResult] = useState<{
+    success: boolean;
+    message: string;
+    spotPrice?: number;
+    strikesCount?: number;
+    urlUsed?: string;
+  } | null>(null);
 
   // Spot shock state
   const [testSpot, setTestSpot] = useState(spotPrice);
@@ -52,6 +61,25 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  const handleTestBroker = async () => {
+    setIsTestingBroker(true);
+    setBrokerTestResult(null);
+    try {
+      const res = await testBrokerConnection(broker);
+      setBrokerTestResult(res);
+      if (res.success && res.spotPrice) {
+        showToast(`Connected! Spot: ₹${res.spotPrice}`);
+      }
+    } catch (err: any) {
+      setBrokerTestResult({
+        success: false,
+        message: err.message || 'Connection test failed',
+      });
+    } finally {
+      setIsTestingBroker(false);
+    }
   };
 
   const handleSaveSupabase = async () => {
@@ -240,8 +268,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     onChange={(e) => setBroker({ ...broker, provider: e.target.value as any })}
                     className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100"
                   >
+                    <option value="upstox">Upstox API v2 (Official)</option>
                     <option value="custom_proxy">Custom NSE / Node.js Proxy</option>
-                    <option value="upstox">Upstox API v2</option>
                     <option value="dhan">Dhan HQ Feed</option>
                     <option value="angelone">AngelOne SmartAPI</option>
                   </select>
@@ -251,14 +279,46 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <label className="block text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1 font-bold">
                     Symbol
                   </label>
-                  <input
-                    type="text"
-                    value={broker.symbol}
+                  <select
+                    value={broker.symbol || 'NIFTY'}
                     onChange={(e) => setBroker({ ...broker, symbol: e.target.value })}
-                    placeholder="NIFTY"
                     className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100"
-                  />
+                  >
+                    <option value="NIFTY">NIFTY 50 (NSE_INDEX|Nifty 50)</option>
+                    <option value="BANKNIFTY">BANK NIFTY (NSE_INDEX|Nifty Bank)</option>
+                  </select>
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1 font-bold">
+                  Target Option Expiry Date (YYYY-MM-DD)
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="date"
+                    value={broker.expiryDate || '2026-10-06'}
+                    onChange={(e) => setBroker({ ...broker, expiryDate: e.target.value })}
+                    className="flex-1 px-3.5 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setBroker({ ...broker, expiryDate: '2026-10-06' })}
+                    className="px-3 py-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-xs rounded-xl font-bold transition-all"
+                  >
+                    06-Oct
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBroker({ ...broker, expiryDate: '2026-10-08' })}
+                    className="px-3 py-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-xs rounded-xl font-bold transition-all"
+                  >
+                    08-Oct
+                  </button>
+                </div>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Must match the exact weekly expiry contract date in Upstox (e.g. <code>2026-10-06</code> or <code>2026-10-08</code>).
+                </p>
               </div>
 
               <div>
@@ -269,7 +329,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   type="password"
                   value={broker.apiKey}
                   onChange={(e) => setBroker({ ...broker, apiKey: e.target.value })}
-                  placeholder="Paste Upstox Access Token here (from 'Generate' button)"
+                  placeholder="Paste Upstox Access Token here (from Upstox 'Generate' button)"
                   className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100"
                 />
                 <p className="text-[11px] text-slate-500 mt-1">
@@ -279,22 +339,56 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
               <div>
                 <label className="block text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1 font-bold">
-                  Proxy REST URL / Option Chain Endpoint
+                  Custom Proxy REST URL (Optional)
                 </label>
                 <input
                   type="text"
                   value={broker.proxyUrl || ''}
                   onChange={(e) => setBroker({ ...broker, proxyUrl: e.target.value })}
-                  placeholder="https://api.upstox.com/v2/option/chain?instrument_key=NSE_INDEX|Nifty 50&expiry_date=2026-10-08"
+                  placeholder="Leave blank for automatic Upstox API endpoint"
                   className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100"
                 />
-                <p className="text-[11px] text-slate-500 mt-1">
-                  Leave blank to auto-fetch the upcoming weekly expiry, or paste the exact Upstox / proxy URL.
-                </p>
+                {broker.proxyUrl && broker.proxyUrl.includes('pro.upstox.com') && (
+                  <p className="text-[11px] text-amber-500 mt-1 font-bold">
+                    ⚠️ Note: <code>pro.upstox.com</code> is a web page URL. The app will automatically convert this to the official Upstox JSON API. You can leave this field empty.
+                  </p>
+                )}
               </div>
 
-              <div className="pt-2">
+              {/* Diagnostic Test Results Box */}
+              {brokerTestResult && (
+                <div
+                  className={`p-3.5 rounded-xl border text-xs font-mono space-y-1 ${
+                    brokerTestResult.success
+                      ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-600/50 text-emerald-800 dark:text-emerald-300'
+                      : 'bg-rose-50 dark:bg-rose-950/40 border-rose-300 dark:border-rose-600/50 text-rose-800 dark:text-rose-300'
+                  }`}
+                >
+                  <div className="font-bold flex items-center gap-1.5">
+                    <span>{brokerTestResult.success ? '✓ Connection Verified' : '✕ Connection Test Failed'}</span>
+                  </div>
+                  <div>{brokerTestResult.message}</div>
+                  {brokerTestResult.urlUsed && (
+                    <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                      Endpoint: {brokerTestResult.urlUsed}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="pt-2 flex items-center gap-3">
                 <button
+                  type="button"
+                  onClick={handleTestBroker}
+                  disabled={isTestingBroker}
+                  className="px-4 py-2.5 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-900 dark:text-white font-bold rounded-xl flex items-center gap-2 cursor-pointer transition-all disabled:opacity-50"
+                >
+                  <Zap className={`w-4 h-4 text-amber-500 ${isTestingBroker ? 'animate-spin' : ''}`} />
+                  <span>{isTestingBroker ? 'Testing...' : 'Test Connection'}</span>
+                </button>
+
+                <button
+                  type="button"
                   onClick={handleSaveBroker}
                   className="px-4 py-2.5 bg-cyan-500 hover:bg-cyan-400 text-black font-bold rounded-xl flex items-center gap-2 cursor-pointer shadow-md shadow-cyan-500/20"
                 >
