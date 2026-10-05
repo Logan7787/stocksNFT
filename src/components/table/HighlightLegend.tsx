@@ -75,7 +75,7 @@ export const HighlightLegend: React.FC<HighlightLegendProps> = ({
             </span>
           </div>
 
-          <div className="flex items-center gap-1.5 bg-white dark:bg-slate-900/90 border border-slate-300 dark:border-slate-800 px-2.5 py-1 rounded-lg shadow-sm hidden sm:flex">
+          <div className="hidden sm:flex items-center gap-1.5 bg-white dark:bg-slate-900/90 border border-slate-300 dark:border-slate-800 px-2.5 py-1 rounded-lg shadow-sm">
             <Zap className="w-3.5 h-3.5 text-amber-500 dark:text-yellow-400" />
             <span className="text-slate-500 dark:text-slate-400 text-[10px]">Max Pain:</span>
             <span className="font-bold text-slate-900 dark:text-white">{metrics.maxPainStrike}</span>
