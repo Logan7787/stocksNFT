@@ -263,28 +263,34 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
               <div>
                 <label className="block text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1 font-bold">
-                  Broker API Key / Access Token
+                  Broker Access Token / API Key
                 </label>
                 <input
                   type="password"
                   value={broker.apiKey}
                   onChange={(e) => setBroker({ ...broker, apiKey: e.target.value })}
-                  placeholder="API Key or Bearer Token"
+                  placeholder="Paste Upstox Access Token here (from 'Generate' button)"
                   className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100"
                 />
+                <p className="text-[11px] text-slate-500 mt-1">
+                  💡 In Upstox Developer Portal, click <strong>Generate</strong> next to Access Token, authenticate, and paste the generated token here.
+                </p>
               </div>
 
               <div>
                 <label className="block text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1 font-bold">
-                  Proxy REST URL / WebSocket URL
+                  Proxy REST URL / Option Chain Endpoint
                 </label>
                 <input
                   type="text"
                   value={broker.proxyUrl || ''}
                   onChange={(e) => setBroker({ ...broker, proxyUrl: e.target.value })}
-                  placeholder="https://api.myoptionproxy.com/nifty/chain"
+                  placeholder="https://api.upstox.com/v2/option/chain?instrument_key=NSE_INDEX|Nifty 50&expiry_date=2026-10-08"
                   className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100"
                 />
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Leave blank to auto-fetch the upcoming weekly expiry, or paste the exact Upstox / proxy URL.
+                </p>
               </div>
 
               <div className="pt-2">

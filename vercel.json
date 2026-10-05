@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/api/upstox/:path*",
+      "destination": "https://api.upstox.com/:path*"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

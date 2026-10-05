@@ -205,38 +205,113 @@ class NiftyMarketDataService {
   }
 
   /**
-   * Fetch from External Broker API / Proxy
+   * Helper to get upcoming weekly Thursday expiry (YYYY-MM-DD)
+   */
+  private getUpcomingExpiryDate(): string {
+    const d = new Date();
+    const day = d.getDay(); // 0 is Sun, 4 is Thu
+    const diff = (4 - day + 7) % 7;
+    const target = new Date(d.getTime() + diff * 86400000);
+    const yyyy = target.getFullYear();
+    const mm = String(target.getMonth() + 1).padStart(2, '0');
+    const dd = String(target.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  /**
+   * Fetch from External Broker API / Proxy (Upstox, Custom Proxy)
    */
   private async fetchBrokerData() {
-    if (!this.brokerConfig.proxyUrl) {
+    let targetUrl = this.brokerConfig.proxyUrl?.trim();
+
+    // Default Upstox URL if Upstox selected
+    if (!targetUrl && this.brokerConfig.provider === 'upstox') {
+      const expiry = this.brokerConfig.expiryDate || this.getUpcomingExpiryDate();
+      const symbolKey = this.brokerConfig.symbol === 'BANKNIFTY' ? 'NSE_INDEX|Nifty Bank' : 'NSE_INDEX|Nifty 50';
+      targetUrl = `/api/upstox/v2/option/chain?instrument_key=${encodeURIComponent(symbolKey)}&expiry_date=${expiry}`;
+    }
+
+    // Auto-route Upstox direct URLs through local Vite proxy to prevent CORS errors
+    if (targetUrl && targetUrl.startsWith('https://api.upstox.com')) {
+      targetUrl = targetUrl.replace('https://api.upstox.com', '/api/upstox');
+    }
+
+    if (!targetUrl) {
       this.tickSimulation();
       return;
     }
 
     try {
-      const response = await fetch(this.brokerConfig.proxyUrl, {
+      const response = await fetch(targetUrl, {
         headers: {
           'Authorization': `Bearer ${this.brokerConfig.apiKey}`,
+          'Accept': 'application/json',
           'Content-Type': 'application/json',
         },
       });
 
       if (response.ok) {
         const json = await response.json();
+
+        // 1. Direct Upstox API v2 Option Chain format
+        if (Array.isArray(json.data) && json.data.length > 0 && (json.data[0].strike_price !== undefined || json.data[0].call_options !== undefined)) {
+          if (json.data[0].underlying_spot_price) {
+            this.spotPrice = round2(Number(json.data[0].underlying_spot_price));
+          }
+
+          this.rawData = json.data.map((item: any) => {
+            const callMd = item.call_options?.market_data;
+            const putMd = item.put_options?.market_data;
+            const callGreeks = item.call_options?.option_greeks;
+            const putGreeks = item.put_options?.option_greeks;
+
+            const callClose = callMd?.ltp ?? callMd?.close_price ?? 0;
+            const callLow = callMd?.low_price || callClose;
+            const callHigh = callMd?.high_price || callClose;
+
+            const putClose = putMd?.ltp ?? putMd?.close_price ?? 0;
+            const putLow = putMd?.low_price || putClose;
+            const putHigh = putMd?.high_price || putClose;
+
+            return {
+              strike: Number(item.strike_price),
+              call_low: round2(callLow),
+              call_high: round2(callHigh),
+              call_close: round2(callClose),
+              call_volume: Number(callMd?.volume || 0),
+              call_oi: Number(callMd?.oi || 0),
+              call_iv: callGreeks?.iv ? round2(callGreeks.iv) : undefined,
+              put_low: round2(putLow),
+              put_high: round2(putHigh),
+              put_close: round2(putClose),
+              put_volume: Number(putMd?.volume || 0),
+              put_oi: Number(putMd?.oi || 0),
+              put_iv: putGreeks?.iv ? round2(putGreeks.iv) : undefined,
+            };
+          });
+
+          this.recalculateAll();
+          return;
+        }
+
+        // 2. Custom Proxy format
         if (json.spotPrice) {
-          this.spotPrice = Number(json.spotPrice);
+          this.spotPrice = round2(Number(json.spotPrice));
         }
         if (Array.isArray(json.data)) {
           this.rawData = json.data;
           this.recalculateAll();
           return;
         }
+      } else {
+        const errorText = await response.text();
+        console.warn(`Broker API returned error status ${response.status}:`, errorText);
       }
     } catch (err) {
       console.warn('External Broker API fetch error, falling back to live simulator:', err);
     }
 
-    // Fallback if network drops
+    // Fallback simulation if broker fetch fails or during off-market hours
     this.tickSimulation();
   }
 }

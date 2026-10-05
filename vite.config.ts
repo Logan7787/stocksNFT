@@ -7,5 +7,12 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true,
+    proxy: {
+      '/api/upstox': {
+        target: 'https://api.upstox.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/upstox/, ''),
+      },
+    },
   },
 })
