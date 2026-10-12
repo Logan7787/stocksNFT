@@ -20,10 +20,12 @@ import type {
   MarketMetrics, 
   MarketSnapshotRecord, 
   BrokerApiConfig,
+  BrokerStatus,
   ConnectionMode
 } from '../../types/optionChain';
 import { applyConditionalHighlights, round2 } from '../../utils/formulas';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, Key } from 'lucide-react';
+
 
 export const OptionChainDashboard: React.FC = () => {
   // Option Chain State
@@ -71,8 +73,9 @@ export const OptionChainDashboard: React.FC = () => {
   const [isMobileCompact, setIsMobileCompact] = useState<boolean>(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
 
-  // Broker Config
+  // Broker Config & Status
   const [brokerConfig, setBrokerConfig] = useState<BrokerApiConfig>(niftyMarketService.getBrokerConfig());
+  const [brokerStatus, setBrokerStatus] = useState<BrokerStatus>(niftyMarketService.getBrokerStatus());
 
   const showToast = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
     setToast(null);
@@ -81,6 +84,19 @@ export const OptionChainDashboard: React.FC = () => {
       setTimeout(() => setToast(null), 3500);
     }, 50);
   };
+
+  // Subscribe to Broker Status updates
+  useEffect(() => {
+    const unsub = niftyMarketService.subscribeBrokerStatus((st) => {
+      setBrokerStatus(st);
+      if (st.status === 'connected') {
+        setConnectionMode('broker_api');
+      } else if (st.status === 'token_expired' || st.status === 'error') {
+        // Fallback connection mode
+      }
+    });
+    return () => unsub();
+  }, []);
 
   // 1. Initial Load of Historical Snapshots list
   const refreshSnapshotsList = useCallback(async () => {
@@ -324,6 +340,23 @@ export const OptionChainDashboard: React.FC = () => {
         isMobileCompact={isMobileCompact}
         onToggleMobileCompact={() => setIsMobileCompact(!isMobileCompact)}
       />
+
+      {/* Broker Live Feed Warning / Expired Token Banner */}
+      {selectedSlot === 'LIVE' && brokerConfig.enabled && brokerStatus.error && (
+        <div className="bg-amber-50 dark:bg-amber-950/70 border-b border-amber-300 dark:border-amber-700/60 px-4 py-2 flex flex-wrap items-center justify-between gap-2 text-xs font-mono text-amber-900 dark:text-amber-200">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+            <span className="font-semibold">{brokerStatus.error}</span>
+          </div>
+          <button
+            onClick={() => setIsSettingsOpen(true)}
+            className="px-2.5 py-1 bg-amber-500 hover:bg-amber-400 text-black font-bold text-[11px] rounded-lg shadow-xs flex items-center gap-1 cursor-pointer transition-all shrink-0"
+          >
+            <Key className="w-3 h-3" />
+            <span>Open Settings & Update Token</span>
+          </button>
+        </div>
+      )}
 
       {/* Conditional Highlights Legend & Market Pulse Bar */}
       <HighlightLegend

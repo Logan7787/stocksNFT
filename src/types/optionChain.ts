@@ -111,8 +111,18 @@ export interface BrokerApiConfig {
   enabled: boolean;
 }
 
+export interface BrokerStatus {
+  connected: boolean;
+  status: 'idle' | 'connected' | 'error' | 'token_expired';
+  error?: string;
+  spotPrice?: number;
+  lastFetchedAt?: string;
+  strikesCount?: number;
+}
+
 export interface SupabaseConfig {
   url: string;
   anonKey: string;
   connected: boolean;
 }
+

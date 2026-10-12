@@ -1,4 +1,4 @@
-import type { RawOptionData, ProcessedOptionRow, MarketMetrics, BrokerApiConfig } from '../types/optionChain';
+import type { RawOptionData, ProcessedOptionRow, MarketMetrics, BrokerApiConfig, BrokerStatus } from '../types/optionChain';
 import { generateBaseNiftyOptionData, processRawOptionRow, applyConditionalHighlights, round2 } from '../utils/formulas';
 
 export type TickListener = (data: {
@@ -8,26 +8,83 @@ export type TickListener = (data: {
   metrics: MarketMetrics;
 }) => void;
 
+export type BrokerStatusListener = (status: BrokerStatus) => void;
+
+/**
+ * Calculate the nearest upcoming Thursday/Tuesday NSE Expiry Date (YYYY-MM-DD)
+ */
+export function calculateUpcomingExpiryDate(symbol: string = 'NIFTY'): string {
+  const d = new Date();
+  let targetDay = 4; // Thursday default for NIFTY & BANKNIFTY
+  if (symbol === 'FINNIFTY') targetDay = 2; // Tuesday
+  else if (symbol === 'MIDCPNIFTY') targetDay = 1; // Monday
+
+  const currentDay = d.getDay(); // 0 is Sun, 1 is Mon, 2 is Tue, 3 is Wed, 4 is Thu, 5 is Fri, 6 is Sat
+  let diff = (targetDay - currentDay + 7) % 7;
+
+  // If today is targetDay, but market already closed (after 15:30 IST), jump to next week
+  const hours = d.getHours();
+  const minutes = d.getMinutes();
+  if (diff === 0 && (hours > 15 || (hours === 15 && minutes >= 30))) {
+    diff = 7;
+  }
+
+  const target = new Date(d.getTime() + diff * 86400000);
+  const yyyy = target.getFullYear();
+  const mm = String(target.getMonth() + 1).padStart(2, '0');
+  const dd = String(target.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+export function generateFallbackExpiryDates(symbol: string = 'NIFTY'): string[] {
+  const dates: string[] = [];
+  const base = new Date();
+  let targetDay = 4; // Thursday
+  if (symbol === 'FINNIFTY') targetDay = 2;
+  else if (symbol === 'MIDCPNIFTY') targetDay = 1;
+
+  for (let i = 0; i < 8; i++) {
+    const d = new Date(base.getTime() + i * 7 * 86400000);
+    const day = d.getDay();
+    const diff = (targetDay - day + 7) % 7;
+    const target = new Date(d.getTime() + diff * 86400000);
+    const yyyy = target.getFullYear();
+    const mm = String(target.getMonth() + 1).padStart(2, '0');
+    const dd = String(target.getDate()).padStart(2, '0');
+    const formatted = `${yyyy}-${mm}-${dd}`;
+    if (!dates.includes(formatted)) {
+      dates.push(formatted);
+    }
+  }
+  return dates;
+}
+
 class NiftyMarketDataService {
   private spotPrice: number = 22620.45;
   private openSpotPrice: number = 22580.00;
   private rawData: RawOptionData[] = [];
   private processedRows: ProcessedOptionRow[] = [];
   private listeners: Set<TickListener> = new Set();
+  private statusListeners: Set<BrokerStatusListener> = new Set();
   private intervalId: any = null;
   private tickIntervalMs: number = 1000;
   private isRunning: boolean = false;
   private isSimulated: boolean = true;
+  private brokerStatus: BrokerStatus = {
+    connected: false,
+    status: 'idle',
+  };
   private brokerConfig: BrokerApiConfig = {
-    provider: 'custom_proxy',
+    provider: 'upstox',
     apiKey: '',
     symbol: 'NIFTY',
-    expiryDate: '',
+    expiryDate: calculateUpcomingExpiryDate('NIFTY'),
     enabled: false,
   };
 
   constructor() {
     this.initData();
+    this.getBrokerConfig(); // Load initial broker configuration with .env fallback
   }
 
   private initData() {
@@ -50,23 +107,83 @@ class NiftyMarketDataService {
     return this.processedRows;
   }
 
+  public getBrokerStatus(): BrokerStatus {
+    return this.brokerStatus;
+  }
+
+  private updateBrokerStatus(status: Partial<BrokerStatus>) {
+    this.brokerStatus = {
+      ...this.brokerStatus,
+      ...status,
+    };
+    this.statusListeners.forEach((fn) => {
+      try {
+        fn(this.brokerStatus);
+      } catch (e) {
+        console.error('Broker status listener error:', e);
+      }
+    });
+  }
+
+  public subscribeBrokerStatus(listener: BrokerStatusListener): () => void {
+    this.statusListeners.add(listener);
+    listener(this.brokerStatus);
+    return () => {
+      this.statusListeners.delete(listener);
+    };
+  }
+
+  /**
+   * Load broker config with full fallback support for .env variables (VITE_UPSTOX_ACCESS_TOKEN)
+   */
   public getBrokerConfig(): BrokerApiConfig {
+    const envToken = (import.meta.env.VITE_UPSTOX_ACCESS_TOKEN || import.meta.env.VITE_BROKER_ACCESS_TOKEN || '').trim();
+    const envProvider = (import.meta.env.VITE_BROKER_PROVIDER || 'upstox') as any;
+    const envSymbol = (import.meta.env.VITE_BROKER_SYMBOL || 'NIFTY').trim();
+    const envExpiry = (import.meta.env.VITE_BROKER_EXPIRY_DATE || '').trim();
+    const envEnabled = import.meta.env.VITE_BROKER_ENABLED === 'true' || import.meta.env.VITE_BROKER_ENABLED === true;
+
     const saved = localStorage.getItem('nifty_broker_config');
     if (saved) {
       try {
-        this.brokerConfig = JSON.parse(saved);
-      } catch (e) {}
+        const parsed = JSON.parse(saved);
+        this.brokerConfig = {
+          provider: parsed.provider || envProvider,
+          apiKey: parsed.apiKey || envToken,
+          symbol: parsed.symbol || envSymbol,
+          expiryDate: parsed.expiryDate || envExpiry || calculateUpcomingExpiryDate(parsed.symbol || envSymbol),
+          enabled: parsed.enabled !== undefined ? parsed.enabled : (envToken ? envEnabled : false),
+          proxyUrl: parsed.proxyUrl || '',
+        };
+      } catch (e) {
+        console.error('Failed to parse saved broker config:', e);
+      }
+    } else {
+      this.brokerConfig = {
+        provider: envProvider,
+        apiKey: envToken,
+        symbol: envSymbol,
+        expiryDate: envExpiry || calculateUpcomingExpiryDate(envSymbol),
+        enabled: envToken ? envEnabled : false,
+        proxyUrl: '',
+      };
     }
+
+    this.isSimulated = !(this.brokerConfig.enabled && this.brokerConfig.apiKey?.trim());
     return this.brokerConfig;
   }
 
   public setBrokerConfig(config: BrokerApiConfig): void {
     this.brokerConfig = config;
     localStorage.setItem('nifty_broker_config', JSON.stringify(config));
-    if (config.enabled && config.apiKey) {
+    if (config.enabled && config.apiKey?.trim()) {
       this.isSimulated = false;
+      this.updateBrokerStatus({ connected: false, status: 'idle', error: undefined });
+      // Trigger instant fetch
+      this.fetchBrokerData();
     } else {
       this.isSimulated = true;
+      this.updateBrokerStatus({ connected: false, status: 'idle', error: undefined });
     }
   }
 
@@ -205,18 +322,10 @@ class NiftyMarketDataService {
   }
 
   /**
-   * Helper to get upcoming weekly Tuesday/Thursday expiry (YYYY-MM-DD)
+   * Helper to get upcoming weekly expiry (YYYY-MM-DD)
    */
   public getUpcomingExpiryDate(): string {
-    const d = new Date();
-    const day = d.getDay(); // 0 is Sun, 1 is Mon, 2 is Tue, 4 is Thu
-    // If today is Monday (1) or Tuesday (2), default to current week's Thursday (or user selected date)
-    const diff = (4 - day + 7) % 7;
-    const target = new Date(d.getTime() + (diff === 0 ? 0 : diff) * 86400000);
-    const yyyy = target.getFullYear();
-    const mm = String(target.getMonth() + 1).padStart(2, '0');
-    const dd = String(target.getDate()).padStart(2, '0');
-    return `${yyyy}-${mm}-${dd}`;
+    return calculateUpcomingExpiryDate(this.brokerConfig.symbol || 'NIFTY');
   }
 
   /**
@@ -232,7 +341,7 @@ class NiftyMarketDataService {
 
     if (config.provider === 'upstox') {
       if (!url || url.includes('api.upstox.com') || url.includes('/api/upstox')) {
-        const expiry = config.expiryDate?.trim() || this.getUpcomingExpiryDate();
+        const expiry = config.expiryDate?.trim() || calculateUpcomingExpiryDate(config.symbol || 'NIFTY');
         const symbolKey = config.symbol === 'BANKNIFTY' ? 'NSE_INDEX|Nifty Bank' : 'NSE_INDEX|Nifty 50';
         url = `/api/upstox/v2/option/chain?instrument_key=${encodeURIComponent(symbolKey)}&expiry_date=${expiry}`;
       }
@@ -251,8 +360,10 @@ class NiftyMarketDataService {
    */
   private async fetchBrokerData() {
     const targetUrl = this.resolveBrokerUrl(this.brokerConfig);
+    const token = this.brokerConfig.apiKey?.trim();
 
-    if (!targetUrl || !this.brokerConfig.apiKey) {
+    if (!targetUrl || !token) {
+      this.updateBrokerStatus({ connected: false, status: 'idle' });
       this.tickSimulation();
       return;
     }
@@ -260,7 +371,7 @@ class NiftyMarketDataService {
     try {
       const response = await fetch(targetUrl, {
         headers: {
-          'Authorization': `Bearer ${this.brokerConfig.apiKey.trim()}`,
+          'Authorization': `Bearer ${token}`,
           'Accept': 'application/json',
           'Content-Type': 'application/json',
         },
@@ -313,6 +424,14 @@ class NiftyMarketDataService {
 
           if (parsed.length > 0) {
             this.rawData = parsed;
+            this.updateBrokerStatus({
+              connected: true,
+              status: 'connected',
+              spotPrice: this.spotPrice,
+              strikesCount: parsed.length,
+              lastFetchedAt: new Date().toLocaleTimeString(),
+              error: undefined,
+            });
             this.recalculateAll();
             return;
           }
@@ -324,18 +443,55 @@ class NiftyMarketDataService {
         }
         if (Array.isArray(json.data) && json.data.length > 0) {
           this.rawData = json.data;
+          this.updateBrokerStatus({
+            connected: true,
+            status: 'connected',
+            spotPrice: this.spotPrice,
+            strikesCount: json.data.length,
+            lastFetchedAt: new Date().toLocaleTimeString(),
+            error: undefined,
+          });
           this.recalculateAll();
           return;
         }
       } else {
         const errorText = await response.text();
-        console.warn(`Broker API returned error status ${response.status}:`, errorText);
+        let parsedErr: any = null;
+        try {
+          parsedErr = JSON.parse(errorText);
+        } catch {}
+
+        if (response.status === 401) {
+          this.updateBrokerStatus({
+            connected: false,
+            status: 'token_expired',
+            error: 'Upstox Access Token Expired (401). Daily token reset occurs at 3:30 AM IST. Please generate a new token in Upstox Developer Portal and update Settings.',
+          });
+        } else if (response.status === 400) {
+          const msg = parsedErr?.errors?.[0]?.message || parsedErr?.message || 'Invalid Expiry Date';
+          this.updateBrokerStatus({
+            connected: false,
+            status: 'error',
+            error: `Upstox API: ${msg}. Please select an active expiry date in Settings.`,
+          });
+        } else {
+          this.updateBrokerStatus({
+            connected: false,
+            status: 'error',
+            error: `Broker API error (${response.status}): ${parsedErr?.message || response.statusText}`,
+          });
+        }
       }
-    } catch (err) {
-      console.warn('External Broker API fetch error, falling back to live simulator:', err);
+    } catch (err: any) {
+      console.warn('External Broker API fetch error:', err);
+      this.updateBrokerStatus({
+        connected: false,
+        status: 'error',
+        error: `Network error: ${err.message || 'Failed to connect to Broker'}`,
+      });
     }
 
-    // Fallback simulation if broker fetch fails or during off-market hours
+    // Fallback simulation if broker fetch fails
     this.tickSimulation();
   }
 }
@@ -354,20 +510,27 @@ export async function testBrokerConnection(config: BrokerApiConfig): Promise<{
   expiryDate?: string;
   urlUsed?: string;
   rawDetails?: string;
+  availableExpiries?: string[];
 }> {
-  if (!config.apiKey?.trim()) {
+  const token = config.apiKey?.trim();
+  if (!token) {
     return {
       success: false,
-      message: 'Access Token / API Key is empty. Please generate and paste your token.',
+      message: 'Access Token / API Key is empty. Please paste your token or set VITE_UPSTOX_ACCESS_TOKEN in .env.',
     };
   }
 
-  const url = niftyMarketService.resolveBrokerUrl(config);
+  // Also fetch available contract expiries for diagnostic help
+  const availableExpiries = await fetchUpstoxExpiryDates(token, config.symbol || 'NIFTY');
+
+  const expiryToUse = config.expiryDate?.trim() || (availableExpiries.length > 0 ? availableExpiries[0] : calculateUpcomingExpiryDate(config.symbol || 'NIFTY'));
+  const testConfig = { ...config, expiryDate: expiryToUse };
+  const url = niftyMarketService.resolveBrokerUrl(testConfig);
 
   try {
     const response = await fetch(url, {
       headers: {
-        'Authorization': `Bearer ${config.apiKey.trim()}`,
+        'Authorization': `Bearer ${token}`,
         'Accept': 'application/json',
         'Content-Type': 'application/json',
       },
@@ -382,19 +545,31 @@ export async function testBrokerConnection(config: BrokerApiConfig): Promise<{
     }
 
     if (!response.ok) {
+      if (response.status === 401) {
+        return {
+          success: false,
+          statusCode: 401,
+          urlUsed: url,
+          availableExpiries,
+          message: 'Upstox Token Expired (401 Unauthorized). Upstox tokens expire daily at 3:30 AM IST. Please generate a new access token in your Upstox Developer Portal and save it.',
+          rawDetails: responseText.slice(0, 300),
+        };
+      }
+
       const errMsg = json?.errors?.[0]?.message || json?.message || `HTTP ${response.status} ${response.statusText}`;
       return {
         success: false,
         statusCode: response.status,
         urlUsed: url,
-        message: `Upstox API Error (${response.status}): ${errMsg}`,
+        availableExpiries,
+        message: `Upstox API Error (${response.status}): ${errMsg}. Check if the expiry date (${expiryToUse}) is valid for this instrument.`,
         rawDetails: responseText.slice(0, 300),
       };
     }
 
     if (json && Array.isArray(json.data) && json.data.length > 0) {
       const spot = json.data[0].underlying_spot_price || json.spotPrice;
-      const expiry = json.data[0].expiry || config.expiryDate;
+      const expiry = json.data[0].expiry || expiryToUse;
       return {
         success: true,
         statusCode: 200,
@@ -402,7 +577,8 @@ export async function testBrokerConnection(config: BrokerApiConfig): Promise<{
         spotPrice: spot ? Number(spot) : undefined,
         strikesCount: json.data.length,
         expiryDate: expiry,
-        message: `Successfully connected to Upstox! Spot Price: ₹${spot?.toLocaleString('en-IN') || 'N/A'}, Loaded ${json.data.length} option strikes (Expiry: ${expiry}).`,
+        availableExpiries,
+        message: `✓ Successfully connected to Upstox Live Feed! Spot Price: ₹${spot?.toLocaleString('en-IN') || 'N/A'}, Loaded ${json.data.length} active option strikes (Expiry: ${expiry}).`,
       };
     }
 
@@ -410,14 +586,16 @@ export async function testBrokerConnection(config: BrokerApiConfig): Promise<{
       success: false,
       statusCode: response.status,
       urlUsed: url,
-      message: `Connected to API, but no option contracts were found for expiry date '${config.expiryDate || '2026-10-08'}'. In Upstox, please switch Target Option Expiry Date to '2026-10-06' (or click the '06-Oct' quick button).`,
+      availableExpiries,
+      message: `Connected to API, but no active option contracts returned for expiry '${expiryToUse}'. Available contract expiries: ${availableExpiries.slice(0, 4).join(', ')}.`,
       rawDetails: responseText.slice(0, 300),
     };
   } catch (err: any) {
     return {
       success: false,
       urlUsed: url,
-      message: `Network Error: ${err.message || 'Failed to connect'}.`,
+      availableExpiries,
+      message: `Network Error: ${err.message || 'Failed to connect'}. If running on Vite dev server, check proxy /api/upstox.`,
     };
   }
 }
@@ -426,14 +604,16 @@ export async function testBrokerConnection(config: BrokerApiConfig): Promise<{
  * Fetch available live option contract expiry dates directly from Upstox
  */
 export async function fetchUpstoxExpiryDates(apiKey: string, symbol: string = 'NIFTY'): Promise<string[]> {
-  if (!apiKey?.trim()) return [];
+  const token = apiKey?.trim() || import.meta.env.VITE_UPSTOX_ACCESS_TOKEN || '';
+  if (!token) return generateFallbackExpiryDates(symbol);
+
   const symbolKey = symbol === 'BANKNIFTY' ? 'NSE_INDEX|Nifty Bank' : 'NSE_INDEX|Nifty 50';
   const url = `/api/upstox/v2/option/contract?instrument_key=${encodeURIComponent(symbolKey)}`;
 
   try {
     const res = await fetch(url, {
       headers: {
-        'Authorization': `Bearer ${apiKey.trim()}`,
+        'Authorization': `Bearer ${token}`,
         'Accept': 'application/json',
       },
     });
@@ -441,13 +621,22 @@ export async function fetchUpstoxExpiryDates(apiKey: string, symbol: string = 'N
     if (res.ok) {
       const json = await res.json();
       if (Array.isArray(json.data)) {
-        const expiries = Array.from(new Set(json.data.map((d: any) => d.expiry).filter(Boolean))) as string[];
+        const todayStr = new Date().toISOString().split('T')[0];
+        const expiries = Array.from(
+          new Set(
+            json.data
+              .map((d: any) => d.expiry)
+              .filter((exp: any) => typeof exp === 'string' && exp >= todayStr)
+          )
+        ) as string[];
         expiries.sort();
-        return expiries;
+        if (expiries.length > 0) {
+          return expiries;
+        }
       }
     }
   } catch (e) {
     console.warn('Error fetching Upstox contract expiries:', e);
   }
-  return ['2026-10-06', '2026-10-13', '2026-10-19', '2026-10-27', '2026-11-03'];
+  return generateFallbackExpiryDates(symbol);
 }
