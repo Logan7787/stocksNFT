@@ -149,7 +149,7 @@ class NiftyMarketDataService {
         const parsed = JSON.parse(saved);
         this.brokerConfig = {
           provider: parsed.provider || envProvider,
-          apiKey: parsed.apiKey || envToken,
+          apiKey: parsed.apiKey !== undefined ? parsed.apiKey : envToken,
           symbol: parsed.symbol || envSymbol,
           expiryDate: parsed.expiryDate || envExpiry || calculateUpcomingExpiryDate(parsed.symbol || envSymbol),
           enabled: parsed.enabled !== undefined ? parsed.enabled : (envToken ? envEnabled : false),

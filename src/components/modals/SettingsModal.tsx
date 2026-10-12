@@ -12,7 +12,10 @@ import {
   Key,
   Calendar,
   Layers,
-  FileCode
+  FileCode,
+  Trash2,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { getSupabaseCredentials, saveSupabaseCredentials, getSupabase } from '../../services/supabaseClient';
 import { testBrokerConnection, fetchUpstoxExpiryDates, calculateUpcomingExpiryDate } from '../../services/niftyApi';
@@ -64,6 +67,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   // Spot shock state
   const [testSpot, setTestSpot] = useState(spotPrice);
+  const [showToken, setShowToken] = useState<boolean>(false);
 
   const envToken = (import.meta.env.VITE_UPSTOX_ACCESS_TOKEN || import.meta.env.VITE_BROKER_ACCESS_TOKEN || '').trim();
 
@@ -133,6 +137,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }));
     loadExpiries(envToken, broker.symbol || 'NIFTY');
     showToast('Loaded Access Token from .env!');
+  };
+
+  const handleClearToken = () => {
+    setBroker(prev => ({ ...prev, apiKey: '' }));
+    setBrokerTestResult(null);
+    showToast('Access token deleted / cleared! You can now paste your new active token.');
   };
 
   const handleSaveBroker = () => {
@@ -375,37 +385,87 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <Key className="w-3.5 h-3.5 text-cyan-500" />
                     Upstox Access Token
                   </label>
-                  {envToken && (
-                    <button
-                      type="button"
-                      onClick={handleResetToEnv}
-                      className="text-[10px] text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 font-mono cursor-pointer"
-                    >
-                      <FileCode className="w-3 h-3" /> Load from .env
-                    </button>
-                  )}
+                  <div className="flex items-center gap-2.5">
+                    {broker.apiKey ? (
+                      <button
+                        type="button"
+                        onClick={handleClearToken}
+                        className="text-[11px] text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                        title="Delete expired or current token"
+                      >
+                        <Trash2 className="w-3 h-3 text-rose-500" /> Clear Expired Token
+                      </button>
+                    ) : null}
+                    {envToken && (
+                      <button
+                        type="button"
+                        onClick={handleResetToEnv}
+                        className="text-[10px] text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 font-mono cursor-pointer"
+                      >
+                        <FileCode className="w-3 h-3" /> Load from .env
+                      </button>
+                    )}
+                  </div>
                 </div>
 
-                <div className="relative">
-                  <input
-                    type="password"
-                    value={broker.apiKey || ''}
-                    onChange={(e) => {
-                      const newKey = e.target.value;
-                      setBroker({ ...broker, apiKey: newKey });
-                    }}
-                    placeholder="Paste Upstox Access Token here (or set in .env file)"
-                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 pr-10"
-                  />
-                  {envToken && broker.apiKey === envToken && (
-                    <span className="absolute right-3 top-2.5 text-[10px] bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded font-mono font-bold border border-emerald-300 dark:border-emerald-800">
-                      .env
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <input
+                      type={showToken ? 'text' : 'password'}
+                      value={broker.apiKey || ''}
+                      onChange={(e) => {
+                        const newKey = e.target.value;
+                        setBroker({ ...broker, apiKey: newKey });
+                      }}
+                      placeholder="Paste Upstox Access Token here (or set in .env file)"
+                      className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 pr-16 font-mono text-xs"
+                    />
+                    <div className="absolute right-2.5 top-2.5 flex items-center gap-1.5">
+                      {broker.apiKey ? (
+                        <button
+                          type="button"
+                          onClick={() => setShowToken(!showToken)}
+                          title={showToken ? 'Hide token' : 'Show token'}
+                          className="p-0.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer"
+                        >
+                          {showToken ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                        </button>
+                      ) : null}
+                      {envToken && broker.apiKey === envToken && (
+                        <span className="text-[10px] bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 px-1.5 py-0.2 rounded font-mono font-bold border border-emerald-300 dark:border-emerald-800">
+                          .env
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {broker.apiKey ? (
+                    <button
+                      type="button"
+                      onClick={handleClearToken}
+                      title="Clear and delete expired token"
+                      className="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 border border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300 rounded-xl flex items-center gap-1.5 font-bold text-xs transition-all cursor-pointer whitespace-nowrap shadow-xs"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
+                      <span>Clear</span>
+                    </button>
+                  ) : null}
+                </div>
+
+                <div className="flex items-center justify-between mt-1 text-[11px] text-slate-500 font-sans">
+                  <span>
+                    💡 In Upstox Developer Portal &gt; My Apps &gt; click <strong>Generate Access Token</strong>, authenticate with OTP, and paste the generated token here.
+                  </span>
+                  {broker.apiKey ? (
+                    <span className="text-[10px] text-slate-400 font-mono shrink-0 ml-2">
+                      {broker.apiKey.length} chars
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono shrink-0 ml-2">
+                      (token empty)
                     </span>
                   )}
                 </div>
-                <p className="text-[11px] text-slate-500 mt-1 font-sans">
-                  💡 In Upstox Developer Portal &gt; My Apps &gt; click <strong>Generate Access Token</strong>, authenticate with OTP, and paste the generated token here.
-                </p>
               </div>
 
               {/* Custom Proxy REST URL */}
