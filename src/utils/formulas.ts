@@ -161,6 +161,11 @@ export function applyConditionalHighlights(
     const isTopCallVolume = row.call_volume >= top2CallVolThreshold && row.call_volume > 0;
     const isTopPutVolume = row.put_volume >= top2PutVolThreshold && row.put_volume > 0;
 
+    // CE Breakout: call_close > call_avg AND call_close > call_premium
+    const ceSignal = row.call_close > row.call_avg && row.call_close > row.call_premium;
+    // PE Breakout: put_close > put_avg AND put_close > put_premium
+    const peSignal = row.put_close > row.put_avg && row.put_close > row.put_premium;
+
     return {
       ...row,
       isATM,
@@ -169,6 +174,8 @@ export function applyConditionalHighlights(
       isMinPutPremium,
       isTopCallVolume,
       isTopPutVolume,
+      ceSignal,
+      peSignal,
     };
   });
 

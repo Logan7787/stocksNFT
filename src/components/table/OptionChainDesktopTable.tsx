@@ -113,6 +113,40 @@ const OptionRowItem = memo(({ row, spotPrice }: { row: ProcessedOptionRow; spotP
       </td>
 
       {/* ============================================================== */}
+      {/* ACTION SIGNALS COLUMN: BUY CE (Green) / BUY PE (Red) Badges    */}
+      {/* ============================================================== */}
+      <td
+        className="py-2 px-3 text-center transition-all border-r-2 border-slate-300 dark:border-slate-700/80 bg-slate-50/70 dark:bg-slate-900/60"
+        title={
+          row.ceSignal && row.peSignal
+            ? 'Dual Breakout: Both CE and PE breakout conditions triggered!'
+            : row.ceSignal
+            ? `Bullish Breakout: Call Close (${row.call_close.toFixed(2)}) > AVG (${row.call_avg.toFixed(2)}) & > Premium (${row.call_premium.toFixed(2)})`
+            : row.peSignal
+            ? `Bearish Breakout: Put Close (${row.put_close.toFixed(2)}) > AVG (${row.put_avg.toFixed(2)}) & > Premium (${row.put_premium.toFixed(2)})`
+            : 'No signal: Waiting for breakout condition (Close > AVG & Close > Premium)'
+        }
+      >
+        <div className="flex items-center justify-center gap-1.5 flex-wrap">
+          {row.ceSignal && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-black bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-md shadow-emerald-500/30 ring-1 ring-emerald-400/60 transition-transform scale-100 hover:scale-105 cursor-default animate-pulse">
+              <span className="w-1.5 h-1.5 rounded-full bg-slate-950"></span>
+              BUY CE
+            </span>
+          )}
+          {row.peSignal && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-black bg-rose-500 hover:bg-rose-400 text-white shadow-md shadow-rose-500/30 ring-1 ring-rose-400/60 transition-transform scale-100 hover:scale-105 cursor-default animate-pulse">
+              <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
+              BUY PE
+            </span>
+          )}
+          {!row.ceSignal && !row.peSignal && (
+            <span className="text-slate-400 dark:text-slate-600 text-xs font-mono">-</span>
+          )}
+        </div>
+      </td>
+
+      {/* ============================================================== */}
       {/* PUT SECTION (RIGHT): CLOSE | AVG | PREMIUM | VOLUME            */}
       {/* ============================================================== */}
 
@@ -206,7 +240,7 @@ export const OptionChainDesktopTable: React.FC<OptionChainDesktopTableProps> = (
       <table className="w-full text-left border-collapse select-text min-w-4xl">
         {/* Table Header Container */}
         <thead>
-          {/* Top Super Header: CALLS (CE) | STRIKE | PUTS (PE) */}
+          {/* Top Super Header: CALLS (CE) | STRIKE | ACTION | PUTS (PE) */}
           <tr className="border-b border-slate-300 dark:border-slate-700 text-xs font-bold uppercase tracking-wider">
             <th colSpan={4} className="py-2.5 px-4 text-center text-cyan-800 dark:text-cyan-400 bg-cyan-100/70 dark:bg-cyan-950/40 border-r border-slate-300 dark:border-slate-700/80">
               CALLS (CE)
@@ -214,12 +248,15 @@ export const OptionChainDesktopTable: React.FC<OptionChainDesktopTableProps> = (
             <th className="py-2.5 px-4 text-center text-amber-800 dark:text-amber-400 bg-amber-100/70 dark:bg-amber-950/40 font-black border-r border-slate-300 dark:border-slate-700/80">
               STRIKE
             </th>
+            <th className="py-2.5 px-3 text-center text-emerald-800 dark:text-emerald-400 bg-emerald-100/70 dark:bg-emerald-950/40 font-black border-r border-slate-300 dark:border-slate-700/80">
+              ACTION SIGNALS
+            </th>
             <th colSpan={4} className="py-2.5 px-4 text-center text-rose-800 dark:text-rose-400 bg-rose-100/70 dark:bg-rose-950/40">
               PUTS (PE)
             </th>
           </tr>
 
-          {/* Exact Columns Header: VOLUME | PREMIUM | AVG | CLOSE | STRIKE | CLOSE | AVG | PREMIUM | VOLUME */}
+          {/* Exact Columns Header: VOLUME | PREMIUM | AVG | CLOSE | STRIKE | ACTION | CLOSE | AVG | PREMIUM | VOLUME */}
           <tr className="border-b border-slate-300 dark:border-slate-800 text-[11px] font-mono font-bold uppercase text-slate-700 dark:text-slate-300 bg-slate-200/90 dark:bg-[#0f172a]">
             {/* CALLS */}
             <th className="py-2.5 px-3 text-right text-yellow-700 dark:text-yellow-300/90">
@@ -238,6 +275,11 @@ export const OptionChainDesktopTable: React.FC<OptionChainDesktopTableProps> = (
             {/* CENTER STRIKE */}
             <th className="py-2.5 px-4 text-center bg-slate-300/80 dark:bg-slate-950 text-amber-900 dark:text-amber-400 font-black border-x-2 border-slate-400 dark:border-slate-700">
               STRIKE
+            </th>
+
+            {/* ACTION SIGNALS COLUMN */}
+            <th className="py-2.5 px-3 text-center bg-slate-200 dark:bg-slate-900/90 text-emerald-800 dark:text-emerald-400 font-black border-r-2 border-slate-400 dark:border-slate-700">
+              ACTION
             </th>
 
             {/* PUTS */}

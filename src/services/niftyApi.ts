@@ -322,6 +322,46 @@ class NiftyMarketDataService {
   }
 
   /**
+   * Intraday Trade Engine simulation shock:
+   * Forces ATM strike to meet the breakout condition for testing
+   */
+  public triggerBreakoutShock(type: 'CE' | 'PE'): void {
+    if (!this.rawData || this.rawData.length === 0) return;
+    let closestIndex = 0;
+    let minDiff = Math.abs(this.rawData[0].strike - this.spotPrice);
+    for (let i = 1; i < this.rawData.length; i++) {
+      const diff = Math.abs(this.rawData[i].strike - this.spotPrice);
+      if (diff < minDiff) {
+        minDiff = diff;
+        closestIndex = i;
+      }
+    }
+
+    const atm = this.rawData[closestIndex];
+    if (type === 'CE') {
+      const prem = (atm.call_low + atm.put_high) / 2;
+      const targetClose = round2(Math.max(prem + 15, atm.call_close + 20));
+      this.rawData[closestIndex] = {
+        ...atm,
+        call_close: targetClose,
+        call_high: round2(Math.max(atm.call_high, targetClose + 4)),
+        call_volume: atm.call_volume + 60000,
+      };
+    } else {
+      const prem = (atm.put_low + atm.call_high) / 2;
+      const targetClose = round2(Math.max(prem + 15, atm.put_close + 20));
+      this.rawData[closestIndex] = {
+        ...atm,
+        put_close: targetClose,
+        put_high: round2(Math.max(atm.put_high, targetClose + 4)),
+        put_volume: atm.put_volume + 60000,
+      };
+    }
+
+    this.recalculateAll();
+  }
+
+  /**
    * Helper to get upcoming weekly expiry (YYYY-MM-DD)
    */
   public getUpcomingExpiryDate(): string {

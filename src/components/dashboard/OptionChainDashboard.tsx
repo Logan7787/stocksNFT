@@ -6,6 +6,8 @@ import { OptionChainMobileTable } from '../table/OptionChainMobileTable';
 import { FormulasModal } from '../modals/FormulasModal';
 import { SettingsModal } from '../modals/SettingsModal';
 import { SnapshotManagerModal } from '../modals/SnapshotManagerModal';
+import { ActiveTradeSetupCard } from './ActiveTradeSetupCard';
+import { TradeSettingsCard } from './TradeSettingsCard';
 import { 
   niftyMarketService 
 } from '../../services/niftyApi';
@@ -21,10 +23,17 @@ import type {
   MarketSnapshotRecord, 
   BrokerApiConfig,
   BrokerStatus,
-  ConnectionMode
+  ConnectionMode,
+  TradeSettings
 } from '../../types/optionChain';
 import { applyConditionalHighlights, round2 } from '../../utils/formulas';
+import { 
+  getStoredTradeSettings, 
+  saveStoredTradeSettings, 
+  evaluateAllTradeSignals 
+} from '../../utils/tradeEngine';
 import { CheckCircle2, AlertTriangle, Key } from 'lucide-react';
+import { useMemo } from 'react';
 
 
 export const OptionChainDashboard: React.FC = () => {
@@ -77,6 +86,9 @@ export const OptionChainDashboard: React.FC = () => {
   const [brokerConfig, setBrokerConfig] = useState<BrokerApiConfig>(niftyMarketService.getBrokerConfig());
   const [brokerStatus, setBrokerStatus] = useState<BrokerStatus>(niftyMarketService.getBrokerStatus());
 
+  // Trade Engine State (Strict Risk Management: Max SL Points & Risk-to-Reward Ratio)
+  const [tradeSettings, setTradeSettings] = useState<TradeSettings>(getStoredTradeSettings());
+
   const showToast = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
     setToast(null);
     setTimeout(() => {
@@ -84,6 +96,22 @@ export const OptionChainDashboard: React.FC = () => {
       setTimeout(() => setToast(null), 3500);
     }, 50);
   };
+
+  const handleUpdateTradeSettings = (newSettings: TradeSettings) => {
+    setTradeSettings(newSettings);
+    saveStoredTradeSettings(newSettings);
+    showToast(`Trade settings saved: Max SL ${newSettings.maxSlPoints} pts, R:R 1:${newSettings.riskRewardRatio}`, 'success');
+  };
+
+  const handleTriggerTestBreakout = (type: 'CE' | 'PE') => {
+    niftyMarketService.triggerBreakoutShock(type);
+    showToast(`Simulated ${type} Breakout on ATM strike!`, 'success');
+  };
+
+  // Dynamic Real-Time Intraday CE / PE Trade Signals & Active Setups Calculation
+  const { rows: rowsWithSignals, activeSetups, atmRow, nearestItmCeRow, nearestItmPeRow } = useMemo(() => {
+    return evaluateAllTradeSignals(rows, spotPrice, tradeSettings);
+  }, [rows, spotPrice, tradeSettings]);
 
   // Subscribe to Broker Status updates
   useEffect(() => {
@@ -367,15 +395,34 @@ export const OptionChainDashboard: React.FC = () => {
       />
 
       {/* Main Table Content Container */}
-      <main className="flex-1 p-2 sm:p-4 max-w-[1600px] w-full mx-auto">
+      <main className="flex-1 p-2 sm:p-4 max-w-[1600px] w-full mx-auto space-y-3">
+        {/* Active Trade Setup Banner (Top live calculation card) */}
+        <ActiveTradeSetupCard
+          activeSetups={activeSetups}
+          settings={tradeSettings}
+          atmRow={atmRow}
+          nearestItmCeRow={nearestItmCeRow}
+          nearestItmPeRow={nearestItmPeRow}
+          spotPrice={spotPrice}
+          onOpenSettings={() => setIsSettingsOpen(true)}
+          onTriggerTestBreakout={handleTriggerTestBreakout}
+          isSimulated={connectionMode === 'simulated'}
+        />
+
+        {/* Global Trade Settings (Admin Panel) */}
+        <TradeSettingsCard
+          settings={tradeSettings}
+          onUpdateSettings={handleUpdateTradeSettings}
+        />
+
         {/* Desktop View (default on lg+) */}
         <div className="hidden lg:block">
-          <OptionChainDesktopTable rows={rows} spotPrice={spotPrice} />
+          <OptionChainDesktopTable rows={rowsWithSignals} spotPrice={spotPrice} />
         </div>
 
         {/* Mobile / Tablet Responsive View */}
         <div className="lg:hidden">
-          <OptionChainMobileTable rows={rows} spotPrice={spotPrice} metrics={metrics} />
+          <OptionChainMobileTable rows={rowsWithSignals} spotPrice={spotPrice} metrics={metrics} />
         </div>
       </main>
 
@@ -395,6 +442,8 @@ export const OptionChainDashboard: React.FC = () => {
         onSetTickInterval={handleSetTickInterval}
         spotPrice={spotPrice}
         onSetSpotPrice={handleSetSpotPrice}
+        tradeSettings={tradeSettings}
+        onUpdateTradeSettings={handleUpdateTradeSettings}
       />
 
       <SnapshotManagerModal

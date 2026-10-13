@@ -45,12 +45,47 @@ export interface ProcessedOptionRow {
   isMinPutPremium?: boolean;  // Light Blue (#7dd3fc)
   isTopCallVolume?: boolean;  // Light Yellow (#fde047) - Top 2
   isTopPutVolume?: boolean;   // Light Yellow (#fde047) - Top 2
+
+  // Trading Signal Flags & Intraday Trade Engine
+  ceSignal?: boolean;         // call_close > call_avg && call_close > call_premium
+  peSignal?: boolean;         // put_close > put_avg && put_close > put_premium
+  ceTradeSetup?: TradeSetup | null;
+  peTradeSetup?: TradeSetup | null;
+  isNearestItmCE?: boolean;
+  isNearestItmPE?: boolean;
   
   // Previous values for tick animation
   prevCallClose?: number;
   prevPutClose?: number;
   callTickDirection?: 'up' | 'down' | 'neutral';
   putTickDirection?: 'up' | 'down' | 'neutral';
+}
+
+export interface TradeSettings {
+  maxSlPoints: number;        // Default: 10 points
+  riskRewardRatio: number;    // Default: 2 (1:2 ratio)
+}
+
+export interface TradeSetup {
+  type: 'BUY_CE' | 'BUY_PE';
+  strike: number;
+  strikeRole: 'ATM' | 'NEAREST_ITM' | 'OTHER';
+  entryPrice: number;
+  rawSlPrice: number;
+  slPrice: number;
+  isSlOverridden: boolean;
+  calculatedRisk: number;
+  effectiveRisk: number;
+  targetPrice: number;
+  rewardPoints: number;
+  rrRatio: number;
+  conditionMet: boolean;
+  timestamp: string;
+  details: {
+    close: number;
+    avg: number;
+    premium: number;
+  };
 }
 
 export interface MarketSnapshotRecord {

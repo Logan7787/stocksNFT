@@ -71,6 +71,7 @@ export const OptionChainMobileTable: React.FC<OptionChainMobileTableProps> = ({
                 <th className="py-2.5 px-3 text-center bg-slate-200 dark:bg-slate-950 text-amber-800 dark:text-amber-400 sticky left-0 z-10 border-r border-slate-300 dark:border-slate-800 font-bold">
                   STRIKE
                 </th>
+                <th className="py-2.5 px-2 text-center text-emerald-800 dark:text-emerald-400 font-bold">SIGNAL</th>
                 <th className="py-2.5 px-3 text-right text-slate-900 dark:text-white">CLOSE</th>
                 <th className="py-2.5 px-3 text-right text-emerald-700 dark:text-emerald-300">AVG</th>
                 <th className="py-2.5 px-3 text-right text-sky-700 dark:text-sky-300">PREMIUM</th>
@@ -86,6 +87,15 @@ export const OptionChainMobileTable: React.FC<OptionChainMobileTableProps> = ({
                     }`}
                   >
                     {row.strike}
+                  </td>
+                  <td className="py-2 px-2 text-center">
+                    {row.ceSignal ? (
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-black bg-emerald-500 text-slate-950 shadow-sm animate-pulse">
+                        BUY CE
+                      </span>
+                    ) : (
+                      <span className="text-slate-400 text-[10px]">-</span>
+                    )}
                   </td>
                   <td className="py-2 px-3 text-right text-slate-900 dark:text-white font-bold">{row.call_close.toFixed(2)}</td>
                   <td
@@ -125,6 +135,7 @@ export const OptionChainMobileTable: React.FC<OptionChainMobileTableProps> = ({
                 <th className="py-2.5 px-3 text-center bg-slate-200 dark:bg-slate-950 text-amber-800 dark:text-amber-400 sticky left-0 z-10 border-r border-slate-300 dark:border-slate-800 font-bold">
                   STRIKE
                 </th>
+                <th className="py-2.5 px-2 text-center text-rose-800 dark:text-rose-400 font-bold">SIGNAL</th>
                 <th className="py-2.5 px-3 text-right text-slate-900 dark:text-white">CLOSE</th>
                 <th className="py-2.5 px-3 text-right text-emerald-700 dark:text-emerald-300">AVG</th>
                 <th className="py-2.5 px-3 text-right text-sky-700 dark:text-sky-300">PREMIUM</th>
@@ -140,6 +151,15 @@ export const OptionChainMobileTable: React.FC<OptionChainMobileTableProps> = ({
                     }`}
                   >
                     {row.strike}
+                  </td>
+                  <td className="py-2 px-2 text-center">
+                    {row.peSignal ? (
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-black bg-rose-500 text-white shadow-sm animate-pulse">
+                        BUY PE
+                      </span>
+                    ) : (
+                      <span className="text-slate-400 text-[10px]">-</span>
+                    )}
                   </td>
                   <td className="py-2 px-3 text-right text-slate-900 dark:text-white font-bold">{row.put_close.toFixed(2)}</td>
                   <td
@@ -170,10 +190,10 @@ export const OptionChainMobileTable: React.FC<OptionChainMobileTableProps> = ({
         </div>
       )}
 
-      {/* 3. COMBINED SUMMARY VIEW (Scrollable with sticky center strike) */}
+      {/* 3. COMBINED SUMMARY VIEW (Scrollable with sticky center strike and Action column) */}
       {activeTab === 'COMBINED' && (
         <div className="overflow-x-auto relative">
-          <table className="w-full text-left font-mono text-xs border-collapse min-w-160">
+          <table className="w-full text-left font-mono text-xs border-collapse min-w-180">
             <thead>
               <tr className="bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800 text-[11px]">
                 <th className="py-2 px-2 text-right text-yellow-700 dark:text-yellow-300">CE VOL</th>
@@ -182,6 +202,9 @@ export const OptionChainMobileTable: React.FC<OptionChainMobileTableProps> = ({
                 <th className="py-2 px-2 text-right text-slate-900 dark:text-white">CE LTP</th>
                 <th className="py-2 px-3 text-center bg-slate-200 dark:bg-slate-950 text-amber-900 dark:text-amber-400 sticky left-0 z-20 border-x border-slate-300 dark:border-slate-700 font-black">
                   STRIKE
+                </th>
+                <th className="py-2 px-2.5 text-center bg-slate-200 dark:bg-slate-900 text-emerald-800 dark:text-emerald-400 font-black border-r border-slate-300 dark:border-slate-700">
+                  ACTION
                 </th>
                 <th className="py-2 px-2 text-left text-slate-900 dark:text-white">PE LTP</th>
                 <th className="py-2 px-2 text-left text-emerald-700 dark:text-emerald-300">AVG</th>
@@ -222,6 +245,25 @@ export const OptionChainMobileTable: React.FC<OptionChainMobileTableProps> = ({
                     }`}
                   >
                     {row.strike}
+                  </td>
+
+                  {/* ACTION SIGNALS COLUMN */}
+                  <td className="py-1.5 px-2 text-center border-r border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
+                    <div className="flex items-center justify-center gap-1">
+                      {row.ceSignal && (
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-black bg-emerald-500 text-slate-950">
+                          BUY CE
+                        </span>
+                      )}
+                      {row.peSignal && (
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-black bg-rose-500 text-white">
+                          BUY PE
+                        </span>
+                      )}
+                      {!row.ceSignal && !row.peSignal && (
+                        <span className="text-slate-400 text-[10px]">-</span>
+                      )}
+                    </div>
                   </td>
 
                   <td className="py-1.5 px-2 text-left text-slate-900 dark:text-white font-bold">{row.put_close.toFixed(2)}</td>

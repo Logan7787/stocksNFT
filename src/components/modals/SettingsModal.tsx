@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { getSupabaseCredentials, saveSupabaseCredentials, getSupabase } from '../../services/supabaseClient';
 import { testBrokerConnection, fetchUpstoxExpiryDates, calculateUpcomingExpiryDate } from '../../services/niftyApi';
-import type { BrokerApiConfig } from '../../types/optionChain';
+import type { BrokerApiConfig, TradeSettings } from '../../types/optionChain';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -30,6 +30,8 @@ interface SettingsModalProps {
   onSetTickInterval: (ms: number) => void;
   spotPrice: number;
   onSetSpotPrice: (price: number) => void;
+  tradeSettings?: TradeSettings;
+  onUpdateTradeSettings?: (settings: TradeSettings) => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -41,8 +43,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onSetTickInterval,
   spotPrice,
   onSetSpotPrice,
+  tradeSettings,
+  onUpdateTradeSettings,
 }) => {
-  const [activeTab, setActiveTab] = useState<'broker' | 'supabase' | 'simulation'>('broker');
+  const [activeTab, setActiveTab] = useState<'broker' | 'supabase' | 'simulation' | 'trade'>('broker');
 
   // Supabase state
   const creds = getSupabaseCredentials();
@@ -233,6 +237,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           >
             <Zap className="w-4 h-4" />
             <span>Engine & Simulator</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('trade')}
+            className={`py-3 px-4 text-xs font-bold border-b-2 flex items-center gap-2 transition-all cursor-pointer ${
+              activeTab === 'trade'
+                ? 'border-indigo-500 text-indigo-700 dark:text-indigo-400 bg-indigo-500/5'
+                : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+            }`}
+          >
+            <Sliders className="w-4 h-4" />
+            <span>Trade Engine (SL & R:R)</span>
           </button>
         </div>
 
@@ -648,6 +664,74 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   >
                     Reset (22620.45)
                   </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 4. Trade Engine Settings Tab */}
+          {activeTab === 'trade' && tradeSettings && onUpdateTradeSettings && (
+            <div className="space-y-4 font-mono text-xs">
+              <div className="p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-bold text-slate-900 dark:text-white text-sm">Real-Time Intraday CE / PE Risk Engine</h4>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">Strict 1:2 Risk-to-Reward ratio with customizable Stop-Loss parameters</p>
+                  </div>
+                  <span className="px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-500 font-bold text-[10px]">RULE #7 ACTIVE</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                  <div className="p-3 bg-white dark:bg-slate-950 rounded-lg border border-slate-200 dark:border-slate-800 space-y-2">
+                    <label className="block text-slate-700 dark:text-slate-300 font-bold uppercase text-[11px]">
+                      Max SL Points (Cap on Maximum Loss)
+                    </label>
+                    <p className="text-[10px] text-slate-500">
+                      If Calculated Risk &gt; Max SL Points, overrides SL to Entry Price - Max SL Points.
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min="1"
+                        max="100"
+                        value={tradeSettings.maxSlPoints}
+                        onChange={(e) => onUpdateTradeSettings({ ...tradeSettings, maxSlPoints: Math.max(1, Number(e.target.value)) })}
+                        className="w-24 px-3 py-1.5 bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-sm font-bold text-slate-900 dark:text-white"
+                      />
+                      <span className="text-slate-500 text-xs">points</span>
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-white dark:bg-slate-950 rounded-lg border border-slate-200 dark:border-slate-800 space-y-2">
+                    <label className="block text-slate-700 dark:text-slate-300 font-bold uppercase text-[11px]">
+                      Risk-to-Reward Ratio Multiplier
+                    </label>
+                    <p className="text-[10px] text-slate-500">
+                      Target = Entry + (Risk * R:R). Default: 1:2 (multiplier: 2).
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <span className="text-slate-500 font-bold">1 :</span>
+                      <input
+                        type="number"
+                        min="0.5"
+                        max="10"
+                        step="0.5"
+                        value={tradeSettings.riskRewardRatio}
+                        onChange={(e) => onUpdateTradeSettings({ ...tradeSettings, riskRewardRatio: Math.max(0.5, Number(e.target.value)) })}
+                        className="w-24 px-3 py-1.5 bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-sm font-bold text-slate-900 dark:text-white"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-3 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-900/40 rounded-lg text-[11px] text-indigo-700 dark:text-indigo-300">
+                  <strong>Trigger Criteria:</strong>
+                  <ul className="list-disc list-inside mt-1 space-y-0.5">
+                    <li>CE Bullish Breakout: call_close &gt; call_avg AND call_close &gt; call_premium on ATM / nearest ITM strike</li>
+                    <li>PE Bearish Breakout: put_close &gt; put_avg AND put_close &gt; put_premium on ATM / nearest ITM strike</li>
+                    <li>Stop-Loss: call_premium (or Entry - Max SL Points, whichever is higher/safer)</li>
+                    <li>Target: Entry + (Risk * 2) [Strict 1:2 Reward]</li>
+                  </ul>
                 </div>
               </div>
             </div>

@@ -88,6 +88,60 @@ export const FormulasModal: React.FC<FormulasModalProps> = ({ isOpen, onClose, s
             </p>
           </div>
 
+          {/* Formula 7: Real-Time Intraday CE / PE Entry & Exit Engine */}
+          <div className="p-4 bg-linear-to-r from-indigo-50/80 to-slate-50 dark:from-indigo-950/40 dark:to-slate-900/80 border border-indigo-300 dark:border-indigo-500/40 rounded-xl space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-400 font-mono">
+                7. Intraday CE / PE Entry & Exit Engine (Strict Risk Management)
+              </span>
+              <span className="px-2 py-0.5 text-[10px] bg-indigo-100 text-indigo-800 dark:bg-indigo-500/20 dark:text-indigo-300 font-mono rounded border border-indigo-300 dark:border-indigo-500/30 font-semibold">
+                Action Signals & 1:2 R:R
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs font-mono">
+              <div className="p-2.5 bg-white dark:bg-slate-950 rounded-lg border border-slate-200 dark:border-slate-800">
+                <strong className="text-emerald-600 dark:text-emerald-400 block mb-1">🟢 CE Bullish Breakout</strong>
+                <p className="text-[11px] text-slate-600 dark:text-slate-300">
+                  <strong>Trigger:</strong> call_close &gt; call_avg AND call_close &gt; call_premium on ATM / nearest ITM strike.
+                </p>
+                <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-1">
+                  <strong>Entry:</strong> call_close
+                </p>
+                <p className="text-[11px] text-slate-600 dark:text-slate-300">
+                  <strong>Stop-Loss:</strong> call_premium (or Entry - Max SL Points, whichever is higher/safer).
+                </p>
+                <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold mt-1">
+                  <strong>Target:</strong> Entry + (Risk * 2) [Strict 1:2 Reward]
+                </p>
+              </div>
+
+              <div className="p-2.5 bg-white dark:bg-slate-950 rounded-lg border border-slate-200 dark:border-slate-800">
+                <strong className="text-rose-600 dark:text-rose-400 block mb-1">🔴 PE Bearish Breakout</strong>
+                <p className="text-[11px] text-slate-600 dark:text-slate-300">
+                  <strong>Trigger:</strong> put_close &gt; put_avg AND put_close &gt; put_premium on ATM / nearest ITM strike.
+                </p>
+                <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-1">
+                  <strong>Entry:</strong> put_close
+                </p>
+                <p className="text-[11px] text-slate-600 dark:text-slate-300">
+                  <strong>Stop-Loss:</strong> put_premium (or Entry - Max SL Points, whichever is higher/safer).
+                </p>
+                <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold mt-1">
+                  <strong>Target:</strong> Entry + (Risk * 2) [Strict 1:2 Reward]
+                </p>
+              </div>
+            </div>
+
+            <div className="p-2.5 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-200 dark:border-amber-900/40 text-[11px] text-amber-900 dark:text-amber-200 font-sans">
+              <strong>Risk Protection Rules:</strong>
+              <ul className="list-disc list-inside mt-0.5 space-y-0.5">
+                <li><strong>Calculated Risk:</strong> Entry Price (Close) - SL Price (Premium).</li>
+                <li><strong>Enforce Max Loss:</strong> If Calculated Risk &gt; Max SL Points (Default: 10 pts), SL is overridden to exactly <code>Entry Price - Max SL Points</code>.</li>
+              </ul>
+            </div>
+          </div>
+
           {/* Table Layout & Highlighting Summary */}
           <div className="p-4 bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 rounded-xl space-y-3">
             <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 font-mono">
