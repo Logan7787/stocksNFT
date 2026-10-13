@@ -117,7 +117,7 @@ export const CandlestickIndicatorChart: React.FC<CandlestickChartProps> = ({
             {symbolName}
           </span>
           {underlyingPrice && (
-            <span className="text-[11px] text-slate-500 dark:text-slate-400">
+            <span className="text-[11px] text-slate-700 dark:text-slate-300 font-semibold">
               Spot Ref: ₹{underlyingPrice.toFixed(2)}
             </span>
           )}
@@ -142,13 +142,13 @@ export const CandlestickIndicatorChart: React.FC<CandlestickChartProps> = ({
 
       {/* Hover Candle Data Stats */}
       {activeCandle && (
-        <div className="flex items-center gap-3 text-[10px] text-slate-600 dark:text-slate-400 mb-2 overflow-x-auto no-scrollbar">
-          <span>நேரம் (Time): <strong className="text-slate-900 dark:text-slate-200">{activeCandle.timestamp}</strong></span>
-          <span>O: <strong className="text-slate-900 dark:text-slate-200">{activeCandle.open.toFixed(2)}</strong></span>
-          <span>H: <strong className="text-emerald-600 dark:text-emerald-400">{activeCandle.high.toFixed(2)}</strong></span>
-          <span>L: <strong className="text-rose-600 dark:text-rose-400">{activeCandle.low.toFixed(2)}</strong></span>
-          <span>C: <strong className="text-slate-900 dark:text-slate-200">{activeCandle.close.toFixed(2)}</strong></span>
-          <span>Vol: <strong className="text-slate-900 dark:text-slate-200">{activeCandle.volume.toLocaleString('en-IN')}</strong></span>
+        <div className="flex items-center gap-3 text-[11px] text-slate-800 dark:text-slate-200 font-semibold mb-2 overflow-x-auto no-scrollbar">
+          <span>நேரம் (Time): <strong className="text-slate-900 dark:text-white font-bold">{activeCandle.timestamp}</strong></span>
+          <span>O: <strong className="text-slate-900 dark:text-white font-bold">{activeCandle.open.toFixed(2)}</strong></span>
+          <span>H: <strong className="text-emerald-700 dark:text-emerald-400 font-bold">{activeCandle.high.toFixed(2)}</strong></span>
+          <span>L: <strong className="text-rose-700 dark:text-rose-400 font-bold">{activeCandle.low.toFixed(2)}</strong></span>
+          <span>C: <strong className="text-slate-900 dark:text-white font-bold">{activeCandle.close.toFixed(2)}</strong></span>
+          <span>Vol: <strong className="text-slate-900 dark:text-white font-bold">{activeCandle.volume.toLocaleString('en-IN')}</strong></span>
         </div>
       )}
 

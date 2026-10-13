@@ -679,7 +679,7 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 font-mono text-xs">
           {/* Time Window Card */}
           <div className="bg-white dark:bg-[#0c101d] border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 shadow-sm">
-            <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase block">
+            <span className="text-[10px] text-slate-700 dark:text-slate-400 font-bold uppercase block">
               6.1 நேர சாளரம் (IST Time Window)
             </span>
             <div className="flex items-center justify-between mt-1">
@@ -688,20 +688,20 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
               </span>
               <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                 timeWindowState.canEnterNewTrade
-                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
-                  : 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
+                  ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/40'
+                  : 'bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/40'
               }`}>
                 {timeWindowState.currentPhase}
               </span>
             </div>
-            <p className="text-[11px] text-slate-400 mt-1">
+            <p className="text-[11px] text-slate-700 dark:text-slate-300 font-semibold mt-1">
               {timeWindowState.timeWindowLabelTamil}
             </p>
           </div>
 
           {/* Opening Range Card */}
           <div className="bg-white dark:bg-[#0c101d] border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 shadow-sm">
-            <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase block">
+            <span className="text-[10px] text-slate-700 dark:text-slate-400 font-bold uppercase block">
               09:15 - 09:30 தொடக்க வரம்பு (Opening Range)
             </span>
             <div className="flex items-baseline justify-between mt-1">
@@ -709,12 +709,12 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
                 ORH: ₹{openingRange.high} | ORL: ₹{openingRange.low}
               </span>
               <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                openingRange.isValidWidth ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'
+                openingRange.isValidWidth ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/20 text-rose-600 dark:text-rose-400'
               }`}>
                 {openingRange.widthPercent.toFixed(2)}% ({openingRange.width} pts)
               </span>
             </div>
-            <p className="text-[11px] text-slate-400 mt-1">
+            <p className="text-[11px] text-slate-700 dark:text-slate-300 font-semibold mt-1">
               அனுமதிக்கப்பட்ட வரம்பு: 0.15% - 0.60% (தற்போது: {openingRange.isValidWidth ? 'சரியான அகலம்' : 'வரம்பிற்கு வெளியே'})
             </p>
           </div>
@@ -723,20 +723,20 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
           <div className={`rounded-xl p-3.5 border shadow-sm ${
             dayFilterResult.canTrade
               ? 'bg-white dark:bg-[#0c101d] border-slate-200 dark:border-slate-800'
-              : 'bg-rose-950/40 border-rose-500/60 text-rose-200'
+              : 'bg-rose-50 dark:bg-rose-950/40 border-rose-300 dark:border-rose-500/60 text-rose-900 dark:text-rose-200'
           }`}>
-            <span className="text-[10px] uppercase block opacity-80">
+            <span className="text-[10px] font-bold uppercase block text-slate-700 dark:text-slate-400">
               6.2 நாள் வடிகட்டி (Day Filter Evaluation)
             </span>
             <div className="flex items-center justify-between mt-1">
-              <span className="text-sm font-bold">
+              <span className="text-sm font-bold text-slate-900 dark:text-white">
                 {dayFilterResult.canTrade ? 'வடிகட்டி பூர்த்தியானது (PASSED)' : 'NO TRADE TODAY'}
               </span>
-              <span className="text-[10px] font-bold text-slate-400">
+              <span className="text-[10px] font-bold text-slate-700 dark:text-slate-300">
                 India VIX: {indiaVix} (Max {orbConfig.dayFilter.maxIndiaVix})
               </span>
             </div>
-            <p className="text-[11px] mt-1 opacity-90 truncate" title={dayFilterResult.reasonTamil}>
+            <p className="text-[11px] mt-1 font-semibold text-slate-700 dark:text-slate-300 truncate" title={dayFilterResult.reasonTamil}>
               {dayFilterResult.reasonTamil}
             </p>
           </div>
@@ -748,7 +748,7 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
         <div className={`rounded-2xl p-4 border font-mono transition-all shadow-md ${
           markedStrike && !markedStrike.isExpired && markedStrike.capitalCheckPassed
             ? 'bg-linear-to-r from-cyan-950/70 via-slate-900 to-slate-950 border-cyan-500/70 text-cyan-100 ring-1 ring-cyan-500/30'
-            : 'bg-white dark:bg-[#0c101d] border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-300'
+            : 'bg-white dark:bg-[#0c101d] border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-300'
         }`}>
           <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3">
             <div>
@@ -756,34 +756,34 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
                 <span className={`text-xs font-black uppercase px-2.5 py-1 rounded-full shadow ${
                   markedStrike && !markedStrike.isExpired && markedStrike.capitalCheckPassed
                     ? 'bg-cyan-500 text-black'
-                    : 'bg-slate-700 text-slate-300'
+                    : 'bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-slate-200 font-bold border border-slate-300 dark:border-slate-700'
                 }`}>
                   {markedStrike && !markedStrike.isExpired && markedStrike.capitalCheckPassed ? 'STRIKE MARKED' : 'WAITING TO MARK STRIKE'}
                 </span>
-                <span className="text-sm font-bold text-white">
+                <span className="text-sm font-bold text-slate-900 dark:text-white">
                   நிகழ்வு 1: ஸ்ட்ரைக் தேர்வு &amp; சார்பு உறுதி (Event 1: Mark Strike)
                 </span>
-                <span className="text-xs text-slate-400">
+                <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                   {markStrikeResult.biasReasonTamil}
                 </span>
               </div>
 
               {markedStrike && (
-                <div className="flex flex-wrap items-center gap-3 mt-2 text-xs">
-                  <span>ஒப்பந்தம்: <strong className="text-white">{markedStrike.contractName}</strong></span>
-                  <span>பிரீமியம்: <strong className="text-cyan-400">₹{markedStrike.premium}</strong></span>
-                  <span>டெல்டா (Delta): <strong className="text-emerald-400">{markedStrike.delta}</strong></span>
-                  <span>ஸ்ப்ரெட்: <strong className="text-amber-400">₹{markedStrike.spread} ({markedStrike.spreadPercent}%)</strong></span>
-                  <span>மூலதன செலவு: <strong className={markedStrike.capitalCheckPassed ? 'text-emerald-400' : 'text-rose-400'}>₹{markedStrike.capitalCost} (60% வரம்பு: ₹15,000)</strong></span>
+                <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-slate-800 dark:text-slate-300 font-semibold">
+                  <span>ஒப்பந்தம்: <strong className="text-slate-900 dark:text-white font-bold">{markedStrike.contractName}</strong></span>
+                  <span>பிரீமியம்: <strong className="text-cyan-700 dark:text-cyan-400 font-bold">₹{markedStrike.premium}</strong></span>
+                  <span>டெல்டா (Delta): <strong className="text-emerald-700 dark:text-emerald-400 font-bold">{markedStrike.delta}</strong></span>
+                  <span>ஸ்ப்ரெட்: <strong className="text-amber-700 dark:text-amber-400 font-bold">₹{markedStrike.spread} ({markedStrike.spreadPercent}%)</strong></span>
+                  <span>மூலதன செலவு: <strong className={markedStrike.capitalCheckPassed ? 'text-emerald-700 dark:text-emerald-400 font-bold' : 'text-rose-700 dark:text-rose-400 font-bold'}>₹{markedStrike.capitalCost} (60% வரம்பு: ₹15,000)</strong></span>
                 </div>
               )}
             </div>
 
             {/* Expiration Timer for Marked Strike (6 candles = 30 min) */}
             {markedStrike && !markedStrike.isExpired && (
-              <div className="bg-black/60 p-2.5 rounded-xl border border-slate-800 text-xs shrink-0">
-                <span className="text-[10px] text-slate-400 block">தூண்டுதல் காத்திருப்பு (Waiting for Trigger)</span>
-                <span className="text-xs font-bold text-amber-400">
+              <div className="bg-slate-100 dark:bg-black/60 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs shrink-0">
+                <span className="text-[10px] text-slate-600 dark:text-slate-400 font-bold block">தூண்டுதல் காத்திருப்பு (Waiting for Trigger)</span>
+                <span className="text-xs font-bold text-amber-600 dark:text-amber-400">
                   காலாவதி: 6 மெழுகுவர்த்திகளுக்குள் (30 நிமிடம்)
                 </span>
               </div>
@@ -797,7 +797,7 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
         <div className={`rounded-2xl p-4 border transition-all shadow-xl font-mono ${
           entrySignalResult.isEntryValid
             ? 'bg-linear-to-r from-emerald-950/80 via-slate-900 to-slate-950 border-emerald-500/80 text-emerald-100 ring-2 ring-emerald-500/40'
-            : 'bg-white dark:bg-[#0c101d] border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-300'
+            : 'bg-white dark:bg-[#0c101d] border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-300'
         }`}>
           <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
             <div>
@@ -805,16 +805,16 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
                 <span className={`text-xs sm:text-sm font-black uppercase px-3 py-1 rounded-full flex items-center gap-1.5 shadow-md ${
                   entrySignalResult.isEntryValid
                     ? 'bg-emerald-500 text-black shadow-emerald-500/40'
-                    : 'bg-slate-700 text-slate-300'
+                    : 'bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-slate-200 font-bold border border-slate-300 dark:border-slate-700'
                 }`}>
-                  <Zap className="w-4 h-4 shrink-0" />
+                  <Zap className="w-4 h-4 shrink-0 text-amber-500" />
                   {entrySignalResult.verdict === 'BUY_WATCH' ? 'BUY WATCH — CE/PE' : 'NO TRADE'}
                 </span>
-                <span className="text-sm font-bold text-white">
+                <span className="text-sm font-bold text-slate-900 dark:text-white">
                   நிகழ்வு 2: நுழைவு சமிக்ஞை (Event 2: Entry Signal on Confirmed 5m Close)
                 </span>
               </div>
-              <p className="text-xs text-slate-400 mt-1">
+              <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 mt-1">
                 {entrySignalResult.reasonTamil} ({entrySignalResult.reason})
               </p>
             </div>
@@ -823,7 +823,7 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
             {entrySignalResult.isEntryValid && (
               <div className="flex flex-wrap items-center gap-3 bg-black/60 p-3 rounded-xl border border-slate-800 text-xs w-full lg:w-auto">
                 <div>
-                  <span className="text-[10px] text-slate-500 uppercase block">நுழைவு ஆஸ்க் (Entry Ask)</span>
+                  <span className="text-[10px] text-slate-400 uppercase block">நுழைவு ஆஸ்க் (Entry Ask)</span>
                   <span className="text-sm font-bold text-white">₹{currentOptionPremium.toFixed(2)}</span>
                 </div>
                 <div className="border-l border-slate-800 pl-3">
@@ -841,42 +841,54 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
           </div>
 
           {/* 6 Mandatory Entry Checklist Gates */}
-          <div className="mt-4 pt-3 border-t border-slate-800/80 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 text-[10px]">
+          <div className="mt-4 pt-3 border-t border-slate-200 dark:border-slate-800/80 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 text-[10px]">
             <div className={`p-2 rounded-lg border flex items-center justify-between ${
-              entrySignalResult.conditions.priceAboveOrhAndVwap ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400' : 'bg-slate-800/40 border-slate-800 text-slate-500'
+              entrySignalResult.conditions.priceAboveOrhAndVwap
+                ? 'bg-emerald-50 dark:bg-emerald-500/20 border-emerald-500/50 text-emerald-800 dark:text-emerald-300 font-bold shadow-xs'
+                : 'bg-slate-100 dark:bg-slate-800/60 border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-300 font-semibold shadow-xs'
             }`}>
               <span>விலை &gt; ORH &amp; VWAP</span>
-              <span>{entrySignalResult.conditions.priceAboveOrhAndVwap ? '✓' : '✗'}</span>
+              <span className="font-bold text-xs">{entrySignalResult.conditions.priceAboveOrhAndVwap ? '✓' : '✗'}</span>
             </div>
             <div className={`p-2 rounded-lg border flex items-center justify-between ${
-              entrySignalResult.conditions.ema9Above21 ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400' : 'bg-slate-800/40 border-slate-800 text-slate-500'
+              entrySignalResult.conditions.ema9Above21
+                ? 'bg-emerald-50 dark:bg-emerald-500/20 border-emerald-500/50 text-emerald-800 dark:text-emerald-300 font-bold shadow-xs'
+                : 'bg-slate-100 dark:bg-slate-800/60 border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-300 font-semibold shadow-xs'
             }`}>
               <span>5m EMA 9 &gt; 21</span>
-              <span>{entrySignalResult.conditions.ema9Above21 ? '✓' : '✗'}</span>
+              <span className="font-bold text-xs">{entrySignalResult.conditions.ema9Above21 ? '✓' : '✗'}</span>
             </div>
             <div className={`p-2 rounded-lg border flex items-center justify-between ${
-              entrySignalResult.conditions.rsiInZone ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400' : 'bg-slate-800/40 border-slate-800 text-slate-500'
+              entrySignalResult.conditions.rsiInZone
+                ? 'bg-emerald-50 dark:bg-emerald-500/20 border-emerald-500/50 text-emerald-800 dark:text-emerald-300 font-bold shadow-xs'
+                : 'bg-slate-100 dark:bg-slate-800/60 border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-300 font-semibold shadow-xs'
             }`}>
               <span>RSI (55–70 CE)</span>
-              <span>{entrySignalResult.conditions.rsiInZone ? '✓' : '✗'}</span>
+              <span className="font-bold text-xs">{entrySignalResult.conditions.rsiInZone ? '✓' : '✗'}</span>
             </div>
             <div className={`p-2 rounded-lg border flex items-center justify-between ${
-              entrySignalResult.conditions.candleBodyRatioMet ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400' : 'bg-slate-800/40 border-slate-800 text-slate-500'
+              entrySignalResult.conditions.candleBodyRatioMet
+                ? 'bg-emerald-50 dark:bg-emerald-500/20 border-emerald-500/50 text-emerald-800 dark:text-emerald-300 font-bold shadow-xs'
+                : 'bg-slate-100 dark:bg-slate-800/60 border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-300 font-semibold shadow-xs'
             }`}>
               <span>உடல் &gt;= 50%</span>
-              <span>{entrySignalResult.conditions.candleBodyRatioMet ? '✓' : '✗'}</span>
+              <span className="font-bold text-xs">{entrySignalResult.conditions.candleBodyRatioMet ? '✓' : '✗'}</span>
             </div>
             <div className={`p-2 rounded-lg border flex items-center justify-between ${
-              entrySignalResult.conditions.volumeSurgeMet ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400' : 'bg-slate-800/40 border-slate-800 text-slate-500'
+              entrySignalResult.conditions.volumeSurgeMet
+                ? 'bg-emerald-50 dark:bg-emerald-500/20 border-emerald-500/50 text-emerald-800 dark:text-emerald-300 font-bold shadow-xs'
+                : 'bg-slate-100 dark:bg-slate-800/60 border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-300 font-semibold shadow-xs'
             }`}>
               <span>அளவு &gt;= 1.2x 20MA</span>
-              <span>{entrySignalResult.conditions.volumeSurgeMet ? '✓' : '✗'}</span>
+              <span className="font-bold text-xs">{entrySignalResult.conditions.volumeSurgeMet ? '✓' : '✗'}</span>
             </div>
             <div className={`p-2 rounded-lg border flex items-center justify-between ${
-              entrySignalResult.conditions.notExtended ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400' : 'bg-slate-800/40 border-slate-800 text-slate-500'
+              entrySignalResult.conditions.notExtended
+                ? 'bg-emerald-50 dark:bg-emerald-500/20 border-emerald-500/50 text-emerald-800 dark:text-emerald-300 font-bold shadow-xs'
+                : 'bg-slate-100 dark:bg-slate-800/60 border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-300 font-semibold shadow-xs'
             }`}>
               <span>நீட்டிப்பு &lt;= 0.25%</span>
-              <span>{entrySignalResult.conditions.notExtended ? '✓' : '✗'}</span>
+              <span className="font-bold text-xs">{entrySignalResult.conditions.notExtended ? '✓' : '✗'}</span>
             </div>
           </div>
         </div>
@@ -901,48 +913,48 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
                 பிரிவு 7: ஆபத்து மேலாண்மை (Risk Management: Capital ₹25,000 | 2% Risk = ₹500)
               </h3>
             </div>
-            <span className="text-[10px] text-slate-500">
+            <span className="text-[10px] text-slate-700 dark:text-slate-400 font-bold">
               ஸ்லிப்பேஜ்: 1 டிக் (₹0.05) சேர்க்கப்பட்டது | R:R இலக்கு: 1:1.5
             </span>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             <div className="bg-slate-50 dark:bg-slate-900/80 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800">
-              <span className="text-[10px] text-slate-500 uppercase block">ஆபத்து வரவு (Risk Budget)</span>
+              <span className="text-[10px] text-slate-700 dark:text-slate-400 font-bold uppercase block">ஆபத்து வரவு (Risk Budget)</span>
               <span className="text-sm font-bold text-cyan-600 dark:text-cyan-400">₹{riskPlan.riskBudget.toFixed(2)}</span>
-              <span className="text-[9px] text-slate-400 block mt-0.5">{orbConfig.riskAndExit.riskPerTradePercent}% of ₹{orbConfig.riskAndExit.capital}</span>
+              <span className="text-[9px] text-slate-600 dark:text-slate-400 font-semibold block mt-0.5">{orbConfig.riskAndExit.riskPerTradePercent}% of ₹{orbConfig.riskAndExit.capital}</span>
             </div>
 
             <div className="bg-slate-50 dark:bg-slate-900/80 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800">
-              <span className="text-[10px] text-slate-500 uppercase block">யூனிட் ஆபத்து (Risk / Unit)</span>
+              <span className="text-[10px] text-slate-700 dark:text-slate-400 font-bold uppercase block">யூனிட் ஆபத்து (Risk / Unit)</span>
               <span className="text-sm font-bold text-slate-900 dark:text-white">₹{riskPlan.riskPerUnit.toFixed(2)}</span>
-              <span className="text-[9px] text-slate-400 block mt-0.5">Entry - SL</span>
+              <span className="text-[9px] text-slate-600 dark:text-slate-400 font-semibold block mt-0.5">Entry - SL</span>
             </div>
 
             <div className="bg-slate-50 dark:bg-slate-900/80 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800">
-              <span className="text-[10px] text-slate-500 uppercase block">லாட்கள் அளவு (Lots)</span>
-              <span className={`text-sm font-bold ${riskPlan.isRiskExceeded ? 'text-rose-500' : 'text-emerald-500'}`}>
+              <span className="text-[10px] text-slate-700 dark:text-slate-400 font-bold uppercase block">லாட்கள் அளவு (Lots)</span>
+              <span className={`text-sm font-bold ${riskPlan.isRiskExceeded ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
                 {riskPlan.lotsCount} லாட்கள் ({riskPlan.finalQuantity} Qty)
               </span>
-              <span className="text-[9px] text-slate-400 block mt-0.5">Lot Size: {lotSize}</span>
+              <span className="text-[9px] text-slate-600 dark:text-slate-400 font-semibold block mt-0.5">Lot Size: {lotSize}</span>
             </div>
 
             <div className="bg-slate-50 dark:bg-slate-900/80 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800">
-              <span className="text-[10px] text-slate-500 uppercase block">மொத்த பிரீமியம் (Outlay)</span>
+              <span className="text-[10px] text-slate-700 dark:text-slate-400 font-bold uppercase block">மொத்த பிரீமியம் (Outlay)</span>
               <span className="text-sm font-bold text-slate-900 dark:text-white">₹{riskPlan.totalPremiumOutlay.toFixed(2)}</span>
-              <span className="text-[9px] text-slate-400 block mt-0.5">Qty x Entry</span>
+              <span className="text-[9px] text-slate-600 dark:text-slate-400 font-semibold block mt-0.5">Qty x Entry</span>
             </div>
 
             <div className="bg-slate-50 dark:bg-slate-900/80 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800">
-              <span className="text-[10px] text-slate-500 uppercase block">மதிப்பிடப்பட்ட நிகர லாபம் (1:1.5)</span>
-              <span className="text-sm font-bold text-emerald-500">₹{riskPlan.estimatedNetProfit.toFixed(2)}</span>
-              <span className="text-[9px] text-slate-400 block mt-0.5">Net of taxes &amp; ₹40 brokerage</span>
+              <span className="text-[10px] text-slate-700 dark:text-slate-400 font-bold uppercase block">மதிப்பிடப்பட்ட நிகர லாபம் (1:1.5)</span>
+              <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">₹{riskPlan.estimatedNetProfit.toFixed(2)}</span>
+              <span className="text-[9px] text-slate-600 dark:text-slate-400 font-semibold block mt-0.5">Net of taxes &amp; ₹40 brokerage</span>
             </div>
 
             <div className="bg-slate-50 dark:bg-slate-900/80 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800">
-              <span className="text-[10px] text-slate-500 uppercase block">மதிப்பிடப்பட்ட கட்டணங்கள்</span>
-              <span className="text-sm font-bold text-amber-500">₹{riskPlan.estimatedBrokerageCharges.toFixed(2)}</span>
-              <span className="text-[9px] text-slate-400 block mt-0.5">STT + GST + SEBI + Stamp</span>
+              <span className="text-[10px] text-slate-700 dark:text-slate-400 font-bold uppercase block">மதிப்பிடப்பட்ட கட்டணங்கள்</span>
+              <span className="text-sm font-bold text-amber-600 dark:text-amber-400">₹{riskPlan.estimatedBrokerageCharges.toFixed(2)}</span>
+              <span className="text-[9px] text-slate-600 dark:text-slate-400 font-semibold block mt-0.5">STT + GST + SEBI + Stamp</span>
             </div>
           </div>
 
@@ -1258,7 +1270,7 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
               </div>
               <button
                 onClick={() => setIsConfigDrawerOpen(false)}
-                className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-white"
+                className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1267,10 +1279,10 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
             <div className="space-y-4">
               {/* Section 6.1 Time Windows */}
               <div className="space-y-2">
-                <span className="font-bold text-cyan-400 block">6.1 நேர சாளரங்கள் (Time Windows)</span>
+                <span className="font-bold text-cyan-600 dark:text-cyan-400 block text-xs">6.1 நேர சாளரங்கள் (Time Windows)</span>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[10px] text-slate-400 block">முதன்மை நுழைவு தொடக்கம்</label>
+                    <label className="text-[11px] font-bold text-slate-800 dark:text-slate-200 block mb-1">முதன்மை நுழைவு தொடக்கம்</label>
                     <input
                       type="text"
                       value={orbConfig.timeWindows.primaryEntryStart}
@@ -1278,11 +1290,11 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
                         ...orbConfig,
                         timeWindows: { ...orbConfig.timeWindows, primaryEntryStart: e.target.value }
                       })}
-                      className="w-full bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-white"
+                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 text-slate-900 dark:text-white font-bold text-sm focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-hidden"
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] text-slate-400 block">கட்டாய வெளியேறும் நேரம்</label>
+                    <label className="text-[11px] font-bold text-slate-800 dark:text-slate-200 block mb-1">கட்டாய வெளியேறும் நேரம்</label>
                     <input
                       type="text"
                       value={orbConfig.timeWindows.forceExitTime}
@@ -1290,7 +1302,7 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
                         ...orbConfig,
                         timeWindows: { ...orbConfig.timeWindows, forceExitTime: e.target.value }
                       })}
-                      className="w-full bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-white"
+                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 text-slate-900 dark:text-white font-bold text-sm focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-hidden"
                     />
                   </div>
                 </div>
@@ -1298,10 +1310,10 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
 
               {/* Section 6.2 Day Filter */}
               <div className="space-y-2">
-                <span className="font-bold text-cyan-400 block">6.2 நாள் வடிகட்டி வரம்புகள் (Day Filter)</span>
+                <span className="font-bold text-cyan-600 dark:text-cyan-400 block text-xs">6.2 நாள் வடிகட்டி வரம்புகள் (Day Filter)</span>
                 <div className="grid grid-cols-3 gap-3">
                   <div>
-                    <label className="text-[10px] text-slate-400 block">குறைந்தபட்ச OR அகலம் (%)</label>
+                    <label className="text-[11px] font-bold text-slate-800 dark:text-slate-200 block mb-1">குறைந்தபட்ச OR அகலம் (%)</label>
                     <input
                       type="number"
                       step="0.05"
@@ -1310,11 +1322,11 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
                         ...orbConfig,
                         dayFilter: { ...orbConfig.dayFilter, minRangeWidthPercent: Number(e.target.value) }
                       })}
-                      className="w-full bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-white"
+                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 text-slate-900 dark:text-white font-bold text-sm focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-hidden"
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] text-slate-400 block">அதிகபட்ச OR அகலம் (%)</label>
+                    <label className="text-[11px] font-bold text-slate-800 dark:text-slate-200 block mb-1">அதிகபட்ச OR அகலம் (%)</label>
                     <input
                       type="number"
                       step="0.05"
@@ -1323,11 +1335,11 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
                         ...orbConfig,
                         dayFilter: { ...orbConfig.dayFilter, maxRangeWidthPercent: Number(e.target.value) }
                       })}
-                      className="w-full bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-white"
+                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 text-slate-900 dark:text-white font-bold text-sm focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-hidden"
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] text-slate-400 block">அதிகபட்ச India VIX</label>
+                    <label className="text-[11px] font-bold text-slate-800 dark:text-slate-200 block mb-1">அதிகபட்ச India VIX</label>
                     <input
                       type="number"
                       step="1"
@@ -1336,7 +1348,7 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
                         ...orbConfig,
                         dayFilter: { ...orbConfig.dayFilter, maxIndiaVix: Number(e.target.value) }
                       })}
-                      className="w-full bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-white"
+                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 text-slate-900 dark:text-white font-bold text-sm focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-hidden"
                     />
                   </div>
                 </div>
@@ -1344,10 +1356,10 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
 
               {/* Section 7 Risk Management */}
               <div className="space-y-2">
-                <span className="font-bold text-cyan-400 block">7. ஆபத்து மேலாண்மை (Risk Management)</span>
+                <span className="font-bold text-cyan-600 dark:text-cyan-400 block text-xs">7. ஆபத்து மேலாண்மை (Risk Management)</span>
                 <div className="grid grid-cols-3 gap-3">
                   <div>
-                    <label className="text-[10px] text-slate-400 block">மூலதனம் (Capital ₹)</label>
+                    <label className="text-[11px] font-bold text-slate-800 dark:text-slate-200 block mb-1">மூலதனம் (Capital ₹)</label>
                     <input
                       type="number"
                       value={orbConfig.riskAndExit.capital}
@@ -1355,11 +1367,11 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
                         ...orbConfig,
                         riskAndExit: { ...orbConfig.riskAndExit, capital: Number(e.target.value) }
                       })}
-                      className="w-full bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-white"
+                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 text-slate-900 dark:text-white font-bold text-sm focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-hidden"
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] text-slate-400 block">வர்த்தக ஆபத்து % (0.5%–2%)</label>
+                    <label className="text-[11px] font-bold text-slate-800 dark:text-slate-200 block mb-1">வர்த்தக ஆபத்து % (0.5%–2%)</label>
                     <input
                       type="number"
                       step="0.1"
@@ -1370,11 +1382,11 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
                         ...orbConfig,
                         riskAndExit: { ...orbConfig.riskAndExit, riskPerTradePercent: Number(e.target.value) }
                       })}
-                      className="w-full bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-white"
+                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 text-slate-900 dark:text-white font-bold text-sm focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-hidden"
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] text-slate-400 block">இலக்கு விகிதம் (Target R:R)</label>
+                    <label className="text-[11px] font-bold text-slate-800 dark:text-slate-200 block mb-1">இலக்கு விகிதம் (Target R:R)</label>
                     <input
                       type="number"
                       step="0.1"
@@ -1383,7 +1395,7 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
                         ...orbConfig,
                         riskAndExit: { ...orbConfig.riskAndExit, targetMultiplier: Number(e.target.value) }
                       })}
-                      className="w-full bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-white"
+                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 text-slate-900 dark:text-white font-bold text-sm focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-hidden"
                     />
                   </div>
                 </div>
@@ -1393,13 +1405,13 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
             <div className="flex items-center justify-between pt-4 border-t border-slate-200 dark:border-slate-800">
               <button
                 onClick={handleResetConfigDefaults}
-                className="px-3 py-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-300 rounded-xl transition-all cursor-pointer"
+                className="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 font-bold rounded-xl transition-all cursor-pointer shadow-xs"
               >
                 இயல்புநிலை மீட்டமை (Reset)
               </button>
               <button
                 onClick={() => handleSaveConfig(orbConfig)}
-                className="px-5 py-2 bg-linear-to-r from-cyan-500 to-blue-600 text-black font-bold rounded-xl transition-all cursor-pointer shadow-lg shadow-cyan-500/20"
+                className="px-5 py-2 bg-linear-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black rounded-xl transition-all cursor-pointer shadow-lg shadow-cyan-500/20"
               >
                 அமைப்புகளை சேமி (Save Settings)
               </button>

@@ -90,17 +90,17 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Top micro ticker bar */}
       <div className="bg-slate-100 dark:bg-[#05070c] px-3 sm:px-6 py-1 border-b border-slate-200 dark:border-slate-900/80 flex items-center justify-between text-[11px] font-mono text-slate-600 dark:text-slate-400 transition-colors">
         <div className="flex items-center gap-3 overflow-x-auto no-scrollbar">
-          <span className="flex items-center gap-1 font-semibold text-slate-800 dark:text-slate-300">
+          <span className="flex items-center gap-1 font-bold text-slate-900 dark:text-slate-200">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             NSE NIFTY 50 INDEX
           </span>
           <span className="text-slate-400 dark:text-slate-600">|</span>
-          <span className="text-slate-600 dark:text-slate-400">EXPIRY: CURRENT WEEKLY (THURSDAY)</span>
+          <span className="text-slate-800 dark:text-slate-300 font-semibold">EXPIRY: CURRENT WEEKLY (THURSDAY)</span>
           <span className="text-slate-400 dark:text-slate-600 hidden sm:inline">|</span>
-          <span className="text-slate-600 dark:text-slate-400 hidden sm:inline">LOT SIZE: 25 / 50</span>
+          <span className="text-slate-800 dark:text-slate-300 font-semibold hidden sm:inline">LOT SIZE: 25 / 50</span>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-slate-500 hidden md:inline">Admin: {user?.email}</span>
+          <span className="text-slate-700 dark:text-slate-300 font-semibold hidden md:inline">Admin: {user?.email}</span>
           <div className="flex items-center gap-1.5">
             <span className={`w-2 h-2 rounded-full ${
               connectionMode === 'broker_api' ? 'bg-cyan-500' :
