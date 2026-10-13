@@ -16,7 +16,8 @@ import {
   Layers,
   History,
   Sun,
-  Moon
+  Moon,
+  Zap
 } from 'lucide-react';
 import { HOURLY_SLOTS } from '../../services/snapshotService';
 import type { MarketSnapshotRecord, ConnectionMode } from '../../types/optionChain';
@@ -40,6 +41,8 @@ interface HeaderProps {
   historicalSnapshots: MarketSnapshotRecord[];
   isMobileCompact: boolean;
   onToggleMobileCompact: () => void;
+  currentRoute?: string;
+  onNavigate?: (route: string) => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -61,10 +64,21 @@ export const Header: React.FC<HeaderProps> = ({
   historicalSnapshots,
   isMobileCompact: _isMobileCompact,
   onToggleMobileCompact,
+  currentRoute = '/',
+  onNavigate,
 }) => {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const isPositive = spotChange >= 0;
+
+  const handleNavigate = (route: string) => {
+    if (onNavigate) {
+      onNavigate(route);
+    } else {
+      window.history.pushState(null, '', route);
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    }
+  };
 
   // Filter snapshot slots for selected date
   const availableSlotsForDate = historicalSnapshots
@@ -138,6 +152,32 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="text-[10px] opacity-80">({isPositive ? '+' : ''}{spotChangePercent.toFixed(2)}%)</span>
             </div>
           </div>
+        </div>
+
+        {/* Primary App Module Navigation */}
+        <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-900/90 border border-slate-300 dark:border-slate-800 p-1 rounded-xl">
+          <button
+            onClick={() => handleNavigate('/')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+              currentRoute !== '/nifty-options'
+                ? 'bg-cyan-500 text-black shadow-md shadow-cyan-500/20'
+                : 'text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800/60'
+            }`}
+          >
+            <Layers className="w-3.5 h-3.5" />
+            <span>Option Chain</span>
+          </button>
+          <button
+            onClick={() => handleNavigate('/nifty-options')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+              currentRoute === '/nifty-options'
+                ? 'bg-cyan-500 text-black shadow-md shadow-cyan-500/20'
+                : 'text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800/60'
+            }`}
+          >
+            <Zap className="w-3.5 h-3.5" />
+            <span>NIFTY Options Analysis</span>
+          </button>
         </div>
 
         {/* Center: Live / Historical Hourly Selector */}

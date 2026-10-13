@@ -8,6 +8,7 @@ import { SettingsModal } from '../modals/SettingsModal';
 import { SnapshotManagerModal } from '../modals/SnapshotManagerModal';
 import { ActiveTradeSetupCard } from './ActiveTradeSetupCard';
 import { TradeSettingsCard } from './TradeSettingsCard';
+import { NiftyOptionsAnalysisPage } from '../niftyAnalysis/NiftyOptionsAnalysisPage';
 import { 
   niftyMarketService 
 } from '../../services/niftyApi';
@@ -88,6 +89,37 @@ export const OptionChainDashboard: React.FC = () => {
 
   // Trade Engine State (Strict Risk Management: Max SL Points & Risk-to-Reward Ratio)
   const [tradeSettings, setTradeSettings] = useState<TradeSettings>(getStoredTradeSettings());
+
+  // Active Navigation Module Route ('/' vs '/nifty-options')
+  const [currentRoute, setCurrentRoute] = useState<string>(() => {
+    const p = window.location.pathname;
+    const h = window.location.hash.replace('#', '');
+    if (p === '/nifty-options' || h === '/nifty-options' || h === 'nifty-options') return '/nifty-options';
+    return '/';
+  });
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const p = window.location.pathname;
+      const h = window.location.hash.replace('#', '');
+      if (p === '/nifty-options' || h === '/nifty-options' || h === 'nifty-options') {
+        setCurrentRoute('/nifty-options');
+      } else {
+        setCurrentRoute('/');
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    window.addEventListener('hashchange', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('hashchange', handlePopState);
+    };
+  }, []);
+
+  const handleNavigate = (route: string) => {
+    setCurrentRoute(route);
+    window.history.pushState(null, '', route);
+  };
 
   const showToast = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
     setToast(null);
@@ -367,64 +399,75 @@ export const OptionChainDashboard: React.FC = () => {
         historicalSnapshots={snapshots}
         isMobileCompact={isMobileCompact}
         onToggleMobileCompact={() => setIsMobileCompact(!isMobileCompact)}
+        currentRoute={currentRoute}
+        onNavigate={handleNavigate}
       />
 
-      {/* Broker Live Feed Warning / Expired Token Banner */}
-      {selectedSlot === 'LIVE' && brokerConfig.enabled && brokerStatus.error && (
-        <div className="bg-amber-50 dark:bg-amber-950/70 border-b border-amber-300 dark:border-amber-700/60 px-4 py-2 flex flex-wrap items-center justify-between gap-2 text-xs font-mono text-amber-900 dark:text-amber-200">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
-            <span className="font-semibold">{brokerStatus.error}</span>
-          </div>
-          <button
-            onClick={() => setIsSettingsOpen(true)}
-            className="px-2.5 py-1 bg-amber-500 hover:bg-amber-400 text-black font-bold text-[11px] rounded-lg shadow-xs flex items-center gap-1 cursor-pointer transition-all shrink-0"
-          >
-            <Key className="w-3 h-3" />
-            <span>Open Settings & Update Token</span>
-          </button>
-        </div>
+      {/* When on NIFTY Options Analysis page */}
+      {currentRoute === '/nifty-options' ? (
+        <main className="flex-1">
+          <NiftyOptionsAnalysisPage />
+        </main>
+      ) : (
+        <>
+          {/* Broker Live Feed Warning / Expired Token Banner */}
+          {selectedSlot === 'LIVE' && brokerConfig.enabled && brokerStatus.error && (
+            <div className="bg-amber-50 dark:bg-amber-950/70 border-b border-amber-300 dark:border-amber-700/60 px-4 py-2 flex flex-wrap items-center justify-between gap-2 text-xs font-mono text-amber-900 dark:text-amber-200">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                <span className="font-semibold">{brokerStatus.error}</span>
+              </div>
+              <button
+                onClick={() => setIsSettingsOpen(true)}
+                className="px-2.5 py-1 bg-amber-500 hover:bg-amber-400 text-black font-bold text-[11px] rounded-lg shadow-xs flex items-center gap-1 cursor-pointer transition-all shrink-0"
+              >
+                <Key className="w-3 h-3" />
+                <span>Open Settings & Update Token</span>
+              </button>
+            </div>
+          )}
+
+          {/* Conditional Highlights Legend & Market Pulse Bar */}
+          <HighlightLegend
+            metrics={metrics}
+            autoSaveCountdown={autoSaveCountdown}
+            isAutoSaveEnabled={isAutoSaveEnabled}
+            totalStrikesCount={rows.length}
+          />
+
+          {/* Main Table Content Container */}
+          <main className="flex-1 p-2 sm:p-4 max-w-[1600px] w-full mx-auto space-y-3">
+            {/* Active Trade Setup Banner (Top live calculation card) */}
+            <ActiveTradeSetupCard
+              activeSetups={activeSetups}
+              settings={tradeSettings}
+              atmRow={atmRow}
+              nearestItmCeRow={nearestItmCeRow}
+              nearestItmPeRow={nearestItmPeRow}
+              spotPrice={spotPrice}
+              onOpenSettings={() => setIsSettingsOpen(true)}
+              onTriggerTestBreakout={handleTriggerTestBreakout}
+              isSimulated={connectionMode === 'simulated'}
+            />
+
+            {/* Global Trade Settings (Admin Panel) */}
+            <TradeSettingsCard
+              settings={tradeSettings}
+              onUpdateSettings={handleUpdateTradeSettings}
+            />
+
+            {/* Desktop View (default on lg+) */}
+            <div className="hidden lg:block">
+              <OptionChainDesktopTable rows={rowsWithSignals} spotPrice={spotPrice} />
+            </div>
+
+            {/* Mobile / Tablet Responsive View */}
+            <div className="lg:hidden">
+              <OptionChainMobileTable rows={rowsWithSignals} spotPrice={spotPrice} metrics={metrics} />
+            </div>
+          </main>
+        </>
       )}
-
-      {/* Conditional Highlights Legend & Market Pulse Bar */}
-      <HighlightLegend
-        metrics={metrics}
-        autoSaveCountdown={autoSaveCountdown}
-        isAutoSaveEnabled={isAutoSaveEnabled}
-        totalStrikesCount={rows.length}
-      />
-
-      {/* Main Table Content Container */}
-      <main className="flex-1 p-2 sm:p-4 max-w-[1600px] w-full mx-auto space-y-3">
-        {/* Active Trade Setup Banner (Top live calculation card) */}
-        <ActiveTradeSetupCard
-          activeSetups={activeSetups}
-          settings={tradeSettings}
-          atmRow={atmRow}
-          nearestItmCeRow={nearestItmCeRow}
-          nearestItmPeRow={nearestItmPeRow}
-          spotPrice={spotPrice}
-          onOpenSettings={() => setIsSettingsOpen(true)}
-          onTriggerTestBreakout={handleTriggerTestBreakout}
-          isSimulated={connectionMode === 'simulated'}
-        />
-
-        {/* Global Trade Settings (Admin Panel) */}
-        <TradeSettingsCard
-          settings={tradeSettings}
-          onUpdateSettings={handleUpdateTradeSettings}
-        />
-
-        {/* Desktop View (default on lg+) */}
-        <div className="hidden lg:block">
-          <OptionChainDesktopTable rows={rowsWithSignals} spotPrice={spotPrice} />
-        </div>
-
-        {/* Mobile / Tablet Responsive View */}
-        <div className="lg:hidden">
-          <OptionChainMobileTable rows={rowsWithSignals} spotPrice={spotPrice} metrics={metrics} />
-        </div>
-      </main>
 
       {/* Modals */}
       <FormulasModal
