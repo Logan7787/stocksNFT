@@ -171,5 +171,102 @@ export interface BacktestResult {
   maxDrawdown: number;
   avgWin: number;
   avgLoss: number;
+  expectancyPerTrade: number;
+  inSampleTradesCount?: number;
+  inSampleNetPnl?: number;
+  outOfSampleTradesCount?: number;
+  outOfSampleNetPnl?: number;
   trades: BacktestTrade[];
 }
+
+export interface OpeningRange {
+  high: number;
+  low: number;
+  width: number;
+  widthPercent: number; // (width / indexPrice) * 100
+  isFormed: boolean;
+  isValidWidth: boolean;// between 0.15% and 0.60%
+  timestampRecorded?: string;
+}
+
+export interface DayFilterResult {
+  canTrade: boolean;
+  reason: string;
+  reasonTamil: string;
+  rangeWidthPercent: number;
+  indiaVix?: number;
+  isEventDay: boolean;
+  isExpiryAfter13: boolean;
+  statusBadge: 'PASSED' | 'NO_TRADE_TODAY';
+}
+
+export interface MarkedStrike {
+  contractName: string;
+  symbol: string;
+  strike: number;
+  optionType: OptionType;
+  expiryDate: string;
+  daysToExpiry: number;
+  isAtmOrItm1: boolean;
+  premium: number;
+  delta: number;
+  bid: number;
+  ask: number;
+  spread: number;
+  spreadPercent: number;
+  volume: number;
+  openInterest: number;
+  capitalCost: number;       // premium * lotSize
+  capitalCheckPassed: boolean;// premium * lotSize <= 60% of available capital
+  markedAtTime: string;
+  markedCandleIndex: number;
+  candlesElapsed: number;
+  isExpired: boolean;        // expires if 6 candles (30m) pass without trigger
+  rejectionReason?: string;
+}
+
+export interface OrbTimeWindowState {
+  currentTime: string;
+  currentPhase: 'OBSERVE_ONLY' | 'PRIMARY_ENTRY' | 'NO_ENTRY_ZONE' | 'SECONDARY_ENTRY' | 'HARD_CUTOFF' | 'FORCE_EXIT' | 'MARKET_CLOSED';
+  canEnterNewTrade: boolean;
+  isForceExitTime: boolean;
+  timeWindowLabel: string;
+  timeWindowLabelTamil: string;
+}
+
+export interface OrbExitSignal {
+  shouldExit: boolean;
+  exitReason: 'STOP_LOSS' | 'TARGET_HIT' | 'BREAKEVEN' | 'TRAILING_SL' | 'MOMENTUM_FAILURE' | 'TIME_STOP' | 'FORCE_EXIT_1515' | 'STALE_FEED' | 'NONE';
+  exitReasonTamil: string;
+  suggestedExitPrice: number;
+  currentRMultiple: number;
+  trailStopLevel: number;
+}
+
+export interface DailyDisciplineState {
+  tradesCompletedToday: number;
+  maxTradesAllowed: number;  // 2
+  consecutiveLosses: number; // Stop after 2 consecutive losses
+  isDailyLossLimitHit: boolean; // 3% of capital
+  isTradeHaltedForDay: boolean;
+  haltReason?: string;
+  isCooldownActive: boolean; // 3 candles cooldown in same direction after SL
+  cooldownCandlesRemaining: number;
+  cooldownDirection?: OptionType;
+  dailyRealizedPnl: number;
+  softProfitLockTriggered: boolean; // Daily profit >= ₹1,500
+}
+
+export interface ValidationGatesStatus {
+  paperTradesCount: number;
+  profitFactor: number;
+  expectancyPerTrade: number;
+  maxDrawdownPercent: number;
+  gate1PaperTradesMet: boolean;  // >= 100
+  gate2ProfitFactorMet: boolean; // > 1.3
+  gate3ExpectancyMet: boolean;   // > 0
+  gate4DrawdownMet: boolean;     // < 10%
+  isValidated: boolean;          // ALL 4 gates met
+  statusText: 'VALIDATED' | 'NOT VALIDATED';
+}
+

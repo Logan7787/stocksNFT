@@ -71,40 +71,46 @@ export function calculateEstimatedCharges(
  */
 export function calculateRiskManagementPlan(params: {
   availableCapital?: number;       // default ₹25,000
-  riskPercentage?: number;         // default 1.0%
+  riskPercentage?: number;         // default 2.0% (₹500)
   entryPrice: number;
   stopLossPrice?: number;          // optional, default entry * 0.98
-  riskRewardRatio?: number;        // default 2.0 (1:2)
-  lotSize?: number;                // default 25 or 50
+  riskRewardRatio?: number;        // default 1.5 (1:1.5 R:R)
+  lotSize?: number;                // default 25
   dailyRealizedPnl?: number;       // default 0
   dailyUnrealizedPnl?: number;     // default 0
-  maxDailyLoss?: number;           // default ₹1,000
+  maxDailyLoss?: number;           // default ₹750 (3% of capital)
+  slippageTicks?: number;          // default 1 tick
 }): RiskManagementPlan {
   const {
     availableCapital = 25000,
-    riskPercentage = 1.0,
+    riskPercentage = 2.0,
     entryPrice,
-    riskRewardRatio = 2.0,
+    riskRewardRatio = 1.5,
     lotSize = 25,
     dailyRealizedPnl = 0,
     dailyUnrealizedPnl = 0,
-    maxDailyLoss = 1000,
+    maxDailyLoss = 750,
+    slippageTicks = 1,
   } = params;
+
+  // Model slippage (1 tick = 0.05 against trader)
+  const slippage = slippageTicks * 0.05;
+  const effectiveEntry = roundToTick(entryPrice + slippage);
 
   // 1. Calculate Risk Budget = Capital * Risk% / 100
   const riskBudget = Math.round(((availableCapital * riskPercentage) / 100) * 100) / 100;
 
-  // 2. Experimental default Stop Loss = Entry * 0.98 (2% stop loss, rounded to 0.05 tick)
-  const defaultSl = roundToTick(entryPrice * 0.98);
+  // 2. Experimental default Stop Loss = Entry * 0.98 (rounded to 0.05 tick)
+  const defaultSl = roundToTick(effectiveEntry * 0.98);
   const stopLossPrice = params.stopLossPrice !== undefined && params.stopLossPrice > 0
     ? roundToTick(params.stopLossPrice)
     : defaultSl;
 
   // Risk per unit = Entry - StopLoss
-  const riskPerUnit = Math.max(0.05, Math.round((entryPrice - stopLossPrice) * 100) / 100);
+  const riskPerUnit = Math.max(0.05, Math.round((effectiveEntry - stopLossPrice) * 100) / 100);
 
-  // 3. Target Price = Entry + R:R * (Entry - StopLoss)
-  const targetPrice = roundToTick(entryPrice + riskRewardRatio * riskPerUnit);
+  // 3. Target Price = Entry + 1.5 * (Entry - StopLoss)
+  const targetPrice = roundToTick(effectiveEntry + riskRewardRatio * riskPerUnit);
 
   // 4. Raw Quantity = Floor(Risk Budget / Risk per unit)
   const rawQuantity = Math.floor(riskBudget / riskPerUnit);

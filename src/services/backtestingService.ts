@@ -32,6 +32,7 @@ export function runBacktest(
       maxDrawdown: 0,
       avgWin: 0,
       avgLoss: 0,
+      expectancyPerTrade: 0,
       trades: [],
     };
   }
@@ -134,6 +135,13 @@ export function runBacktest(
   let maxDrawdown = 0;
   let cumNet = 0;
 
+  // 60% in-sample / 40% out-of-sample split boundary
+  const splitIndex = Math.floor(candles.length * 0.60);
+  let inSampleTradesCount = 0;
+  let inSampleNetPnl = 0;
+  let outOfSampleTradesCount = 0;
+  let outOfSampleNetPnl = 0;
+
   trades.forEach((t) => {
     grossPnl += t.grossPnl;
     netPnl += t.netPnl;
@@ -150,6 +158,16 @@ export function runBacktest(
       lossTrades++;
       lossSum += Math.abs(t.netPnl);
     }
+
+    // Check if entry was in the first 60% of candles
+    const tradeCandleIdx = candles.findIndex((c) => c.timestamp === t.entryTime);
+    if (tradeCandleIdx !== -1 && tradeCandleIdx < splitIndex) {
+      inSampleTradesCount++;
+      inSampleNetPnl += t.netPnl;
+    } else {
+      outOfSampleTradesCount++;
+      outOfSampleNetPnl += t.netPnl;
+    }
   });
 
   const totalTrades = trades.length;
@@ -157,6 +175,13 @@ export function runBacktest(
   const avgWin = winTrades > 0 ? Math.round((winSum / winTrades) * 100) / 100 : 0;
   const avgLoss = lossTrades > 0 ? Math.round((lossSum / lossTrades) * 100) / 100 : 0;
   const profitFactor = lossSum > 0 ? Math.round((winSum / lossSum) * 100) / 100 : winSum > 0 ? 999 : 0;
+
+  // Expectancy Per Trade = (WinRate * AvgWin) - (LossRate * AvgLoss) - AvgCommission
+  const winRateFrac = totalTrades > 0 ? winTrades / totalTrades : 0;
+  const lossRateFrac = 1 - winRateFrac;
+  const expectancyPerTrade = totalTrades > 0
+    ? Math.round(((winRateFrac * avgWin) - (lossRateFrac * avgLoss) - (brokeragePerOrder * 2)) * 100) / 100
+    : 0;
 
   return {
     totalTrades,
@@ -169,6 +194,11 @@ export function runBacktest(
     maxDrawdown: Math.round(maxDrawdown * 100) / 100,
     avgWin,
     avgLoss,
+    expectancyPerTrade,
+    inSampleTradesCount,
+    inSampleNetPnl: Math.round(inSampleNetPnl * 100) / 100,
+    outOfSampleTradesCount,
+    outOfSampleNetPnl: Math.round(outOfSampleNetPnl * 100) / 100,
     trades,
   };
 }

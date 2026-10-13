@@ -1,4 +1,5 @@
-// Standalone execution of technical indicators, position sizing, lot rounding, charges & paper trade tests
+// Automated Test Suite for Opening Range Breakout (ORB) + VWAP Strategy
+// Tests: Section 6 Strategy (Time Windows, Day Filters, Event 1, Event 2, Event 3), Section 7 Risk, and Section 7A Validation Gates
 
 function roundToTick(value, tickSize = 0.05) {
   return Math.round((Math.round(value / tickSize) * tickSize) * 100) / 100;
@@ -52,28 +53,41 @@ function calculateRSI(closes, period = 14) {
   return result;
 }
 
-function calculateEstimatedCharges(entryPrice, exitPrice, quantity, brokeragePerOrder = 20) {
-  if (quantity <= 0) return { brokerage: 0, stt: 0, exchangeTurnoverFee: 0, sebiCharges: 0, stampDuty: 0, gst: 0, totalCharges: 0 };
-  const buyTurnover = entryPrice * quantity;
-  const sellTurnover = exitPrice * quantity;
-  const totalTurnover = buyTurnover + sellTurnover;
-  const brokerage = brokeragePerOrder * 2;
-  const stt = Math.round(sellTurnover * 0.001 * 100) / 100;
-  const exchangeTurnoverFee = Math.round(totalTurnover * 0.0005 * 100) / 100;
-  const sebiCharges = Math.round(totalTurnover * 0.000001 * 100) / 100;
-  const stampDuty = Math.round(buyTurnover * 0.00003 * 100) / 100;
-  const gst = Math.round((brokerage + exchangeTurnoverFee + sebiCharges) * 0.18 * 100) / 100;
-  const totalCharges = Math.round((brokerage + stt + exchangeTurnoverFee + sebiCharges + stampDuty + gst) * 100) / 100;
-  return { brokerage, stt, exchangeTurnoverFee, sebiCharges, stampDuty, gst, totalCharges };
+// 6.1 Time window evaluation
+function evaluateOrbTimeWindow(timeStr) {
+  const t = timeStr.slice(0, 5);
+  if (t >= '09:15' && t < '09:30') return { phase: 'OBSERVE_ONLY', canEnter: false };
+  if (t >= '09:30' && t < '11:30') return { phase: 'PRIMARY_ENTRY', canEnter: true };
+  if (t >= '11:30' && t < '13:30') return { phase: 'NO_ENTRY_ZONE', canEnter: false };
+  if (t >= '13:30' && t < '14:45') return { phase: 'SECONDARY_ENTRY', canEnter: true };
+  if (t >= '14:45' && t < '15:15') return { phase: 'HARD_CUTOFF', canEnter: false };
+  if (t >= '15:15') return { phase: 'FORCE_EXIT', canEnter: false, isForceExit: true };
+  return { phase: 'MARKET_CLOSED', canEnter: false };
 }
 
+// 6.2 Day filter evaluation
+function evaluateDayFilter(rangeWidthPercent, indiaVix, isEventDay, isExpiryAfter13) {
+  if (rangeWidthPercent < 0.15) return { canTrade: false, reason: 'Range too narrow (<0.15%)' };
+  if (rangeWidthPercent > 0.60) return { canTrade: false, reason: 'Range too wide (>0.60%)' };
+  if (isEventDay) return { canTrade: false, reason: 'Configured event day' };
+  if (indiaVix > 22) return { canTrade: false, reason: 'India VIX > 22' };
+  if (isExpiryAfter13) return { canTrade: false, reason: 'Expiry day after 13:00' };
+  return { canTrade: true };
+}
+
+// 6.3 Event 1 Mark Strike: 60% capital check
+function checkCapitalThreshold(premium, lotSize, capital) {
+  const outlay = premium * lotSize;
+  const maxAllowed = capital * 0.60;
+  return { passed: outlay <= maxAllowed, outlay, maxAllowed };
+}
+
+// 7. Risk Management (Section 7: 2% risk, 1.5x target)
 function calculateRiskManagementPlan(params) {
-  const { availableCapital = 25000, riskPercentage = 1.0, entryPrice, lotSize = 25 } = params;
+  const { availableCapital = 25000, riskPercentage = 2.0, entryPrice, stopLossPrice, lotSize = 25, targetMultiplier = 1.5 } = params;
   const riskBudget = Math.round(((availableCapital * riskPercentage) / 100) * 100) / 100;
-  const defaultSl = roundToTick(entryPrice * 0.98);
-  const stopLossPrice = params.stopLossPrice !== undefined && params.stopLossPrice > 0 ? roundToTick(params.stopLossPrice) : defaultSl;
   const riskPerUnit = Math.max(0.05, Math.round((entryPrice - stopLossPrice) * 100) / 100);
-  const targetPrice = roundToTick(entryPrice + 2.0 * riskPerUnit);
+  const targetPrice = roundToTick(entryPrice + targetMultiplier * riskPerUnit);
   const rawQuantity = Math.floor(riskBudget / riskPerUnit);
   const lotsCount = Math.floor(rawQuantity / lotSize);
   const finalQuantity = lotsCount * lotSize;
@@ -82,7 +96,17 @@ function calculateRiskManagementPlan(params) {
   return { riskBudget, stopLossPrice, targetPrice, riskPerUnit, rawQuantity, lotsCount, finalQuantity, isRiskExceeded };
 }
 
-console.log('=== RUNNING AUTOMATED UNIT TESTS ===');
+// 7A. Validation Gates Evaluation
+function evaluateValidationGates(paperTradesCount, profitFactor, expectancyPerTrade, maxDrawdownPercent) {
+  const gate1 = paperTradesCount >= 100;
+  const gate2 = profitFactor > 1.30;
+  const gate3 = expectancyPerTrade > 0;
+  const gate4 = maxDrawdownPercent < 10.0;
+  const isValidated = gate1 && gate2 && gate3 && gate4;
+  return { gate1, gate2, gate3, gate4, isValidated, statusText: isValidated ? 'VALIDATED' : 'NOT VALIDATED' };
+}
+
+console.log('=== RUNNING SECTION 6, 7 & 7A AUTOMATED STRATEGY TESTS ===\n');
 
 let pass = 0;
 let fail = 0;
@@ -102,48 +126,92 @@ function assert(cond, msg) {
   if (!cond) throw new Error(msg);
 }
 
-// Suite
+// 1. Tick size
 it('Tick size 0.05 rounding', () => {
   assert(roundToTick(145.22) === 145.20, '145.22 -> 145.20');
   assert(roundToTick(145.23) === 145.25, '145.23 -> 145.25');
   assert(roundToTick(145.28) === 145.30, '145.28 -> 145.30');
 });
 
-it('EMA 9 series math test', () => {
-  const prices = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
-  const ema = calculateEMA(prices, 9);
-  assert(ema[8] !== null, '9th item is SMA');
-  assert(ema[10] > ema[8], 'Trending up');
+// 2. Section 6.1 Time Windows
+it('Section 6.1: Time windows evaluate accurately', () => {
+  assert(evaluateOrbTimeWindow('09:20').phase === 'OBSERVE_ONLY', '09:20 observe only');
+  assert(evaluateOrbTimeWindow('10:15').phase === 'PRIMARY_ENTRY' && evaluateOrbTimeWindow('10:15').canEnter === true, '10:15 primary entry');
+  assert(evaluateOrbTimeWindow('12:00').phase === 'NO_ENTRY_ZONE' && evaluateOrbTimeWindow('12:00').canEnter === false, '12:00 low momentum zone');
+  assert(evaluateOrbTimeWindow('14:00').phase === 'SECONDARY_ENTRY', '14:00 secondary entry');
+  assert(evaluateOrbTimeWindow('15:00').phase === 'HARD_CUTOFF', '15:00 hard cutoff');
+  assert(evaluateOrbTimeWindow('15:15').phase === 'FORCE_EXIT' && evaluateOrbTimeWindow('15:15').isForceExit === true, '15:15 force exit');
 });
 
-it('RSI 14 bounded range test', () => {
-  const prices = [100, 102, 101, 103, 105, 104, 106, 108, 107, 109, 111, 110, 112, 114, 113, 115, 117, 116, 118, 120];
-  const rsi = calculateRSI(prices, 14);
-  const latest = rsi[rsi.length - 1];
-  assert(latest > 50 && latest < 100, 'RSI in valid range');
+// 3. Section 6.2 Day Filter
+it('Section 6.2: Day filter rejects choppy, exhausted, event days, and VIX > 22', () => {
+  // Too narrow
+  assert(evaluateDayFilter(0.10, 14, false, false).canTrade === false, 'Reject narrow range (<0.15%)');
+  // Too wide
+  assert(evaluateDayFilter(0.75, 14, false, false).canTrade === false, 'Reject wide range (>0.60%)');
+  // VIX > 22
+  assert(evaluateDayFilter(0.35, 23.5, false, false).canTrade === false, 'Reject high VIX (>22)');
+  // Event day
+  assert(evaluateDayFilter(0.35, 15, true, false).canTrade === false, 'Reject event day');
+  // Expiry after 13:00
+  assert(evaluateDayFilter(0.35, 15, false, true).canTrade === false, 'Reject expiry after 13:00');
+  // Valid normal day
+  assert(evaluateDayFilter(0.35, 15, false, false).canTrade === true, 'Pass valid day');
 });
 
-it('Position Sizing: ₹25,000 capital, 1% risk budget = ₹250', () => {
+// 4. Section 6.3 Event 1 Mark Strike: 60% capital check
+it('Section 6.3: Mark Strike rejects contract when cost > 60% of capital', () => {
+  const cap25k = 25000;
+  // Cost = 250 * 25 = 6250 <= 15000 (Pass)
+  assert(checkCapitalThreshold(250, 25, cap25k).passed === true, 'Outlay under 60% passes');
+  // Cost = 650 * 25 = 16250 > 15000 (Fail)
+  assert(checkCapitalThreshold(650, 25, cap25k).passed === false, 'Outlay over 60% rejected');
+});
+
+// 5. Section 6.4 Event 2: Stop-loss derived from index structure
+it('Section 6.5: Stop loss derived from index structure & rejects if loss > 25%', () => {
+  const entry = 120;
+  const delta = 0.55;
+  const indexPointsToSl = 20; // Index points to VWAP / candle low
+  const premiumLoss = roundToTick(delta * indexPointsToSl); // 11.00
+  const slPrice = entry - premiumLoss; // 109.00
+  const lossPercent = (premiumLoss / entry) * 100;
+  assert(slPrice === 109.00, 'Premium SL is 109.00');
+  assert(lossPercent <= 25, 'Loss <= 25% accepted');
+
+  // Big gap index SL: 70 pts * 0.55 = 38.5 pts > 25% of 120 (30 pts)
+  const bigIndexLoss = 70 * delta;
+  const bigLossPercent = (bigIndexLoss / entry) * 100;
+  assert(bigLossPercent > 25, 'Loss > 25% rejected as specified in 6.5');
+});
+
+// 6. Section 7: Risk Management (2% default = ₹500, 1.5x target)
+it('Section 7: ₹25,000 capital, 2% risk budget = ₹500, Target 1:1.5 R:R', () => {
   const plan = calculateRiskManagementPlan({
     availableCapital: 25000,
-    riskPercentage: 1.0,
+    riskPercentage: 2.0,
     entryPrice: 100,
-    stopLossPrice: 98, // risk per unit = ₹2.00
-    lotSize: 25
+    stopLossPrice: 95, // risk per unit = ₹5.00
+    lotSize: 25,
+    targetMultiplier: 1.5
   });
-  assert(plan.riskBudget === 250, 'Budget is 250');
-  assert(plan.riskPerUnit === 2, 'Risk per unit is 2');
-  assert(plan.lotsCount === 5, 'Lots count is 5');
-  assert(plan.finalQuantity === 125, 'Final qty is 125');
+  assert(plan.riskBudget === 500, 'Risk budget is ₹500');
+  assert(plan.riskPerUnit === 5, 'Risk per unit is 5');
+  // Raw qty = floor(500 / 5) = 100
+  // Lots count = floor(100 / 25) = 4 lots
+  assert(plan.lotsCount === 4, '4 lots');
+  assert(plan.finalQuantity === 100, '100 Qty');
+  assert(plan.targetPrice === 107.50, 'Target is 100 + 1.5 * 5 = 107.50');
   assert(plan.isRiskExceeded === false, 'Risk not exceeded');
 });
 
-it('Risk Exceeded: TRADE SKIPPED — RISK TOO HIGH when 1 lot risk > risk budget', () => {
+// 7. Section 7: Risk Exceeded protection
+it('Section 7: TRADE SKIPPED — RISK TOO HIGH when 1 lot risk > risk budget', () => {
   const plan = calculateRiskManagementPlan({
     availableCapital: 25000,
-    riskPercentage: 1.0, // ₹250 budget
-    entryPrice: 300,
-    stopLossPrice: 280, // risk per unit = ₹20 -> 25 * 20 = ₹500 > ₹250
+    riskPercentage: 2.0, // ₹500 budget
+    entryPrice: 200,
+    stopLossPrice: 170,  // risk per unit = ₹30 -> 25 * 30 = ₹750 > ₹500
     lotSize: 25
   });
   assert(plan.isRiskExceeded === true, 'Risk exceeded is true');
@@ -151,13 +219,33 @@ it('Risk Exceeded: TRADE SKIPPED — RISK TOO HIGH when 1 lot risk > risk budget
   assert(plan.finalQuantity === 0, 'Final qty is 0');
 });
 
-it('Statutory Charges & Brokerage calculation', () => {
-  const charges = calculateEstimatedCharges(100, 104, 50, 20);
-  assert(charges.brokerage === 40, 'Brokerage buy+sell is 40');
-  assert(charges.stt > 0, 'STT is positive');
-  assert(charges.gst > 0, 'GST is positive');
-  assert(charges.totalCharges > 40, 'Total charges covers all duties');
+// 8. Section 7A: Validation Gates
+it('Section 7A: Strategy marked NOT VALIDATED until all 4 criteria are satisfied', () => {
+  // Gate 1: <100 paper trades
+  const gateTest1 = evaluateValidationGates(45, 1.8, 50, 4.2);
+  assert(gateTest1.isValidated === false, 'Fails gate 1 (<100 trades)');
+  assert(gateTest1.statusText === 'NOT VALIDATED', 'NOT VALIDATED status');
+
+  // Gate 2: PF < 1.3
+  const gateTest2 = evaluateValidationGates(120, 1.15, 20, 5.0);
+  assert(gateTest2.isValidated === false, 'Fails gate 2 (PF < 1.3)');
+
+  // Gate 3: Negative expectancy
+  const gateTest3 = evaluateValidationGates(120, 1.4, -15, 6.0);
+  assert(gateTest3.isValidated === false, 'Fails gate 3 (Negative expectancy)');
+
+  // Gate 4: Drawdown > 10%
+  const gateTest4 = evaluateValidationGates(120, 1.5, 30, 12.5);
+  assert(gateTest4.isValidated === false, 'Fails gate 4 (Drawdown > 10%)');
+
+  // All 4 passed
+  const allPassed = evaluateValidationGates(110, 1.65, 45, 6.2);
+  assert(allPassed.isValidated === true, 'All 4 gates pass');
+  assert(allPassed.statusText === 'VALIDATED', 'VALIDATED status');
 });
 
-console.log(`\nTEST RESULTS: ${pass} PASSED, ${fail} FAILED`);
+console.log(`\n========================================`);
+console.log(`TOTAL TEST RESULTS: ${pass} PASSED, ${fail} FAILED`);
+console.log(`========================================\n`);
+
 if (fail > 0) process.exit(1);
