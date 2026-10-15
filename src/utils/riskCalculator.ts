@@ -75,7 +75,7 @@ export function calculateRiskManagementPlan(params: {
   entryPrice: number;
   stopLossPrice?: number;          // optional, default entry * 0.98
   riskRewardRatio?: number;        // default 1.5 (1:1.5 R:R)
-  lotSize?: number;                // default 25
+  lotSize?: number;                // default 65
   dailyRealizedPnl?: number;       // default 0
   dailyUnrealizedPnl?: number;     // default 0
   maxDailyLoss?: number;           // default ₹750 (3% of capital)
@@ -86,7 +86,7 @@ export function calculateRiskManagementPlan(params: {
     riskPercentage = 2.0,
     entryPrice,
     riskRewardRatio = 1.5,
-    lotSize = 25,
+    lotSize = 65,
     dailyRealizedPnl = 0,
     dailyUnrealizedPnl = 0,
     maxDailyLoss = 750,

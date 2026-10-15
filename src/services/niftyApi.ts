@@ -11,12 +11,13 @@ export type TickListener = (data: {
 export type BrokerStatusListener = (status: BrokerStatus) => void;
 
 /**
- * Calculate the nearest upcoming Thursday/Tuesday NSE Expiry Date (YYYY-MM-DD)
+ * Calculate the nearest upcoming Tuesday NSE Expiry Date (YYYY-MM-DD)
  */
 export function calculateUpcomingExpiryDate(symbol: string = 'NIFTY'): string {
   const d = new Date();
-  let targetDay = 4; // Thursday default for NIFTY & BANKNIFTY
-  if (symbol === 'FINNIFTY') targetDay = 2; // Tuesday
+  let targetDay = 2; // Tuesday default for NIFTY & FINNIFTY (NSE weekly expiry)
+  if (symbol === 'FINNIFTY' || symbol === 'NIFTY') targetDay = 2; // Tuesday
+  else if (symbol === 'BANKNIFTY') targetDay = 3; // Wednesday
   else if (symbol === 'MIDCPNIFTY') targetDay = 1; // Monday
 
   const currentDay = d.getDay(); // 0 is Sun, 1 is Mon, 2 is Tue, 3 is Wed, 4 is Thu, 5 is Fri, 6 is Sat
@@ -39,8 +40,9 @@ export function calculateUpcomingExpiryDate(symbol: string = 'NIFTY'): string {
 export function generateFallbackExpiryDates(symbol: string = 'NIFTY'): string[] {
   const dates: string[] = [];
   const base = new Date();
-  let targetDay = 4; // Thursday
-  if (symbol === 'FINNIFTY') targetDay = 2;
+  let targetDay = 2; // Tuesday default for NIFTY & FINNIFTY
+  if (symbol === 'FINNIFTY' || symbol === 'NIFTY') targetDay = 2;
+  else if (symbol === 'BANKNIFTY') targetDay = 3;
   else if (symbol === 'MIDCPNIFTY') targetDay = 1;
 
   for (let i = 0; i < 8; i++) {

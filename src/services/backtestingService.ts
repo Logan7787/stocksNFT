@@ -13,7 +13,7 @@ export function runBacktest(
   config: StrategyConfig,
   capital: number = 25000,
   riskPercent: number = 1.0,
-  lotSize: number = 25,
+  lotSize: number = 65,
   slippagePoints: number = 0.2,
   brokeragePerOrder: number = 20
 ): BacktestResult {

@@ -95,9 +95,9 @@ export const Header: React.FC<HeaderProps> = ({
             NSE NIFTY 50 INDEX
           </span>
           <span className="text-slate-400 dark:text-slate-600">|</span>
-          <span className="text-slate-800 dark:text-slate-300 font-semibold">EXPIRY: CURRENT WEEKLY (THURSDAY)</span>
+          <span className="text-slate-800 dark:text-slate-300 font-semibold">EXPIRY: CURRENT WEEKLY (TUESDAY)</span>
           <span className="text-slate-400 dark:text-slate-600 hidden sm:inline">|</span>
-          <span className="text-slate-800 dark:text-slate-300 font-semibold hidden sm:inline">LOT SIZE: 25 / 50</span>
+          <span className="text-slate-800 dark:text-slate-300 font-semibold hidden sm:inline">LOT SIZE: 65</span>
         </div>
         <div className="flex items-center gap-3">
           <span className="text-slate-700 dark:text-slate-300 font-semibold hidden md:inline">Admin: {user?.email}</span>

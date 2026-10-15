@@ -143,7 +143,7 @@ export const CandlestickIndicatorChart: React.FC<CandlestickChartProps> = ({
       {/* Hover Candle Data Stats */}
       {activeCandle && (
         <div className="flex items-center gap-3 text-[11px] text-slate-800 dark:text-slate-200 font-semibold mb-2 overflow-x-auto no-scrollbar">
-          <span>நேரம் (Time): <strong className="text-slate-900 dark:text-white font-bold">{activeCandle.timestamp}</strong></span>
+          <span>Time: <strong className="text-slate-900 dark:text-white font-bold">{activeCandle.timestamp}</strong></span>
           <span>O: <strong className="text-slate-900 dark:text-white font-bold">{activeCandle.open.toFixed(2)}</strong></span>
           <span>H: <strong className="text-emerald-700 dark:text-emerald-400 font-bold">{activeCandle.high.toFixed(2)}</strong></span>
           <span>L: <strong className="text-rose-700 dark:text-rose-400 font-bold">{activeCandle.low.toFixed(2)}</strong></span>
@@ -254,7 +254,7 @@ export const CandlestickIndicatorChart: React.FC<CandlestickChartProps> = ({
                   y={rsiTop + 10}
                   className="fill-slate-500 dark:fill-slate-400 text-[10px] font-bold"
                 >
-                  RSI 14 (வாங்குதல் மண்டலம் / BUY ZONE: 55 - 70)
+                  RSI 14 (BUY ZONE: 55 - 70)
                 </text>
 
                 {/* Strategy Buy Zone Fill between 55 and 70 */}

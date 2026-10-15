@@ -74,7 +74,7 @@ export interface RiskManagementPlan {
   stopLossPrice: number;
   targetPrice: number;
   riskPerUnit: number;         // entry - stopLoss
-  lotSize: number;             // e.g. 25 or 50
+  lotSize: number;             // e.g. 65 (NIFTY)
   rawQuantity: number;
   lotsCount: number;
   finalQuantity: number;       // lotsCount * lotSize

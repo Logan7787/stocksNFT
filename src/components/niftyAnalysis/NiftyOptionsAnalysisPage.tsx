@@ -100,7 +100,7 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
   const [selectedExpiry, setSelectedExpiry] = useState<string>(calculateUpcomingExpiryDate('NIFTY'));
   const [availableExpiries, setAvailableExpiries] = useState<string[]>([]);
   const [selectedInterval, setSelectedInterval] = useState<CandleInterval>('5minute');
-  const [lotSize] = useState<number>(25); // NIFTY lot size: 25
+  const [lotSize] = useState<number>(65); // NIFTY lot size: 65
   const [indiaVix, setIndiaVix] = useState<number>(14.2); // Current India VIX
 
   // 3. Data Feeds & Real-Time Engine
@@ -330,7 +330,7 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
       if (triggeredTrades.length > 0) {
         savePaperTrades(updatedTrades);
         triggeredTrades.forEach((tr) => {
-          flashNotification(`காகித வர்த்தகம் முடிந்தது: ${tr.contractName} (${tr.exitReason}) | Net PnL: ₹${tr.netPnl}`);
+          flashNotification(`Paper trade completed: ${tr.contractName} (${tr.exitReason}) | Net PnL: ₹${tr.netPnl}`);
         });
       }
       return updatedTrades;
@@ -422,22 +422,22 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
   // Execute Paper Buy Order (Enforcing Daily Discipline & Time Windows)
   const handleExecutePaperBuy = () => {
     if (disciplineState.isTradeHaltedForDay) {
-      flashNotification(`வர்த்தகம் நிறுத்தப்பட்டது: ${disciplineState.haltReason}`);
+      flashNotification(`Trading halted: ${disciplineState.haltReason}`);
       return;
     }
 
     if (!timeWindowState.canEnterNewTrade) {
-      flashNotification(`வர்த்தக சாளரம் மூடப்பட்டுள்ளது: ${timeWindowState.timeWindowLabelTamil}`);
+      flashNotification(`Trading window closed: ${timeWindowState.timeWindowLabel}`);
       return;
     }
 
     if (riskPlan.isRiskExceeded) {
-      flashNotification('வர்த்தகம் தவிர்க்கப்பட்டது: 1 லாட்டின் ஆபத்து அனுமதிக்கப்பட்ட தொகையை விட அதிகம்!');
+      flashNotification('Trade skipped: Risk for 1 lot exceeds allowed risk budget!');
       return;
     }
 
     if (openPositions.length > 0) {
-      flashNotification('ஏற்கனவே ஒரு நிலை திறந்துள்ளது. ஒரு நேரத்தில் ஒரு நிலை மட்டுமே அனுமதிக்கப்படுகிறது.');
+      flashNotification('An open position already exists. Only one position allowed at a time.');
       return;
     }
 
@@ -460,7 +460,7 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
     const updated = [newTrade, ...paperTrades];
     setPaperTrades(updated);
     savePaperTrades(updated);
-    flashNotification(`காகித ஆணை செயல்படுத்தப்பட்டது (PAPER BUY): ${contractName} x ${riskPlan.finalQuantity} Qty`);
+    flashNotification(`Paper order executed (PAPER BUY): ${contractName} x ${riskPlan.finalQuantity} Qty`);
   };
 
   // Close open paper trade manually
@@ -471,7 +471,7 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
     const updated = paperTrades.map((t) => (t.id === tradeId ? closed : t));
     setPaperTrades(updated);
     savePaperTrades(updated);
-    flashNotification(`காகித வர்த்தகம் கைமுறையாக மூடப்பட்டது: ₹${closed.netPnl} Net P&L`);
+    flashNotification(`Paper trade manually closed: ₹${closed.netPnl} Net P&L`);
   };
 
   // Export CSV
@@ -485,7 +485,7 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    flashNotification('வர்த்தக வரலாறு CSV கோப்பாக பதிவிறக்கப்பட்டது!');
+    flashNotification('Trade history exported to CSV!');
   };
 
   // Run Walk-Forward Backtest (Section 7A)
@@ -513,7 +513,7 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
       );
       setBacktestResult(res);
       setIsBacktestRunning(false);
-      flashNotification(`பின்தேர்வு முடிந்தது (Walk-Forward 60/40 Complete): ${res.totalTrades} வர்த்தகங்கள் பகுப்பாய்வு செய்யப்பட்டன.`);
+      flashNotification(`Backtest complete (Walk-Forward 60/40): ${res.totalTrades} trades analyzed.`);
     }, 450);
   };
 
@@ -522,13 +522,13 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
     setOrbConfig(updated);
     saveStoredOrbConfig(updated);
     setIsConfigDrawerOpen(false);
-    flashNotification('வியூக அமைப்புகள் வெற்றிகரமாக சேமிக்கப்பட்டன! (Strategy Config Saved)');
+    flashNotification('Strategy configuration saved successfully!');
   };
 
   const handleResetConfigDefaults = () => {
     setOrbConfig(DEFAULT_ORB_CONFIG);
     saveStoredOrbConfig(DEFAULT_ORB_CONFIG);
-    flashNotification('இயல்புநிலை அமைப்புகள் மீட்டமைக்கப்பட்டன (Reset to Defaults)');
+    flashNotification('Settings reset to defaults');
   };
 
   // Strike range generation centered around ATM
@@ -574,14 +574,14 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
                 </span>
                 <span className="text-sm font-bold text-white flex items-center gap-1.5">
                   <Award className="w-4 h-4 text-amber-400" />
-                  பிரிவு 7A: உத்தி சரிபார்ப்பு வாயில்கள் (Strategy Validation Gates)
+                  Section 7A: Strategy Validation Gates
                 </span>
                 <span className="text-[10px] text-rose-400 bg-rose-500/20 px-2 py-0.5 rounded-full border border-rose-500/40">
-                  உண்மையான ஆணை செயல்படுத்தல் நிரந்தரமாக முடக்கப்பட்டுள்ளது (Real Orders Disabled)
+                  Real Orders Disabled
                 </span>
               </div>
               <p className="text-xs text-slate-300 mt-1 max-w-4xl leading-relaxed">
-                இந்த உத்தி 100+ காகித வர்த்தகங்கள், 1.3-க்கு அதிகமான லாபக் காரணி (PF), நிகர நேர்மறை எதிர்பார்ப்பு மற்றும் மூலதனத்தில் 10%-க்கு குறைவான வீழ்ச்சியை அடையும் வரை <strong>"NOT VALIDATED"</strong> என குறிக்கப்படும்.
+                This strategy remains <strong>"NOT VALIDATED"</strong> until it achieves 100+ paper trades, Profit Factor (PF) &gt; 1.3, net positive expectancy, and max drawdown &lt; 10% of capital.
               </p>
             </div>
 
@@ -590,7 +590,7 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
               <div className={`p-2 rounded-lg border text-center ${
                 validationGates.gate1PaperTradesMet ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400' : 'bg-slate-800/60 border-slate-700 text-slate-400'
               }`}>
-                <span className="block font-bold">100+ வர்த்தகம்</span>
+                <span className="block font-bold">100+ Trades</span>
                 <span>{validationGates.paperTradesCount} / 100 {validationGates.gate1PaperTradesMet ? '✓' : '✗'}</span>
               </div>
               <div className={`p-2 rounded-lg border text-center ${
@@ -602,13 +602,13 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
               <div className={`p-2 rounded-lg border text-center ${
                 validationGates.gate3ExpectancyMet ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400' : 'bg-slate-800/60 border-slate-700 text-slate-400'
               }`}>
-                <span className="block font-bold">எதிர்பார்ப்பு &gt; 0</span>
+                <span className="block font-bold">Expectancy &gt; 0</span>
                 <span>₹{validationGates.expectancyPerTrade} {validationGates.gate3ExpectancyMet ? '✓' : '✗'}</span>
               </div>
               <div className={`p-2 rounded-lg border text-center ${
                 validationGates.gate4DrawdownMet ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400' : 'bg-slate-800/60 border-slate-700 text-slate-400'
               }`}>
-                <span className="block font-bold">வீழ்ச்சி &lt; 10%</span>
+                <span className="block font-bold">Drawdown &lt; 10%</span>
                 <span>{validationGates.maxDrawdownPercent}% {validationGates.gate4DrawdownMet ? '✓' : '✗'}</span>
               </div>
             </div>
@@ -623,14 +623,14 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
             <div>
               <div className="flex items-center gap-2">
                 <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/30">
-                  பிரிவு 6: ORB + VWAP உத்தி
+                  Section 6: ORB + VWAP Strategy
                 </span>
                 <h2 className="text-base sm:text-lg font-black text-white tracking-tight flex items-center gap-1.5">
-                  Opening Range Breakout + VWAP Trend <span className="text-cyan-400 text-sm font-normal">| நிஃப்டி 50 குறியீட்டு சமிக்ஞை</span>
+                  Opening Range Breakout + VWAP Trend <span className="text-cyan-400 text-sm font-normal">| NIFTY 50 Index Signals</span>
                 </h2>
               </div>
               <p className="text-xs text-slate-300 mt-1 max-w-3xl leading-relaxed">
-                சமிக்ஞைகள் <strong>NIFTY 50 INDEX</strong> மெழுகுவர்த்திகளிலிருந்து மட்டுமே உருவாக்கப்படுகின்றன. ஆப்ஷன்கள் வர்த்தகத்தை வெளிப்படுத்த மட்டுமே பயன்படுகின்றன.
+                Signals are generated solely from <strong>NIFTY 50 INDEX</strong> candles. Options are used purely as execution instruments.
               </p>
             </div>
 
@@ -641,7 +641,7 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
                 className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-500/40 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
               >
                 <SlidersHorizontal className="w-3.5 h-3.5" />
-                <span>அமைப்புகள் (Configure Thresholds)</span>
+                <span>Configure Thresholds</span>
               </button>
 
               {/* Operating Mode Toggle */}
@@ -655,7 +655,7 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
                   }`}
                 >
                   <FileSpreadsheet className="w-3.5 h-3.5" />
-                  <span>காகித வர்த்தகம்</span>
+                  <span>Paper Trading</span>
                 </button>
                 <button
                   onClick={() => setActiveModuleMode('LIVE_SIGNALS')}
@@ -666,7 +666,7 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
                   }`}
                 >
                   <Radio className="w-3.5 h-3.5" />
-                  <span>நேரலை சமிக்ஞைகள்</span>
+                  <span>Live Signals</span>
                 </button>
               </div>
             </div>
@@ -680,7 +680,7 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
           {/* Time Window Card */}
           <div className="bg-white dark:bg-[#0c101d] border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 shadow-sm">
             <span className="text-[10px] text-slate-700 dark:text-slate-400 font-bold uppercase block">
-              6.1 நேர சாளரம் (IST Time Window)
+              6.1 IST Time Window
             </span>
             <div className="flex items-center justify-between mt-1">
               <span className="text-sm font-bold text-slate-900 dark:text-white">
@@ -695,14 +695,14 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
               </span>
             </div>
             <p className="text-[11px] text-slate-700 dark:text-slate-300 font-semibold mt-1">
-              {timeWindowState.timeWindowLabelTamil}
+              {timeWindowState.timeWindowLabel}
             </p>
           </div>
 
           {/* Opening Range Card */}
           <div className="bg-white dark:bg-[#0c101d] border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 shadow-sm">
             <span className="text-[10px] text-slate-700 dark:text-slate-400 font-bold uppercase block">
-              09:15 - 09:30 தொடக்க வரம்பு (Opening Range)
+              09:15 - 09:30 Opening Range
             </span>
             <div className="flex items-baseline justify-between mt-1">
               <span className="text-sm font-bold text-slate-900 dark:text-white">
@@ -715,7 +715,7 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
               </span>
             </div>
             <p className="text-[11px] text-slate-700 dark:text-slate-300 font-semibold mt-1">
-              அனுமதிக்கப்பட்ட வரம்பு: 0.15% - 0.60% (தற்போது: {openingRange.isValidWidth ? 'சரியான அகலம்' : 'வரம்பிற்கு வெளியே'})
+              Allowed Range: 0.15% - 0.60% (Current: {openingRange.isValidWidth ? 'Valid Width' : 'Out of Range'})
             </p>
           </div>
 
@@ -726,18 +726,18 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
               : 'bg-rose-50 dark:bg-rose-950/40 border-rose-300 dark:border-rose-500/60 text-rose-900 dark:text-rose-200'
           }`}>
             <span className="text-[10px] font-bold uppercase block text-slate-700 dark:text-slate-400">
-              6.2 நாள் வடிகட்டி (Day Filter Evaluation)
+              6.2 Day Filter Evaluation
             </span>
             <div className="flex items-center justify-between mt-1">
               <span className="text-sm font-bold text-slate-900 dark:text-white">
-                {dayFilterResult.canTrade ? 'வடிகட்டி பூர்த்தியானது (PASSED)' : 'NO TRADE TODAY'}
+                {dayFilterResult.canTrade ? 'Filter Passed (PASSED)' : 'NO TRADE TODAY'}
               </span>
               <span className="text-[10px] font-bold text-slate-700 dark:text-slate-300">
                 India VIX: {indiaVix} (Max {orbConfig.dayFilter.maxIndiaVix})
               </span>
             </div>
-            <p className="text-[11px] mt-1 font-semibold text-slate-700 dark:text-slate-300 truncate" title={dayFilterResult.reasonTamil}>
-              {dayFilterResult.reasonTamil}
+            <p className="text-[11px] mt-1 font-semibold text-slate-700 dark:text-slate-300 truncate" title={dayFilterResult.reason}>
+              {dayFilterResult.reason}
             </p>
           </div>
         </div>
@@ -761,20 +761,20 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
                   {markedStrike && !markedStrike.isExpired && markedStrike.capitalCheckPassed ? 'STRIKE MARKED' : 'WAITING TO MARK STRIKE'}
                 </span>
                 <span className="text-sm font-bold text-slate-900 dark:text-white">
-                  நிகழ்வு 1: ஸ்ட்ரைக் தேர்வு &amp; சார்பு உறுதி (Event 1: Mark Strike)
+                  Event 1: Mark Strike &amp; Bias Confirmation
                 </span>
                 <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                  {markStrikeResult.biasReasonTamil}
+                  {markStrikeResult.biasReason}
                 </span>
               </div>
 
               {markedStrike && (
                 <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-slate-800 dark:text-slate-300 font-semibold">
-                  <span>ஒப்பந்தம்: <strong className="text-slate-900 dark:text-white font-bold">{markedStrike.contractName}</strong></span>
-                  <span>பிரீமியம்: <strong className="text-cyan-700 dark:text-cyan-400 font-bold">₹{markedStrike.premium}</strong></span>
-                  <span>டெல்டா (Delta): <strong className="text-emerald-700 dark:text-emerald-400 font-bold">{markedStrike.delta}</strong></span>
-                  <span>ஸ்ப்ரெட்: <strong className="text-amber-700 dark:text-amber-400 font-bold">₹{markedStrike.spread} ({markedStrike.spreadPercent}%)</strong></span>
-                  <span>மூலதன செலவு: <strong className={markedStrike.capitalCheckPassed ? 'text-emerald-700 dark:text-emerald-400 font-bold' : 'text-rose-700 dark:text-rose-400 font-bold'}>₹{markedStrike.capitalCost} (60% வரம்பு: ₹15,000)</strong></span>
+                  <span>Contract: <strong className="text-slate-900 dark:text-white font-bold">{markedStrike.contractName}</strong></span>
+                  <span>Premium: <strong className="text-cyan-700 dark:text-cyan-400 font-bold">₹{markedStrike.premium}</strong></span>
+                  <span>Delta: <strong className="text-emerald-700 dark:text-emerald-400 font-bold">{markedStrike.delta}</strong></span>
+                  <span>Spread: <strong className="text-amber-700 dark:text-amber-400 font-bold">₹{markedStrike.spread} ({markedStrike.spreadPercent}%)</strong></span>
+                  <span>Capital Cost: <strong className={markedStrike.capitalCheckPassed ? 'text-emerald-700 dark:text-emerald-400 font-bold' : 'text-rose-700 dark:text-rose-400 font-bold'}>₹{markedStrike.capitalCost} (60% Limit: ₹15,000)</strong></span>
                 </div>
               )}
             </div>
@@ -782,9 +782,9 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
             {/* Expiration Timer for Marked Strike (6 candles = 30 min) */}
             {markedStrike && !markedStrike.isExpired && (
               <div className="bg-slate-100 dark:bg-black/60 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs shrink-0">
-                <span className="text-[10px] text-slate-600 dark:text-slate-400 font-bold block">தூண்டுதல் காத்திருப்பு (Waiting for Trigger)</span>
+                <span className="text-[10px] text-slate-600 dark:text-slate-400 font-bold block">Waiting for Trigger</span>
                 <span className="text-xs font-bold text-amber-600 dark:text-amber-400">
-                  காலாவதி: 6 மெழுகுவர்த்திகளுக்குள் (30 நிமிடம்)
+                  Expires: Within 6 candles (30 mins)
                 </span>
               </div>
             )}
@@ -811,11 +811,11 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
                   {entrySignalResult.verdict === 'BUY_WATCH' ? 'BUY WATCH — CE/PE' : 'NO TRADE'}
                 </span>
                 <span className="text-sm font-bold text-slate-900 dark:text-white">
-                  நிகழ்வு 2: நுழைவு சமிக்ஞை (Event 2: Entry Signal on Confirmed 5m Close)
+                  Event 2: Entry Signal (Confirmed 5m Close)
                 </span>
               </div>
               <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 mt-1">
-                {entrySignalResult.reasonTamil} ({entrySignalResult.reason})
+                {entrySignalResult.reason}
               </p>
             </div>
 
@@ -823,17 +823,17 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
             {entrySignalResult.isEntryValid && (
               <div className="flex flex-wrap items-center gap-3 bg-black/60 p-3 rounded-xl border border-slate-800 text-xs w-full lg:w-auto">
                 <div>
-                  <span className="text-[10px] text-slate-400 uppercase block">நுழைவு ஆஸ்க் (Entry Ask)</span>
+                  <span className="text-[10px] text-slate-400 uppercase block">Entry Ask</span>
                   <span className="text-sm font-bold text-white">₹{currentOptionPremium.toFixed(2)}</span>
                 </div>
                 <div className="border-l border-slate-800 pl-3">
-                  <span className="text-[10px] text-rose-400 uppercase block">குறியீட்டு SL / பிரீமியம் SL</span>
+                  <span className="text-[10px] text-rose-400 uppercase block">Index SL / Premium SL</span>
                   <span className="text-sm font-bold text-rose-400">
                     ₹{entrySignalResult.indexSlLevel.toFixed(1)} / ₹{entrySignalResult.premiumSl.toFixed(2)}
                   </span>
                 </div>
                 <div className="border-l border-slate-800 pl-3">
-                  <span className="text-[10px] text-emerald-400 uppercase block">இலக்கு (Target 1:1.5)</span>
+                  <span className="text-[10px] text-emerald-400 uppercase block">Target (1:1.5)</span>
                   <span className="text-sm font-bold text-emerald-400">₹{entrySignalResult.targetPrice.toFixed(2)}</span>
                 </div>
               </div>
@@ -847,7 +847,7 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
                 ? 'bg-emerald-50 dark:bg-emerald-500/20 border-emerald-500/50 text-emerald-800 dark:text-emerald-300 font-bold shadow-xs'
                 : 'bg-slate-100 dark:bg-slate-800/60 border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-300 font-semibold shadow-xs'
             }`}>
-              <span>விலை &gt; ORH &amp; VWAP</span>
+              <span>Price &gt; ORH &amp; VWAP</span>
               <span className="font-bold text-xs">{entrySignalResult.conditions.priceAboveOrhAndVwap ? '✓' : '✗'}</span>
             </div>
             <div className={`p-2 rounded-lg border flex items-center justify-between ${
@@ -871,7 +871,7 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
                 ? 'bg-emerald-50 dark:bg-emerald-500/20 border-emerald-500/50 text-emerald-800 dark:text-emerald-300 font-bold shadow-xs'
                 : 'bg-slate-100 dark:bg-slate-800/60 border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-300 font-semibold shadow-xs'
             }`}>
-              <span>உடல் &gt;= 50%</span>
+              <span>Body &gt;= 50%</span>
               <span className="font-bold text-xs">{entrySignalResult.conditions.candleBodyRatioMet ? '✓' : '✗'}</span>
             </div>
             <div className={`p-2 rounded-lg border flex items-center justify-between ${
@@ -879,7 +879,7 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
                 ? 'bg-emerald-50 dark:bg-emerald-500/20 border-emerald-500/50 text-emerald-800 dark:text-emerald-300 font-bold shadow-xs'
                 : 'bg-slate-100 dark:bg-slate-800/60 border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-300 font-semibold shadow-xs'
             }`}>
-              <span>அளவு &gt;= 1.2x 20MA</span>
+              <span>Volume &gt;= 1.2x 20MA</span>
               <span className="font-bold text-xs">{entrySignalResult.conditions.volumeSurgeMet ? '✓' : '✗'}</span>
             </div>
             <div className={`p-2 rounded-lg border flex items-center justify-between ${
@@ -887,7 +887,7 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
                 ? 'bg-emerald-50 dark:bg-emerald-500/20 border-emerald-500/50 text-emerald-800 dark:text-emerald-300 font-bold shadow-xs'
                 : 'bg-slate-100 dark:bg-slate-800/60 border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-300 font-semibold shadow-xs'
             }`}>
-              <span>நீட்டிப்பு &lt;= 0.25%</span>
+              <span>Extension &lt;= 0.25%</span>
               <span className="font-bold text-xs">{entrySignalResult.conditions.notExtended ? '✓' : '✗'}</span>
             </div>
           </div>
@@ -910,49 +910,49 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
             <div className="flex items-center gap-2">
               <ShieldAlert className="w-4 h-4 text-cyan-500" />
               <h3 className="font-bold text-slate-900 dark:text-white text-sm">
-                பிரிவு 7: ஆபத்து மேலாண்மை (Risk Management: Capital ₹25,000 | 2% Risk = ₹500)
+                Section 7: Risk Management (Capital ₹25,000 | 2% Risk = ₹500)
               </h3>
             </div>
             <span className="text-[10px] text-slate-700 dark:text-slate-400 font-bold">
-              ஸ்லிப்பேஜ்: 1 டிக் (₹0.05) சேர்க்கப்பட்டது | R:R இலக்கு: 1:1.5
+              Slippage: 1 Tick (₹0.05) included | R:R Target: 1:1.5
             </span>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             <div className="bg-slate-50 dark:bg-slate-900/80 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800">
-              <span className="text-[10px] text-slate-700 dark:text-slate-400 font-bold uppercase block">ஆபத்து வரவு (Risk Budget)</span>
+              <span className="text-[10px] text-slate-700 dark:text-slate-400 font-bold uppercase block">Risk Budget</span>
               <span className="text-sm font-bold text-cyan-600 dark:text-cyan-400">₹{riskPlan.riskBudget.toFixed(2)}</span>
               <span className="text-[9px] text-slate-600 dark:text-slate-400 font-semibold block mt-0.5">{orbConfig.riskAndExit.riskPerTradePercent}% of ₹{orbConfig.riskAndExit.capital}</span>
             </div>
 
             <div className="bg-slate-50 dark:bg-slate-900/80 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800">
-              <span className="text-[10px] text-slate-700 dark:text-slate-400 font-bold uppercase block">யூனிட் ஆபத்து (Risk / Unit)</span>
+              <span className="text-[10px] text-slate-700 dark:text-slate-400 font-bold uppercase block">Risk / Unit</span>
               <span className="text-sm font-bold text-slate-900 dark:text-white">₹{riskPlan.riskPerUnit.toFixed(2)}</span>
               <span className="text-[9px] text-slate-600 dark:text-slate-400 font-semibold block mt-0.5">Entry - SL</span>
             </div>
 
             <div className="bg-slate-50 dark:bg-slate-900/80 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800">
-              <span className="text-[10px] text-slate-700 dark:text-slate-400 font-bold uppercase block">லாட்கள் அளவு (Lots)</span>
+              <span className="text-[10px] text-slate-700 dark:text-slate-400 font-bold uppercase block">Position Lots</span>
               <span className={`text-sm font-bold ${riskPlan.isRiskExceeded ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                {riskPlan.lotsCount} லாட்கள் ({riskPlan.finalQuantity} Qty)
+                {riskPlan.lotsCount} Lots ({riskPlan.finalQuantity} Qty)
               </span>
               <span className="text-[9px] text-slate-600 dark:text-slate-400 font-semibold block mt-0.5">Lot Size: {lotSize}</span>
             </div>
 
             <div className="bg-slate-50 dark:bg-slate-900/80 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800">
-              <span className="text-[10px] text-slate-700 dark:text-slate-400 font-bold uppercase block">மொத்த பிரீமியம் (Outlay)</span>
+              <span className="text-[10px] text-slate-700 dark:text-slate-400 font-bold uppercase block">Total Premium Outlay</span>
               <span className="text-sm font-bold text-slate-900 dark:text-white">₹{riskPlan.totalPremiumOutlay.toFixed(2)}</span>
               <span className="text-[9px] text-slate-600 dark:text-slate-400 font-semibold block mt-0.5">Qty x Entry</span>
             </div>
 
             <div className="bg-slate-50 dark:bg-slate-900/80 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800">
-              <span className="text-[10px] text-slate-700 dark:text-slate-400 font-bold uppercase block">மதிப்பிடப்பட்ட நிகர லாபம் (1:1.5)</span>
+              <span className="text-[10px] text-slate-700 dark:text-slate-400 font-bold uppercase block">Estimated Net Profit (1:1.5)</span>
               <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">₹{riskPlan.estimatedNetProfit.toFixed(2)}</span>
               <span className="text-[9px] text-slate-600 dark:text-slate-400 font-semibold block mt-0.5">Net of taxes &amp; ₹40 brokerage</span>
             </div>
 
             <div className="bg-slate-50 dark:bg-slate-900/80 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800">
-              <span className="text-[10px] text-slate-700 dark:text-slate-400 font-bold uppercase block">மதிப்பிடப்பட்ட கட்டணங்கள்</span>
+              <span className="text-[10px] text-slate-700 dark:text-slate-400 font-bold uppercase block">Estimated Charges</span>
               <span className="text-sm font-bold text-amber-600 dark:text-amber-400">₹{riskPlan.estimatedBrokerageCharges.toFixed(2)}</span>
               <span className="text-[9px] text-slate-600 dark:text-slate-400 font-semibold block mt-0.5">STT + GST + SEBI + Stamp</span>
             </div>
@@ -972,7 +972,7 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
             ) : (
               <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold">
                 <CheckCircle2 className="w-4 h-4 shrink-0" />
-                <span>ஆபத்து வரவு சரிபார்க்கப்பட்டது (Allowed under ₹{riskPlan.riskBudget} budget)</span>
+                <span>Risk Approved (Allowed under ₹{riskPlan.riskBudget} budget)</span>
               </div>
             )}
 
@@ -983,7 +983,7 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
                 className="px-4 py-2 bg-linear-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-black text-xs rounded-xl shadow-lg shadow-cyan-500/20 active:scale-95 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 <Zap className="w-4 h-4 stroke-[2.5]" />
-                <span>காகித ஆணை செயல்படுத்து (SIMULATE PAPER BUY)</span>
+                <span>Simulate Paper Buy Order</span>
               </button>
             )}
           </div>
@@ -998,17 +998,17 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
               <div className="flex items-center gap-2">
                 <Activity className="w-4 h-4 text-emerald-500" />
                 <h3 className="font-bold text-slate-900 dark:text-white text-sm">
-                  நிகழ்வு 3: செயலில் உள்ள நிலை &amp; வெளியேறும் சமிக்ஞை (Event 3: Active Position &amp; Exits)
+                  Event 3: Active Position &amp; Exit Signals
                 </h3>
               </div>
               <span className="text-[10px] text-slate-500">
-                தினசரி ஒழுக்கம்: {disciplineState.tradesCompletedToday} / {orbConfig.riskAndExit.maxTradesPerDay} வர்த்தகம்
+                Daily Discipline: {disciplineState.tradesCompletedToday} / {orbConfig.riskAndExit.maxTradesPerDay} Trades
               </span>
             </div>
 
             {openPositions.length === 0 ? (
               <div className="text-center py-6 text-slate-500 dark:text-slate-400">
-                தற்போது திறந்த காகித வர்த்தகம் எதுவும் இல்லை. (No active simulated positions).
+                No active simulated positions.
               </div>
             ) : (
               <div className="space-y-3">
@@ -1028,9 +1028,9 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
                           </span>
                         </div>
                         <div className="flex items-center gap-3 text-[11px] text-slate-500 mt-1">
-                          <span>அளவு: {pos.quantity}</span>
-                          <span>நுழைவு: ₹{pos.entryPrice.toFixed(2)}</span>
-                          <span>தற்போது: ₹{currentOptionPremium.toFixed(2)}</span>
+                          <span>Qty: {pos.quantity}</span>
+                          <span>Entry: ₹{pos.entryPrice.toFixed(2)}</span>
+                          <span>LTP: ₹{currentOptionPremium.toFixed(2)}</span>
                           <span className="text-rose-400">SL: ₹{pos.stopLossPrice.toFixed(2)}</span>
                           <span className="text-emerald-400">Target (1.5R): ₹{pos.targetPrice.toFixed(2)}</span>
                         </div>
@@ -1038,7 +1038,7 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
 
                       <div className="flex items-center gap-4">
                         <div>
-                          <span className="text-[10px] text-slate-500 uppercase block">நிகர P&amp;L (Net PnL)</span>
+                          <span className="text-[10px] text-slate-500 uppercase block">Net P&amp;L</span>
                           <span className={`text-base font-bold ${
                             pos.unrealizedPnl >= 0 ? 'text-emerald-500' : 'text-rose-500'
                           }`}>
@@ -1050,7 +1050,7 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
                           onClick={() => handleCloseManualPaperTrade(pos.id)}
                           className="px-3 py-1.5 bg-rose-500 hover:bg-rose-600 text-white font-bold rounded-lg transition-all cursor-pointer text-xs"
                         >
-                          வெளியேறு (Manual Exit)
+                          Manual Exit
                         </button>
                       </div>
                     </div>
@@ -1060,9 +1060,9 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
                       <div className={`p-2.5 rounded-lg border text-[11px] flex items-center justify-between gap-2 ${
                         exitSignalResult.shouldExit ? 'bg-rose-500/10 border-rose-500/40 text-rose-400' : 'bg-slate-800/40 border-slate-700 text-slate-300'
                       }`}>
-                        <span>வெளியேறும் நிலை: <strong>{exitSignalResult.exitReasonTamil}</strong></span>
+                        <span>Exit Status: <strong>{exitSignalResult.exitReason}</strong></span>
                         <span>R-Multiple: <strong>{exitSignalResult.currentRMultiple.toFixed(2)}R</strong></span>
-                        <span>டிரெயிலிங் SL: <strong>₹{exitSignalResult.trailStopLevel.toFixed(2)}</strong></span>
+                        <span>Trailing SL: <strong>₹{exitSignalResult.trailStopLevel.toFixed(2)}</strong></span>
                       </div>
                     )}
                   </div>
@@ -1079,8 +1079,8 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
           <div className="bg-amber-500/10 border border-amber-500/40 rounded-xl p-3 text-xs font-mono text-amber-300 flex items-center gap-2">
             <Lock className="w-4 h-4 text-amber-400 shrink-0" />
             <span>
-              <strong>ஆலோசனை அறிவிப்பு:</strong> தினசரி லாபம் ₹{disciplineState.dailyRealizedPnl.toFixed(2)} எட்டியுள்ளது. 
-              <strong>CONSIDER STOPPING - PROFIT PROTECTED</strong> (லாபத்தை பாதுகாக்கவும்).
+              <strong>Advisory Notice:</strong> Daily realized profit reached ₹{disciplineState.dailyRealizedPnl.toFixed(2)}. 
+              <strong>CONSIDER STOPPING - PROFIT PROTECTED</strong>.
             </span>
           </div>
         )}
@@ -1093,7 +1093,7 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
             <div className="flex items-center gap-2">
               <BarChart2 className="w-4 h-4 text-cyan-500" />
               <h3 className="font-bold text-slate-900 dark:text-white text-sm">
-                செயல்திறன் பகுப்பாய்வு &amp; வர்த்தக வரலாறு (Trade Journal)
+                Performance Analytics &amp; Trade Journal
               </h3>
             </div>
             
@@ -1102,42 +1102,42 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
               className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer"
             >
               <Download className="w-3.5 h-3.5" />
-              <span>CSV ஏற்றுமதி</span>
+              <span>Export CSV</span>
             </button>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 mb-4">
             <div className="bg-slate-50 dark:bg-slate-900/60 p-2 rounded-lg border border-slate-200 dark:border-slate-800">
-              <span className="text-[10px] text-slate-500 uppercase block">வெற்றி விகிதம்</span>
+              <span className="text-[10px] text-slate-500 uppercase block">Win Rate</span>
               <span className="text-sm font-bold text-emerald-500">{performance.winRatePercent}%</span>
               <span className="text-[9px] text-slate-400 block">{performance.winningTrades} / {performance.totalTrades}</span>
             </div>
 
             <div className="bg-slate-50 dark:bg-slate-900/60 p-2 rounded-lg border border-slate-200 dark:border-slate-800">
-              <span className="text-[10px] text-slate-500 uppercase block">நிகர P&amp;L</span>
+              <span className="text-[10px] text-slate-500 uppercase block">Net P&amp;L</span>
               <span className={`text-sm font-bold ${performance.netPnl >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
                 {performance.netPnl >= 0 ? '+' : ''}₹{performance.netPnl.toFixed(2)}
               </span>
-              <span className="text-[9px] text-slate-400 block">கட்டணங்கள்: ₹{performance.totalCharges.toFixed(2)}</span>
+              <span className="text-[9px] text-slate-400 block">Charges: ₹{performance.totalCharges.toFixed(2)}</span>
             </div>
 
             <div className="bg-slate-50 dark:bg-slate-900/60 p-2 rounded-lg border border-slate-200 dark:border-slate-800">
-              <span className="text-[10px] text-slate-500 uppercase block">லாபக் காரணி (PF)</span>
+              <span className="text-[10px] text-slate-500 uppercase block">Profit Factor (PF)</span>
               <span className="text-sm font-bold text-cyan-500">{performance.profitFactor}</span>
             </div>
 
             <div className="bg-slate-50 dark:bg-slate-900/60 p-2 rounded-lg border border-slate-200 dark:border-slate-800">
-              <span className="text-[10px] text-slate-500 uppercase block">சராசரி வெற்றி</span>
+              <span className="text-[10px] text-slate-500 uppercase block">Average Win</span>
               <span className="text-sm font-bold text-emerald-500">₹{performance.averageWin.toFixed(2)}</span>
             </div>
 
             <div className="bg-slate-50 dark:bg-slate-900/60 p-2 rounded-lg border border-slate-200 dark:border-slate-800">
-              <span className="text-[10px] text-slate-500 uppercase block">சராசரி இழப்பு</span>
+              <span className="text-[10px] text-slate-500 uppercase block">Average Loss</span>
               <span className="text-sm font-bold text-rose-500">₹{performance.averageLoss.toFixed(2)}</span>
             </div>
 
             <div className="bg-slate-50 dark:bg-slate-900/60 p-2 rounded-lg border border-slate-200 dark:border-slate-800">
-              <span className="text-[10px] text-slate-500 uppercase block">அதிகபட்ச வீழ்ச்சி</span>
+              <span className="text-[10px] text-slate-500 uppercase block">Max Drawdown</span>
               <span className="text-sm font-bold text-amber-500">₹{performance.maxDrawdown.toFixed(2)}</span>
             </div>
           </div>
@@ -1146,19 +1146,19 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
             <table className="w-full text-left text-[11px]">
               <thead className="bg-slate-100 dark:bg-slate-900 sticky top-0 text-slate-600 dark:text-slate-400">
                 <tr>
-                  <th className="p-2">ஒப்பந்தம்</th>
-                  <th className="p-2">அளவு</th>
-                  <th className="p-2">நுழைவு</th>
-                  <th className="p-2">வெளியேறு</th>
-                  <th className="p-2">நிலை</th>
-                  <th className="p-2 text-right">நிகர P&amp;L</th>
+                  <th className="p-2">Contract</th>
+                  <th className="p-2">Qty</th>
+                  <th className="p-2">Entry</th>
+                  <th className="p-2">Exit</th>
+                  <th className="p-2">Status</th>
+                  <th className="p-2 text-right">Net P&amp;L</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
                 {paperTrades.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="text-center p-4 text-slate-400">
-                      வர்த்தக வரலாறு காலியாக உள்ளது.
+                      No trade history available.
                     </td>
                   </tr>
                 ) : (
@@ -1198,10 +1198,10 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
           <div className="flex flex-wrap items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800/80 mb-3 gap-2">
             <div>
               <h3 className="font-bold text-slate-900 dark:text-white text-sm">
-                பிரிவு 7A: வரலாற்று பின்தேர்வு &amp; முன்னோக்கி சரிபார்ப்பு (Walk-Forward 60/40 Validation)
+                Section 7A: Historical Backtest &amp; Walk-Forward 60/40 Validation
               </h3>
               <p className="text-[11px] text-slate-500 mt-0.5">
-                முதல் 60% தரவில் விதிகளை உருவாக்கி, கடைசி 40% தீண்டப்படாத தரவில் சரிபார்க்கவும் (Walk-Forward Split).
+                Rules trained on first 60% in-sample data and validated on untouched 40% out-of-sample data (Walk-Forward Split).
               </p>
             </div>
 
@@ -1211,7 +1211,7 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
               className="px-4 py-2 bg-linear-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white font-bold rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isBacktestRunning ? 'animate-spin' : ''}`} />
-              <span>{isBacktestRunning ? 'பகுப்பாய்வு செய்கிறது...' : 'பின்தேர்வு இயக்கு (Run 60/40 Backtest)'}</span>
+              <span>{isBacktestRunning ? 'Analyzing...' : 'Run 60/40 Backtest'}</span>
             </button>
           </div>
 
@@ -1219,21 +1219,21 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
             <div className="space-y-3">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 dark:bg-slate-900/60 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
                 <div>
-                  <span className="text-[10px] text-slate-500 block">மொத்த வர்த்தகங்கள்</span>
+                  <span className="text-[10px] text-slate-500 block">Total Trades</span>
                   <span className="text-sm font-bold text-slate-900 dark:text-white">{backtestResult.totalTrades}</span>
                 </div>
                 <div>
-                  <span className="text-[10px] text-slate-500 block">வெற்றி விகிதம்</span>
+                  <span className="text-[10px] text-slate-500 block">Win Rate</span>
                   <span className="text-sm font-bold text-emerald-500">{backtestResult.winRate}%</span>
                 </div>
                 <div>
-                  <span className="text-[10px] text-slate-500 block">வர்த்தக எதிர்பார்ப்பு</span>
+                  <span className="text-[10px] text-slate-500 block">Trade Expectancy</span>
                   <span className={`text-sm font-bold ${backtestResult.expectancyPerTrade > 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
                     ₹{backtestResult.expectancyPerTrade.toFixed(2)} / trade
                   </span>
                 </div>
                 <div>
-                  <span className="text-[10px] text-slate-500 block">அதிகபட்ச வீழ்ச்சி</span>
+                  <span className="text-[10px] text-slate-500 block">Max Drawdown</span>
                   <span className="text-sm font-bold text-amber-500">₹{backtestResult.maxDrawdown.toFixed(2)}</span>
                 </div>
               </div>
@@ -1241,12 +1241,12 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
               {/* 60% / 40% Split Breakdown */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[11px]">
                 <div className="p-3 bg-slate-100 dark:bg-slate-900/80 rounded-xl border border-slate-200 dark:border-slate-800">
-                  <span className="font-bold text-cyan-400 block">60% மாதிரிக்குள் (In-Sample Training)</span>
-                  <span>வர்த்தகங்கள்: {backtestResult.inSampleTradesCount || 0} | நிகர P&amp;L: ₹{backtestResult.inSampleNetPnl || 0}</span>
+                  <span className="font-bold text-cyan-400 block">60% In-Sample Training</span>
+                  <span>Trades: {backtestResult.inSampleTradesCount || 0} | Net P&amp;L: ₹{backtestResult.inSampleNetPnl || 0}</span>
                 </div>
                 <div className="p-3 bg-slate-100 dark:bg-slate-900/80 rounded-xl border border-slate-200 dark:border-slate-800">
-                  <span className="font-bold text-purple-400 block">40% மாதிரிக்கு வெளியே (Out-of-Sample Walk-Forward)</span>
-                  <span>வர்த்தகங்கள்: {backtestResult.outOfSampleTradesCount || 0} | நிகர P&amp;L: ₹{backtestResult.outOfSampleNetPnl || 0}</span>
+                  <span className="font-bold text-purple-400 block">40% Out-of-Sample Walk-Forward</span>
+                  <span>Trades: {backtestResult.outOfSampleTradesCount || 0} | Net P&amp;L: ₹{backtestResult.outOfSampleNetPnl || 0}</span>
                 </div>
               </div>
             </div>
@@ -1265,7 +1265,7 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
               <div className="flex items-center gap-2">
                 <Sliders className="w-5 h-5 text-cyan-500" />
                 <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                  உத்தி அமைப்புகள் (Strategy Configuration Settings)
+                  Strategy Configuration Settings
                 </h3>
               </div>
               <button
@@ -1279,10 +1279,10 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
             <div className="space-y-4">
               {/* Section 6.1 Time Windows */}
               <div className="space-y-2">
-                <span className="font-bold text-cyan-600 dark:text-cyan-400 block text-xs">6.1 நேர சாளரங்கள் (Time Windows)</span>
+                <span className="font-bold text-cyan-600 dark:text-cyan-400 block text-xs">6.1 Time Windows</span>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[11px] font-bold text-slate-800 dark:text-slate-200 block mb-1">முதன்மை நுழைவு தொடக்கம்</label>
+                    <label className="text-[11px] font-bold text-slate-800 dark:text-slate-200 block mb-1">Primary Entry Start</label>
                     <input
                       type="text"
                       value={orbConfig.timeWindows.primaryEntryStart}
@@ -1294,7 +1294,7 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="text-[11px] font-bold text-slate-800 dark:text-slate-200 block mb-1">கட்டாய வெளியேறும் நேரம்</label>
+                    <label className="text-[11px] font-bold text-slate-800 dark:text-slate-200 block mb-1">Force Exit Time</label>
                     <input
                       type="text"
                       value={orbConfig.timeWindows.forceExitTime}
@@ -1310,10 +1310,10 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
 
               {/* Section 6.2 Day Filter */}
               <div className="space-y-2">
-                <span className="font-bold text-cyan-600 dark:text-cyan-400 block text-xs">6.2 நாள் வடிகட்டி வரம்புகள் (Day Filter)</span>
+                <span className="font-bold text-cyan-600 dark:text-cyan-400 block text-xs">6.2 Day Filter Thresholds</span>
                 <div className="grid grid-cols-3 gap-3">
                   <div>
-                    <label className="text-[11px] font-bold text-slate-800 dark:text-slate-200 block mb-1">குறைந்தபட்ச OR அகலம் (%)</label>
+                    <label className="text-[11px] font-bold text-slate-800 dark:text-slate-200 block mb-1">Min OR Width (%)</label>
                     <input
                       type="number"
                       step="0.05"
@@ -1326,7 +1326,7 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="text-[11px] font-bold text-slate-800 dark:text-slate-200 block mb-1">அதிகபட்ச OR அகலம் (%)</label>
+                    <label className="text-[11px] font-bold text-slate-800 dark:text-slate-200 block mb-1">Max OR Width (%)</label>
                     <input
                       type="number"
                       step="0.05"
@@ -1339,7 +1339,7 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="text-[11px] font-bold text-slate-800 dark:text-slate-200 block mb-1">அதிகபட்ச India VIX</label>
+                    <label className="text-[11px] font-bold text-slate-800 dark:text-slate-200 block mb-1">Max India VIX</label>
                     <input
                       type="number"
                       step="1"
@@ -1356,10 +1356,10 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
 
               {/* Section 7 Risk Management */}
               <div className="space-y-2">
-                <span className="font-bold text-cyan-600 dark:text-cyan-400 block text-xs">7. ஆபத்து மேலாண்மை (Risk Management)</span>
+                <span className="font-bold text-cyan-600 dark:text-cyan-400 block text-xs">7. Risk Management</span>
                 <div className="grid grid-cols-3 gap-3">
                   <div>
-                    <label className="text-[11px] font-bold text-slate-800 dark:text-slate-200 block mb-1">மூலதனம் (Capital ₹)</label>
+                    <label className="text-[11px] font-bold text-slate-800 dark:text-slate-200 block mb-1">Capital (₹)</label>
                     <input
                       type="number"
                       value={orbConfig.riskAndExit.capital}
@@ -1371,7 +1371,7 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="text-[11px] font-bold text-slate-800 dark:text-slate-200 block mb-1">வர்த்தக ஆபத்து % (0.5%–2%)</label>
+                    <label className="text-[11px] font-bold text-slate-800 dark:text-slate-200 block mb-1">Risk Per Trade % (0.5%–2%)</label>
                     <input
                       type="number"
                       step="0.1"
@@ -1386,7 +1386,7 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="text-[11px] font-bold text-slate-800 dark:text-slate-200 block mb-1">இலக்கு விகிதம் (Target R:R)</label>
+                    <label className="text-[11px] font-bold text-slate-800 dark:text-slate-200 block mb-1">Target Multiplier (R:R)</label>
                     <input
                       type="number"
                       step="0.1"
@@ -1407,13 +1407,13 @@ export const NiftyOptionsAnalysisPage: React.FC = () => {
                 onClick={handleResetConfigDefaults}
                 className="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 font-bold rounded-xl transition-all cursor-pointer shadow-xs"
               >
-                இயல்புநிலை மீட்டமை (Reset)
+                Reset Defaults
               </button>
               <button
                 onClick={() => handleSaveConfig(orbConfig)}
                 className="px-5 py-2 bg-linear-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black rounded-xl transition-all cursor-pointer shadow-lg shadow-cyan-500/20"
               >
-                அமைப்புகளை சேமி (Save Settings)
+                Save Settings
               </button>
             </div>
           </div>
