@@ -33,7 +33,7 @@ export const HighlightLegend: React.FC<HighlightLegendProps> = ({
 
           {/* ATM Strike (Orange) */}
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#f97316] text-white font-bold text-[11px] shadow-sm shadow-orange-500/20">
-            <span className="w-2 h-2 rounded-full bg-white animate-ping" />
+            <span className="w-2 h-2 rounded-full bg-white" />
             <span>ATM STRIKE:</span>
             <span className="font-mono text-xs">{metrics.atmStrike}</span>
           </div>

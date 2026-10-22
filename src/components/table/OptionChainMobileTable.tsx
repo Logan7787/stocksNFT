@@ -90,7 +90,7 @@ export const OptionChainMobileTable: React.FC<OptionChainMobileTableProps> = ({
                   </td>
                   <td className="py-2 px-2 text-center">
                     {row.ceSignal ? (
-                      <span className="px-1.5 py-0.5 rounded text-[10px] font-black bg-emerald-500 text-slate-950 shadow-sm animate-pulse">
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-black bg-emerald-500 text-slate-950 shadow-sm">
                         BUY CE
                       </span>
                     ) : (
@@ -154,7 +154,7 @@ export const OptionChainMobileTable: React.FC<OptionChainMobileTableProps> = ({
                   </td>
                   <td className="py-2 px-2 text-center">
                     {row.peSignal ? (
-                      <span className="px-1.5 py-0.5 rounded text-[10px] font-black bg-rose-500 text-white shadow-sm animate-pulse">
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-black bg-rose-500 text-white shadow-sm">
                         BUY PE
                       </span>
                     ) : (

@@ -91,7 +91,7 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="bg-slate-100 dark:bg-[#05070c] px-3 sm:px-6 py-1 border-b border-slate-200 dark:border-slate-900/80 flex items-center justify-between text-[11px] font-mono text-slate-600 dark:text-slate-400 transition-colors">
         <div className="flex items-center gap-3 overflow-x-auto no-scrollbar">
           <span className="flex items-center gap-1 font-bold text-slate-900 dark:text-slate-200">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="w-2 h-2 rounded-full bg-emerald-500" />
             NSE NIFTY 50 INDEX
           </span>
           <span className="text-slate-400 dark:text-slate-600">|</span>
@@ -105,7 +105,7 @@ export const Header: React.FC<HeaderProps> = ({
             <span className={`w-2 h-2 rounded-full ${
               connectionMode === 'broker_api' ? 'bg-cyan-500' :
               connectionMode === 'supabase_synced' ? 'bg-emerald-500' :
-              connectionMode === 'historical' ? 'bg-amber-500' : 'bg-emerald-500 animate-ping'
+              connectionMode === 'historical' ? 'bg-amber-500' : 'bg-emerald-500'
             }`} />
             <span className="text-[10px] uppercase font-bold text-slate-700 dark:text-slate-300">
               {connectionMode === 'broker_api' ? 'Broker Live' :
@@ -159,13 +159,25 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             onClick={() => handleNavigate('/')}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-              currentRoute !== '/nifty-options'
+              currentRoute === '/' || (!currentRoute.includes('nifty-options') && !currentRoute.includes('previous-close'))
                 ? 'bg-cyan-500 text-black shadow-md shadow-cyan-500/20'
                 : 'text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800/60'
             }`}
           >
             <Layers className="w-3.5 h-3.5" />
             <span>Option Chain</span>
+          </button>
+          <button
+            onClick={() => handleNavigate('/previous-close')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+              currentRoute === '/previous-close'
+                ? 'bg-cyan-500 text-black shadow-md shadow-cyan-500/20'
+                : 'text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800/60'
+            }`}
+            title="Previous Day Market Close Data (Option Chain format)"
+          >
+            <History className="w-3.5 h-3.5" />
+            <span>Previous Day Market Close Data</span>
           </button>
           <button
             onClick={() => handleNavigate('/nifty-options')}

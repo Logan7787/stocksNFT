@@ -129,13 +129,13 @@ const OptionRowItem = memo(({ row, spotPrice }: { row: ProcessedOptionRow; spotP
       >
         <div className="flex items-center justify-center gap-1.5 flex-wrap">
           {row.ceSignal && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-black bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-md shadow-emerald-500/30 ring-1 ring-emerald-400/60 transition-transform scale-100 hover:scale-105 cursor-default animate-pulse">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-black bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-md shadow-emerald-500/30 ring-1 ring-emerald-400/60 transition-transform scale-100 hover:scale-105 cursor-default">
               <span className="w-1.5 h-1.5 rounded-full bg-slate-950"></span>
               BUY CE
             </span>
           )}
           {row.peSignal && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-black bg-rose-500 hover:bg-rose-400 text-white shadow-md shadow-rose-500/30 ring-1 ring-rose-400/60 transition-transform scale-100 hover:scale-105 cursor-default animate-pulse">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-black bg-rose-500 hover:bg-rose-400 text-white shadow-md shadow-rose-500/30 ring-1 ring-rose-400/60 transition-transform scale-100 hover:scale-105 cursor-default">
               <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
               BUY PE
             </span>

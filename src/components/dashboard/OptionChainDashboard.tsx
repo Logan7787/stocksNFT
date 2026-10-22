@@ -9,6 +9,7 @@ import { SnapshotManagerModal } from '../modals/SnapshotManagerModal';
 import { ActiveTradeSetupCard } from './ActiveTradeSetupCard';
 import { TradeSettingsCard } from './TradeSettingsCard';
 import { NiftyOptionsAnalysisPage } from '../niftyAnalysis/NiftyOptionsAnalysisPage';
+import { PreviousDayClosePage } from './PreviousDayClosePage';
 import { 
   niftyMarketService 
 } from '../../services/niftyApi';
@@ -90,11 +91,12 @@ export const OptionChainDashboard: React.FC = () => {
   // Trade Engine State (Strict Risk Management: Max SL Points & Risk-to-Reward Ratio)
   const [tradeSettings, setTradeSettings] = useState<TradeSettings>(getStoredTradeSettings());
 
-  // Active Navigation Module Route ('/' vs '/nifty-options')
+  // Active Navigation Module Route ('/' vs '/nifty-options' vs '/previous-close')
   const [currentRoute, setCurrentRoute] = useState<string>(() => {
     const p = window.location.pathname;
     const h = window.location.hash.replace('#', '');
     if (p === '/nifty-options' || h === '/nifty-options' || h === 'nifty-options') return '/nifty-options';
+    if (p === '/previous-close' || h === '/previous-close' || h === 'previous-close') return '/previous-close';
     return '/';
   });
 
@@ -104,6 +106,8 @@ export const OptionChainDashboard: React.FC = () => {
       const h = window.location.hash.replace('#', '');
       if (p === '/nifty-options' || h === '/nifty-options' || h === 'nifty-options') {
         setCurrentRoute('/nifty-options');
+      } else if (p === '/previous-close' || h === '/previous-close' || h === 'previous-close') {
+        setCurrentRoute('/previous-close');
       } else {
         setCurrentRoute('/');
       }
@@ -407,6 +411,13 @@ export const OptionChainDashboard: React.FC = () => {
       {currentRoute === '/nifty-options' ? (
         <main className="flex-1">
           <NiftyOptionsAnalysisPage />
+        </main>
+      ) : currentRoute === '/previous-close' ? (
+        <main className="flex-1">
+          <PreviousDayClosePage
+            onOpenSettings={() => setIsSettingsOpen(true)}
+            referenceSpotPrice={spotPrice}
+          />
         </main>
       ) : (
         <>

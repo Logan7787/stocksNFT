@@ -150,8 +150,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   const handleSaveBroker = () => {
-    onSaveBrokerConfig(broker);
-    showToast(broker.enabled ? 'Live Broker Settings Saved & Activated!' : 'Broker Settings Saved (Simulator Active)');
+    const hasToken = !!broker.apiKey?.trim();
+    const updated = {
+      ...broker,
+      enabled: hasToken ? true : broker.enabled,
+    };
+    setBroker(updated);
+    onSaveBrokerConfig(updated);
+    showToast(updated.enabled ? 'Live Broker Settings Saved & Activated!' : 'Broker Settings Saved (Simulator Active)');
   };
 
   const handleSaveSupabase = async () => {
