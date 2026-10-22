@@ -54,3 +54,58 @@ body {
 .animate-pulse-slow {
   animation: pulseGlow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
+
+/* Optimized Print Styles for Option Chain Reports */
+@media print {
+  @page {
+    size: landscape;
+    margin: 6mm;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 11px !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Hide application navigation, header, toasts, and buttons */
+  header,
+  nav,
+  .print\:hidden,
+  .no-print {
+    display: none !important;
+  }
+
+  /* Full-width container without clipping or scrollbars */
+  main,
+  div {
+    overflow: visible !important;
+    max-width: 100% !important;
+    box-shadow: none !important;
+  }
+
+  /* High contrast table borders and rows */
+  table {
+    width: 100% !important;
+    min-width: 100% !important;
+    border-collapse: collapse !important;
+    page-break-inside: auto;
+  }
+
+  tr {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  th,
+  td {
+    padding: 3px 4px !important;
+    font-size: 10px !important;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+}

@@ -417,6 +417,10 @@ export const OptionChainDashboard: React.FC = () => {
           <PreviousDayClosePage
             onOpenSettings={() => setIsSettingsOpen(true)}
             referenceSpotPrice={spotPrice}
+            spotChange={spotChange}
+            spotChangePercent={spotChangePercent}
+            currentRows={rows}
+            currentMetrics={metrics}
           />
         </main>
       ) : (

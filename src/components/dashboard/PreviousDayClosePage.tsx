@@ -14,12 +14,15 @@ import {
   Layers,
   Database,
   SlidersHorizontal,
-  Info
+  Info,
+  Printer
 } from 'lucide-react';
 import { 
   getMarketCloseStatusInfo, 
   getPreviousCloseOptionChain, 
   saveCloseSnapshotRecord,
+  formatDateYMD,
+  getISTNow,
   ForcedMarketMode,
   PreviousCloseChainResult,
   MarketCloseStatusInfo 
@@ -33,11 +36,19 @@ import type { ProcessedOptionRow, MarketMetrics, TradeSettings } from '../../typ
 interface PreviousDayClosePageProps {
   onOpenSettings?: () => void;
   referenceSpotPrice?: number;
+  spotChange?: number;
+  spotChangePercent?: number;
+  currentRows?: ProcessedOptionRow[];
+  currentMetrics?: MarketMetrics;
 }
 
 export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
   onOpenSettings,
-  referenceSpotPrice = 22749.35
+  referenceSpotPrice,
+  spotChange,
+  spotChangePercent,
+  currentRows,
+  currentMetrics,
 }) => {
   // Mode: Auto (detects IST market hours) vs Simulation
   const [forcedMode, setForcedMode] = useState<ForcedMarketMode>('auto');
@@ -65,16 +76,27 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
   const loadedKeyRef = React.useRef<string>('');
 
   useEffect(() => {
-    const key = `${statusInfo.effectiveCloseDate}_${forcedMode}_${customDate}`;
-    if (loadedKeyRef.current === key && dataResult) {
-      return; // Already loaded, do not re-run or set loading!
+    const isToday = statusInfo.effectiveCloseDate === formatDateYMD(getISTNow());
+    const effectiveSpot = isToday ? (referenceSpotPrice || 22687.65) : 22811.35;
+    const modeKey = `${statusInfo.effectiveCloseDate}_${forcedMode}_${customDate}`;
+
+    const dateOrModeChanged = loadedKeyRef.current !== modeKey;
+
+    if (dateOrModeChanged) {
+      loadedKeyRef.current = modeKey;
+      setLoading(true);
+    } else if (dataResult && dataResult.rows.length > 0) {
+      return; // Already loaded with valid rows for this mode & date
     }
-    loadedKeyRef.current = key;
 
     let isMounted = true;
-    setLoading(true);
 
-    getPreviousCloseOptionChain(statusInfo.effectiveCloseDate, 22811.35)
+    getPreviousCloseOptionChain(statusInfo.effectiveCloseDate, effectiveSpot, {
+      todayRows: currentRows,
+      todaySpotChange: spotChange,
+      todaySpotChangePercent: spotChangePercent,
+      todayMetrics: currentMetrics,
+    })
       .then((res) => {
         if (isMounted) {
           setDataResult(res);
@@ -91,7 +113,17 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [statusInfo.effectiveCloseDate, forcedMode, customDate]);
+  }, [
+    statusInfo.effectiveCloseDate, 
+    forcedMode, 
+    customDate, 
+    referenceSpotPrice, 
+    currentRows, 
+    spotChange, 
+    spotChangePercent, 
+    currentMetrics,
+    dataResult
+  ]);
 
   // Evaluate trade signals on the closed option chain data
   const { rows: rowsWithSignals } = useMemo(() => {
@@ -177,6 +209,12 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
     showToast(`Exported ${filename}`, 'success');
   };
 
+  // Handle Print to physical printer or PDF
+  const handlePrint = () => {
+    if (!dataResult || dataResult.rows.length === 0) return;
+    window.print();
+  };
+
   const isPositive = (dataResult?.spotChange ?? 0) >= 0;
 
   return (
@@ -222,8 +260,8 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
             </div>
           </div>
 
-          {/* Right Action Controls: Save DB + Export CSV */}
-          <div className="flex items-center gap-2">
+          {/* Right Action Controls: Save DB + Print + Export CSV */}
+          <div className="flex items-center gap-2 print:hidden">
             <button
               onClick={handleSaveToDb}
               disabled={isSaving || loading}
@@ -232,6 +270,15 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
             >
               <Save className="w-3.5 h-3.5" />
               <span>{isSaving ? 'Saving...' : 'Save to DB'}</span>
+            </button>
+            <button
+              onClick={handlePrint}
+              disabled={loading || !dataResult}
+              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer transition-all disabled:opacity-50"
+              title="Print data to printer"
+            >
+              <Printer className="w-3.5 h-3.5" />
+              <span>Print</span>
             </button>
             <button
               onClick={handleExportCsv}
@@ -246,7 +293,7 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
         </div>
 
         {/* Second Line: Condition Selector, Date Picker, Simulation Modes */}
-        <div className="pt-2 border-t border-slate-200 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
+        <div className="pt-2 border-t border-slate-200 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-3 text-xs font-mono print:hidden">
           {/* Live vs Closed Simulation Mode Pills */}
           <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900/90 border border-slate-300 dark:border-slate-800 p-1 rounded-xl">
             <span className="text-[10px] text-slate-500 dark:text-slate-400 px-2 uppercase font-bold flex items-center gap-1">

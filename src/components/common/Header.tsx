@@ -86,7 +86,7 @@ export const Header: React.FC<HeaderProps> = ({
     .map(s => s.hour_slot);
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 dark:bg-[#0a0e1a]/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800/90 shadow-sm dark:shadow-xl transition-colors">
+    <header className="sticky top-0 z-40 bg-white/95 dark:bg-[#0a0e1a]/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800/90 shadow-sm dark:shadow-xl transition-colors print:hidden">
       {/* Top micro ticker bar */}
       <div className="bg-slate-100 dark:bg-[#05070c] px-3 sm:px-6 py-1 border-b border-slate-200 dark:border-slate-900/80 flex items-center justify-between text-[11px] font-mono text-slate-600 dark:text-slate-400 transition-colors">
         <div className="flex items-center gap-3 overflow-x-auto no-scrollbar">

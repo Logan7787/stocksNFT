@@ -105,6 +105,19 @@ class NiftyMarketDataService {
     this.recalculateAll();
   }
 
+  public getOpenSpotPrice(): number {
+    return this.openSpotPrice;
+  }
+
+  public getSpotChange(): number {
+    return round2(this.spotPrice - this.openSpotPrice);
+  }
+
+  public getSpotChangePercent(): number {
+    if (!this.openSpotPrice) return 0;
+    return round2(((this.spotPrice - this.openSpotPrice) / this.openSpotPrice) * 100);
+  }
+
   public getProcessedRows(): ProcessedOptionRow[] {
     return this.processedRows;
   }

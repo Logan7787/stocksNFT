@@ -63,9 +63,10 @@ export async function saveCurrentSnapshot(
   spotClose: number,
   rows: ProcessedOptionRow[],
   customSlot?: string,
-  notes?: string
+  notes?: string,
+  customDate?: string
 ): Promise<{ success: boolean; snapshotId: string; message: string }> {
-  const today = new Date().toISOString().split('T')[0];
+  const dateStr = customDate || new Date().toISOString().split('T')[0];
   const slot = customSlot || getClosestMarketHourSlot();
-  return await saveHourlySnapshotToDatabase(today, slot, spotClose, rows, notes);
+  return await saveHourlySnapshotToDatabase(dateStr, slot, spotClose, rows, notes);
 }

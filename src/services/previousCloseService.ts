@@ -10,6 +10,7 @@ import {
   loadHistoricalSnapshot, 
   saveCurrentSnapshot 
 } from './snapshotService';
+import { niftyMarketService } from './niftyApi';
 
 export type ForcedMarketMode = 'auto' | 'live' | 'closed';
 
@@ -214,19 +215,123 @@ export function getMarketCloseStatusInfo(
 
 const CACHED_CLOSE_PREFIX = 'nifty_close_cache_';
 
+export interface PreviousCloseOptions {
+  todayRows?: ProcessedOptionRow[];
+  todaySpotChange?: number;
+  todaySpotChangePercent?: number;
+  todayMetrics?: MarketMetrics;
+}
+
 /**
  * Loads or generates option chain data for a market close session
  */
 export async function getPreviousCloseOptionChain(
   targetDate: string,
-  referenceSpot: number = 22811.35
+  referenceSpot?: number,
+  options?: PreviousCloseOptions
 ): Promise<PreviousCloseChainResult> {
-  // 1. Official Verified Historical Dataset from 2026-10-21 / 2026-10-22 Market Close Report
-  if (targetDate === '2026-10-21' || targetDate === '2026-10-22' || !targetDate) {
+  const todayYMD = formatDateYMD(getISTNow());
+  const effectiveDate = targetDate || todayYMD;
+  const isToday = effectiveDate === todayYMD;
+
+  // 1. If today's market is closed and we need today's close:
+  if (isToday) {
+    // 1A. Check if a 15:30 snapshot for today exists in database/localStorage
+    try {
+      const snapshots: MarketSnapshotRecord[] = await loadHistoricalSnapshotsList();
+      const targetSnapshot = snapshots.find(
+        s => s.snapshot_date === todayYMD && (s.hour_slot === '15:30' || s.hour_slot === '14:15')
+      ) || snapshots.find(s => s.snapshot_date === todayYMD);
+
+      if (targetSnapshot) {
+        const loaded = await loadHistoricalSnapshot(targetSnapshot.id);
+        if (loaded.snapshot && loaded.rows && loaded.rows.length > 0) {
+          const spot = Number(loaded.snapshot.spot_close) || referenceSpot || niftyMarketService.getSpotPrice();
+          const { highlightedRows, metrics } = applyConditionalHighlights(loaded.rows, spot);
+          return {
+            date: targetSnapshot.snapshot_date,
+            slot: targetSnapshot.hour_slot,
+            spotPrice: spot,
+            spotChange: options?.todaySpotChange !== undefined ? options.todaySpotChange : niftyMarketService.getSpotChange(),
+            spotChangePercent: options?.todaySpotChangePercent !== undefined ? options.todaySpotChangePercent : niftyMarketService.getSpotChangePercent(),
+            rows: highlightedRows,
+            metrics,
+            source: 'database',
+            savedSnapshotId: targetSnapshot.id,
+          };
+        }
+      }
+    } catch (err) {
+      console.warn('Error checking snapshots for today close:', err);
+    }
+
+    // 1B. Use today's live/closing session data from options or niftyMarketService
+    const liveSpot = referenceSpot || niftyMarketService.getSpotPrice() || 22687.65;
+    const liveChange = options?.todaySpotChange !== undefined ? options.todaySpotChange : niftyMarketService.getSpotChange();
+    const liveChangePct = options?.todaySpotChangePercent !== undefined ? options.todaySpotChangePercent : niftyMarketService.getSpotChangePercent();
+    const liveRows = (options?.todayRows && options.todayRows.length > 0)
+      ? options.todayRows
+      : niftyMarketService.getProcessedRows();
+
+    if (liveRows && liveRows.length > 0) {
+      const { highlightedRows, metrics } = applyConditionalHighlights(liveRows, liveSpot);
+      // Auto-cache to localStorage as today's close
+      const cacheKey = `${CACHED_CLOSE_PREFIX}${todayYMD}`;
+      try {
+        localStorage.setItem(cacheKey, JSON.stringify({
+          spotPrice: liveSpot,
+          spotChange: liveChange,
+          spotChangePercent: liveChangePct,
+          rows: highlightedRows,
+        }));
+      } catch (e) {
+        console.warn('Failed to cache today close:', e);
+      }
+
+      return {
+        date: todayYMD,
+        slot: '15:30',
+        spotPrice: liveSpot,
+        spotChange: liveChange,
+        spotChangePercent: liveChangePct,
+        rows: highlightedRows,
+        metrics: {
+          ...metrics,
+          spotPrice: liveSpot,
+          spotChange: liveChange,
+          spotChangePercent: liveChangePct,
+        },
+        source: 'database',
+      };
+    }
+
+    // 1C. Fallback: generate option chain for today's closing spot
+    const rawRows = generateBaseNiftyOptionData(liveSpot);
+    const processed = rawRows.map(r => processRawOptionRow(r));
+    const { highlightedRows, metrics } = applyConditionalHighlights(processed, liveSpot);
+    return {
+      date: todayYMD,
+      slot: '15:30',
+      spotPrice: liveSpot,
+      spotChange: liveChange,
+      spotChangePercent: liveChangePct,
+      rows: highlightedRows,
+      metrics: {
+        ...metrics,
+        spotPrice: liveSpot,
+        spotChange: liveChange,
+        spotChangePercent: liveChangePct,
+      },
+      source: 'database',
+    };
+  }
+
+  // 2. Official Verified Historical Dataset from 2026-10-21 Market Close Report
+  if (effectiveDate === '2026-10-21') {
     const verifiedSpot = 22811.35;
     const { highlightedRows, metrics } = applyConditionalHighlights(VERIFIED_MARKET_CLOSE_2026_10_21, verifiedSpot);
     return {
-      date: targetDate || '2026-10-21',
+      date: '2026-10-21',
       slot: '15:30',
       spotPrice: verifiedSpot,
       spotChange: 0,
@@ -237,18 +342,19 @@ export async function getPreviousCloseOptionChain(
     };
   }
 
-  // 2. Check existing database/local snapshots
+  // 3. Check existing database/local snapshots for any other historical date
+  const fallbackSpot = referenceSpot || 22811.35;
   try {
     const snapshots: MarketSnapshotRecord[] = await loadHistoricalSnapshotsList();
     // Look for exact date and 15:30 slot first, or any snapshot on that date
     const targetSnapshot = snapshots.find(
-      s => s.snapshot_date === targetDate && (s.hour_slot === '15:30' || s.hour_slot === '14:15')
-    ) || snapshots.find(s => s.snapshot_date === targetDate);
+      s => s.snapshot_date === effectiveDate && (s.hour_slot === '15:30' || s.hour_slot === '14:15')
+    ) || snapshots.find(s => s.snapshot_date === effectiveDate);
 
     if (targetSnapshot) {
       const loaded = await loadHistoricalSnapshot(targetSnapshot.id);
       if (loaded.snapshot && loaded.rows && loaded.rows.length > 0) {
-        const spot = Number(loaded.snapshot.spot_close) || referenceSpot;
+        const spot = Number(loaded.snapshot.spot_close) || fallbackSpot;
         const { highlightedRows, metrics } = applyConditionalHighlights(loaded.rows, spot);
         return {
           date: targetSnapshot.snapshot_date,
@@ -267,17 +373,17 @@ export async function getPreviousCloseOptionChain(
     console.warn('Error checking snapshots for previous close:', err);
   }
 
-  // 2. Check localStorage cache for stable generated close data
-  const cacheKey = `${CACHED_CLOSE_PREFIX}${targetDate}`;
+  // 4. Check localStorage cache for stable generated close data
+  const cacheKey = `${CACHED_CLOSE_PREFIX}${effectiveDate}`;
   try {
     const cached = localStorage.getItem(cacheKey);
     if (cached) {
       const parsed = JSON.parse(cached);
       if (parsed && Array.isArray(parsed.rows) && parsed.rows.length > 0) {
-        const spot = Number(parsed.spotPrice) || referenceSpot;
+        const spot = Number(parsed.spotPrice) || fallbackSpot;
         const { highlightedRows, metrics } = applyConditionalHighlights(parsed.rows, spot);
         return {
-          date: targetDate,
+          date: effectiveDate,
           slot: '15:30',
           spotPrice: spot,
           spotChange: parsed.spotChange ?? 0,
@@ -292,14 +398,13 @@ export async function getPreviousCloseOptionChain(
     console.warn('Cache read error:', e);
   }
 
-
-  // 4. Fallback: Generate realistic market close data centered at spot price
+  // 5. Fallback: Generate realistic market close data centered at spot price
   let dateSeed = 0;
-  for (let i = 0; i < targetDate.length; i++) {
-    dateSeed += targetDate.charCodeAt(i);
+  for (let i = 0; i < effectiveDate.length; i++) {
+    dateSeed += effectiveDate.charCodeAt(i);
   }
   const delta = ((dateSeed % 60) - 30);
-  const closingSpot = round2(referenceSpot + delta);
+  const closingSpot = round2(fallbackSpot + delta);
   const closingSpotChange = round2(delta * 1.25);
   const closingSpotPct = round2((closingSpotChange / (closingSpot - closingSpotChange)) * 100);
 
@@ -308,7 +413,7 @@ export async function getPreviousCloseOptionChain(
   const { highlightedRows, metrics } = applyConditionalHighlights(processed, closingSpot);
 
   const result: PreviousCloseChainResult = {
-    date: targetDate,
+    date: effectiveDate,
     slot: '15:30',
     spotPrice: closingSpot,
     spotChange: closingSpotChange,
@@ -350,6 +455,7 @@ export async function saveCloseSnapshotRecord(
     spotPrice,
     rows,
     '15:30',
-    `Market Close Data (15:30 IST) for ${date}`
+    `Market Close Data (15:30 IST) for ${date}`,
+    date
   );
 }
