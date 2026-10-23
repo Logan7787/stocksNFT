@@ -62,7 +62,8 @@ export function generateFallbackExpiryDates(symbol: string = 'NIFTY'): string[] 
 }
 
 class NiftyMarketDataService {
-  private spotPrice: number = 22620.45;
+  private spotPrice: number = 22446.65;
+  private previousClose: number = 22687.65;
   private openSpotPrice: number = 22580.00;
   private rawData: RawOptionData[] = [];
   private processedRows: ProcessedOptionRow[] = [];
@@ -72,6 +73,7 @@ class NiftyMarketDataService {
   private tickIntervalMs: number = 1000;
   private isRunning: boolean = false;
   private isSimulated: boolean = true;
+  private hasSyncedQuoteToday: boolean = false;
   private brokerStatus: BrokerStatus = {
     connected: false,
     status: 'idle',
@@ -85,6 +87,23 @@ class NiftyMarketDataService {
   };
 
   constructor() {
+    // Restore persistent previous day close if saved
+    const savedPrevClose = localStorage.getItem('nifty_previous_close');
+    if (savedPrevClose) {
+      const parsed = parseFloat(savedPrevClose);
+      if (!isNaN(parsed) && parsed > 0) {
+        this.previousClose = round2(parsed);
+      }
+    }
+    // Restore calibrated spot price if saved
+    const savedSpot = localStorage.getItem('nifty_calibrated_spot');
+    if (savedSpot) {
+      const parsedSpot = parseFloat(savedSpot);
+      if (!isNaN(parsedSpot) && parsedSpot > 0) {
+        this.spotPrice = round2(parsedSpot);
+      }
+    }
+
     this.initData();
     this.getBrokerConfig(); // Load initial broker configuration with .env fallback
   }
@@ -102,6 +121,35 @@ class NiftyMarketDataService {
 
   public setSpotPrice(newSpot: number): void {
     this.spotPrice = round2(newSpot);
+    localStorage.setItem('nifty_calibrated_spot', String(this.spotPrice));
+    this.recalculateAll();
+  }
+
+  public getPreviousClose(): number {
+    return this.previousClose;
+  }
+
+  public setPreviousClose(newPrevClose: number): void {
+    if (newPrevClose > 0) {
+      this.previousClose = round2(newPrevClose);
+      localStorage.setItem('nifty_previous_close', String(this.previousClose));
+      this.recalculateAll();
+    }
+  }
+
+  /**
+   * Calibrate to official NSE closing price (e.g., between 8:30 PM and 9:30 PM Bhavcopy)
+   * Resolves the 0.10 paise difference between 3:30 PM LTP tick and 30-min VWAP close.
+   */
+  public calibrateToOfficialClose(officialSpot: number, officialPrevClose?: number): void {
+    if (officialSpot > 0) {
+      this.spotPrice = round2(officialSpot);
+      localStorage.setItem('nifty_calibrated_spot', String(this.spotPrice));
+    }
+    if (officialPrevClose && officialPrevClose > 0) {
+      this.previousClose = round2(officialPrevClose);
+      localStorage.setItem('nifty_previous_close', String(this.previousClose));
+    }
     this.recalculateAll();
   }
 
@@ -109,13 +157,19 @@ class NiftyMarketDataService {
     return this.openSpotPrice;
   }
 
+  /**
+   * Real NSE Market Daily Change: Current Spot - Previous Day Close
+   */
   public getSpotChange(): number {
-    return round2(this.spotPrice - this.openSpotPrice);
+    return round2(this.spotPrice - this.previousClose);
   }
 
+  /**
+   * Real NSE Market Daily Change %: (Change / Previous Close) * 100
+   */
   public getSpotChangePercent(): number {
-    if (!this.openSpotPrice) return 0;
-    return round2(((this.spotPrice - this.openSpotPrice) / this.openSpotPrice) * 100);
+    if (!this.previousClose) return 0;
+    return round2(((this.spotPrice - this.previousClose) / this.previousClose) * 100);
   }
 
   public getProcessedRows(): ProcessedOptionRow[] {
@@ -235,14 +289,17 @@ class NiftyMarketDataService {
     this.listeners.add(listener);
     // Send initial frame immediately
     const { highlightedRows, metrics } = applyConditionalHighlights(this.processedRows, this.spotPrice);
+    const spotChange = this.getSpotChange();
+    const spotChangePercent = this.getSpotChangePercent();
     listener({
       spotPrice: this.spotPrice,
-      spotChange: round2(this.spotPrice - this.openSpotPrice),
+      spotChange,
       rows: highlightedRows,
       metrics: {
         ...metrics,
-        spotChange: round2(this.spotPrice - this.openSpotPrice),
-        spotChangePercent: round2(((this.spotPrice - this.openSpotPrice) / this.openSpotPrice) * 100),
+        spotPrice: this.spotPrice,
+        spotChange,
+        spotChangePercent,
       }
     });
 
@@ -252,8 +309,8 @@ class NiftyMarketDataService {
   }
 
   private notify(rows: ProcessedOptionRow[], metrics: MarketMetrics) {
-    const spotChange = round2(this.spotPrice - this.openSpotPrice);
-    const spotChangePercent = round2((spotChange / this.openSpotPrice) * 100);
+    const spotChange = this.getSpotChange();
+    const spotChangePercent = this.getSpotChangePercent();
     const updatedMetrics: MarketMetrics = {
       ...metrics,
       spotPrice: this.spotPrice,
@@ -548,6 +605,67 @@ class NiftyMarketDataService {
 
     // Fallback simulation if broker fetch fails
     this.tickSimulation();
+  }
+
+  /**
+   * Sync official spot price and previous day close directly from broker (Upstox) quote
+   */
+  public async syncBrokerQuote(): Promise<{
+    success: boolean;
+    spotPrice?: number;
+    previousClose?: number;
+    spotChange?: number;
+    spotChangePercent?: number;
+    message: string;
+  }> {
+    const token = this.brokerConfig.apiKey?.trim();
+    if (!token) {
+      return { success: false, message: 'Broker API token is not configured.' };
+    }
+
+    const symbolKey = this.brokerConfig.symbol === 'BANKNIFTY' ? 'NSE_INDEX|Nifty Bank' : 'NSE_INDEX|Nifty 50';
+    const quoteUrl = `/api/upstox/v2/market-quote/quotes?instrument_key=${encodeURIComponent(symbolKey)}`;
+
+    try {
+      const res = await fetch(quoteUrl, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+        },
+      });
+
+      if (res.ok) {
+        const json = await res.json();
+        const dataObj = json.data || {};
+        const keys = Object.keys(dataObj);
+        if (keys.length > 0) {
+          const item = dataObj[keys[0]];
+          const lastPrice = item?.last_price;
+          const prevClose = item?.ohlc?.close;
+
+          if (prevClose && Number(prevClose) > 0) {
+            this.setPreviousClose(Number(prevClose));
+          }
+          if (lastPrice && Number(lastPrice) > 0) {
+            this.setSpotPrice(Number(lastPrice));
+          }
+
+          this.hasSyncedQuoteToday = true;
+
+          return {
+            success: true,
+            spotPrice: this.spotPrice,
+            previousClose: this.previousClose,
+            spotChange: this.getSpotChange(),
+            spotChangePercent: this.getSpotChangePercent(),
+            message: `Synced with Upstox: Spot ₹${this.spotPrice}, Prev Close ₹${this.previousClose} (${this.getSpotChange()} pts / ${this.getSpotChangePercent()}%)`,
+          };
+        }
+      }
+      return { success: false, message: `Broker quote returned status ${res.status}` };
+    } catch (e: any) {
+      return { success: false, message: e.message || 'Failed to sync broker quote' };
+    }
   }
 }
 

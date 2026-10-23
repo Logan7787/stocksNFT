@@ -188,7 +188,7 @@ export const OptionChainDashboard: React.FC = () => {
     const unsubscribe = niftyMarketService.subscribe((data) => {
       setSpotPrice(data.spotPrice);
       setSpotChange(data.spotChange);
-      setSpotChangePercent(round2((data.spotChange / (data.spotPrice - data.spotChange)) * 100));
+      setSpotChangePercent(data.metrics.spotChangePercent);
       setRows(data.rows);
       setMetrics(data.metrics);
     });
@@ -500,6 +500,24 @@ export const OptionChainDashboard: React.FC = () => {
         onSetTickInterval={handleSetTickInterval}
         spotPrice={spotPrice}
         onSetSpotPrice={handleSetSpotPrice}
+        previousClose={niftyMarketService.getPreviousClose()}
+        onSetPreviousClose={(pc) => {
+          niftyMarketService.setPreviousClose(pc);
+          showToast(`Previous Close updated to ₹${pc}`, 'success');
+        }}
+        onCalibrateOfficialClose={(spot, prevClose) => {
+          niftyMarketService.calibrateToOfficialClose(spot, prevClose);
+          showToast(`Calibrated to NSE Official Settlement Close (Spot: ₹${spot})`, 'success');
+        }}
+        onSyncBrokerQuote={async () => {
+          const res = await niftyMarketService.syncBrokerQuote();
+          if (res.success) {
+            showToast(res.message, 'success');
+          } else {
+            showToast(res.message, 'error');
+          }
+          return res;
+        }}
         tradeSettings={tradeSettings}
         onUpdateTradeSettings={handleUpdateTradeSettings}
       />

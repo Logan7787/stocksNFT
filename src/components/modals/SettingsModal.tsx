@@ -30,6 +30,10 @@ interface SettingsModalProps {
   onSetTickInterval: (ms: number) => void;
   spotPrice: number;
   onSetSpotPrice: (price: number) => void;
+  previousClose?: number;
+  onSetPreviousClose?: (close: number) => void;
+  onCalibrateOfficialClose?: (spot: number, prevClose?: number) => void;
+  onSyncBrokerQuote?: () => Promise<{ success: boolean; message: string }>;
   tradeSettings?: TradeSettings;
   onUpdateTradeSettings?: (settings: TradeSettings) => void;
 }
@@ -43,10 +47,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onSetTickInterval,
   spotPrice,
   onSetSpotPrice,
+  previousClose = 22687.65,
+  onSetPreviousClose,
+  onCalibrateOfficialClose,
+  onSyncBrokerQuote,
   tradeSettings,
   onUpdateTradeSettings,
 }) => {
-  const [activeTab, setActiveTab] = useState<'broker' | 'supabase' | 'simulation' | 'trade'>('broker');
+  const [activeTab, setActiveTab] = useState<'broker' | 'market' | 'supabase' | 'simulation' | 'trade'>('broker');
 
   // Supabase state
   const creds = getSupabaseCredentials();
@@ -69,11 +77,23 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     availableExpiries?: string[];
   } | null>(null);
 
-  // Spot shock state
+  // Spot & Market Calibration state
   const [testSpot, setTestSpot] = useState(spotPrice);
+  const [inputPrevClose, setInputPrevClose] = useState<number>(previousClose);
+  const [isSyncingQuote, setIsSyncingQuote] = useState<boolean>(false);
   const [showToken, setShowToken] = useState<boolean>(false);
 
   const envToken = (import.meta.env.VITE_UPSTOX_ACCESS_TOKEN || import.meta.env.VITE_BROKER_ACCESS_TOKEN || '').trim();
+
+  useEffect(() => {
+    setTestSpot(spotPrice);
+  }, [spotPrice]);
+
+  useEffect(() => {
+    if (previousClose) {
+      setInputPrevClose(previousClose);
+    }
+  }, [previousClose]);
 
   // Load available live expiries whenever modal opens or API key / symbol changes
   useEffect(() => {
@@ -219,6 +239,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           >
             <Server className="w-4 h-4" />
             <span>Broker Live API (Upstox)</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('market')}
+            className={`py-3 px-4 text-xs font-bold border-b-2 flex items-center gap-2 transition-all cursor-pointer ${
+              activeTab === 'market'
+                ? 'border-blue-500 text-blue-700 dark:text-blue-400 bg-blue-500/5'
+                : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+            }`}
+          >
+            <Layers className="w-4 h-4" />
+            <span>Market & Settlement Close (NSE)</span>
           </button>
 
           <button
@@ -554,7 +586,214 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           )}
 
-          {/* 2. Supabase Tab */}
+          {/* 2. Market & Settlement Close Tab */}
+          {activeTab === 'market' && (
+            <div className="space-y-5 font-mono text-xs">
+              <div className="p-4 bg-linear-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border border-blue-200 dark:border-blue-800/60 rounded-xl space-y-1">
+                <h4 className="font-bold text-blue-900 dark:text-blue-300 text-sm flex items-center gap-2">
+                  <Layers className="w-4 h-4" />
+                  <span>NSE India Official Close & Settlement Calibration</span>
+                </h4>
+                <p className="text-[11px] text-slate-600 dark:text-slate-400 font-sans leading-relaxed">
+                  Calibrate previous trading day close and reconcile the <strong>0.10 paise difference</strong> between the 3:30 PM intraday LTP tick (e.g. ₹22,446.75) and NSE's official 8:30–9:30 PM Bhavcopy settlement close (₹22,446.65).
+                </p>
+              </div>
+
+              {/* Live Preview Box */}
+              <div className="p-4 bg-slate-50 dark:bg-slate-900/90 border border-slate-300 dark:border-slate-800 rounded-xl space-y-2">
+                <div className="flex items-center justify-between text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                  <span>LIVE CALCULATION PREVIEW</span>
+                  <span className="text-[10px] text-cyan-600 dark:text-cyan-400 font-mono">ATM Strike: {Math.round(testSpot / 50) * 50}</span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 font-mono">
+                  <div className="p-2.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg">
+                    <span className="text-[10px] text-slate-500 uppercase block">Spot Price</span>
+                    <span className="text-sm font-black text-slate-900 dark:text-white">₹{testSpot.toFixed(2)}</span>
+                  </div>
+                  <div className="p-2.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg">
+                    <span className="text-[10px] text-slate-500 uppercase block">Previous Close</span>
+                    <span className="text-sm font-black text-slate-900 dark:text-white">₹{inputPrevClose.toFixed(2)}</span>
+                  </div>
+                  <div className="p-2.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg">
+                    <span className="text-[10px] text-slate-500 uppercase block">Net Points</span>
+                    <span className={`text-sm font-black ${(testSpot - inputPrevClose) >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                      {(testSpot - inputPrevClose) >= 0 ? '+' : ''}{(testSpot - inputPrevClose).toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="p-2.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg">
+                    <span className="text-[10px] text-slate-500 uppercase block">Change %</span>
+                    <span className={`text-sm font-black ${(testSpot - inputPrevClose) >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                      {(testSpot - inputPrevClose) >= 0 ? '+' : ''}{(((testSpot - inputPrevClose) / (inputPrevClose || 1)) * 100).toFixed(2)}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 1. Previous Day Close Config */}
+              <div className="p-4 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-xl space-y-3">
+                <label className="block text-slate-800 dark:text-slate-300 font-bold uppercase tracking-wider text-[11px]">
+                  1. Previous Trading Day Close (Official NSE Close)
+                </label>
+                <p className="text-[11px] text-slate-500 font-sans">
+                  The base price used by NSE to calculate today's net change points and %. E.g. <strong>₹22,687.65</strong> yields <strong>-241.00 pts (-1.06%)</strong> against ₹22,446.65.
+                </p>
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <span className="absolute left-3 top-2.5 text-slate-400 font-bold">₹</span>
+                    <input
+                      type="number"
+                      step="0.05"
+                      value={inputPrevClose}
+                      onChange={(e) => setInputPrevClose(Number(e.target.value))}
+                      placeholder="e.g. 22687.65"
+                      className="w-full pl-8 pr-3.5 py-2 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl font-bold text-slate-900 dark:text-white"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (onSetPreviousClose && inputPrevClose > 0) {
+                        onSetPreviousClose(inputPrevClose);
+                        showToast(`Previous close saved: ₹${inputPrevClose}`);
+                      }
+                    }}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl cursor-pointer shadow-sm transition-all"
+                  >
+                    Save Prev Close
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setInputPrevClose(22687.65);
+                      if (onSetPreviousClose) onSetPreviousClose(22687.65);
+                      showToast('Reset to default previous close: ₹22,687.65');
+                    }}
+                    className="px-3 py-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-300 rounded-xl text-[11px] cursor-pointer"
+                  >
+                    Reset (22687.65)
+                  </button>
+                </div>
+              </div>
+
+              {/* 2. Official Settlement / Spot Close Calibration */}
+              <div className="p-4 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-xl space-y-3">
+                <label className="block text-slate-800 dark:text-slate-300 font-bold uppercase tracking-wider text-[11px]">
+                  2. Spot Close Calibration (8:30 PM – 9:30 PM NSE Bhavcopy)
+                </label>
+                <p className="text-[11px] text-slate-500 font-sans">
+                  Reconcile the live tick price with the official 30-minute VWAP published on <a href="https://www.nseindia.com/get-quote/derivatives/NIFTY/NIFTY-50" target="_blank" rel="noreferrer" className="text-cyan-600 dark:text-cyan-400 underline font-semibold">nseindia.com</a>.
+                </p>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="relative w-44">
+                    <span className="absolute left-3 top-2.5 text-slate-400 font-bold">₹</span>
+                    <input
+                      type="number"
+                      step="0.05"
+                      value={testSpot}
+                      onChange={(e) => setTestSpot(Number(e.target.value))}
+                      className="w-full pl-8 pr-3 py-2 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl font-bold text-slate-900 dark:text-white"
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onSetSpotPrice(testSpot);
+                      if (onCalibrateOfficialClose) onCalibrateOfficialClose(testSpot, inputPrevClose);
+                      showToast(`Spot price calibrated to ₹${testSpot}`);
+                    }}
+                    className="px-3.5 py-2 bg-cyan-500 hover:bg-cyan-400 text-black font-bold rounded-xl cursor-pointer shadow-sm transition-all"
+                  >
+                    Apply Spot Close
+                  </button>
+
+                  {/* 1-Click Bhavcopy Quick-Reconcile */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const official = 22446.65;
+                      const prev = 22687.65;
+                      setTestSpot(official);
+                      setInputPrevClose(prev);
+                      if (onCalibrateOfficialClose) {
+                        onCalibrateOfficialClose(official, prev);
+                      } else {
+                        onSetSpotPrice(official);
+                        if (onSetPreviousClose) onSetPreviousClose(prev);
+                      }
+                      showToast(`Calibrated: Spot ₹${official} (-241.00 pts / -1.06%)`);
+                    }}
+                    className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl cursor-pointer shadow-sm transition-all"
+                  >
+                    Quick Reconcile: 22,446.65 (-1.06%)
+                  </button>
+                </div>
+
+                {/* Quick 0.10 paise adjustments */}
+                <div className="flex items-center gap-2 pt-1">
+                  <span className="text-[11px] text-slate-500">Fine Adjust:</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newSpot = Math.round((testSpot - 0.10) * 100) / 100;
+                      setTestSpot(newSpot);
+                      onSetSpotPrice(newSpot);
+                      showToast(`Offset by -0.10 paise: ₹${newSpot}`);
+                    }}
+                    className="px-2.5 py-1 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-300 rounded-lg text-[11px] font-bold cursor-pointer"
+                  >
+                    -0.10 paise (3:30 LTP → VWAP)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newSpot = Math.round((testSpot + 0.10) * 100) / 100;
+                      setTestSpot(newSpot);
+                      onSetSpotPrice(newSpot);
+                      showToast(`Offset by +0.10 paise: ₹${newSpot}`);
+                    }}
+                    className="px-2.5 py-1 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-300 rounded-lg text-[11px] font-bold cursor-pointer"
+                  >
+                    +0.10 paise
+                  </button>
+                </div>
+              </div>
+
+              {/* 3. Auto-Sync from Upstox */}
+              {onSyncBrokerQuote && (
+                <div className="p-4 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-xl flex items-center justify-between gap-4">
+                  <div>
+                    <h5 className="font-bold text-slate-900 dark:text-white text-xs">Live Broker Quote Sync</h5>
+                    <p className="text-[10px] text-slate-500">Auto-fetch official NIFTY Spot and Previous Close from Upstox live feed.</p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={isSyncingQuote}
+                    onClick={async () => {
+                      setIsSyncingQuote(true);
+                      try {
+                        const res = await onSyncBrokerQuote();
+                        if (res.success) {
+                          showToast(res.message);
+                        } else {
+                          showToast(res.message);
+                        }
+                      } finally {
+                        setIsSyncingQuote(false);
+                      }
+                    }}
+                    className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isSyncingQuote ? 'animate-spin' : ''}`} />
+                    <span>{isSyncingQuote ? 'Syncing...' : 'Sync from Upstox'}</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 3. Supabase Tab */}
           {activeTab === 'supabase' && (
             <div className="space-y-4 font-mono text-xs">
               <p className="text-slate-600 dark:text-slate-300 font-sans text-xs">
