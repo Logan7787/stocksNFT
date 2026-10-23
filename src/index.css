@@ -59,13 +59,13 @@ body {
 @media print {
   @page {
     size: landscape;
-    margin: 6mm;
+    margin: 4mm 6mm;
   }
 
   body {
     background: #ffffff !important;
     color: #000000 !important;
-    font-size: 11px !important;
+    font-size: 13px !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
@@ -86,7 +86,15 @@ body {
     box-shadow: none !important;
   }
 
-  /* High contrast table borders and rows */
+  /* Ensure desktop table prints even if media query matches smaller screens */
+  .hidden.lg\:block {
+    display: block !important;
+  }
+  .lg\:hidden {
+    display: none !important;
+  }
+
+  /* High contrast table borders and rows with significantly larger, crisp print typography */
   table {
     width: 100% !important;
     min-width: 100% !important;
@@ -94,18 +102,34 @@ body {
     page-break-inside: auto;
   }
 
-  tr {
-    page-break-inside: avoid;
-    break-inside: avoid;
+  th {
+    padding: 6px 6px !important;
+    font-size: 12px !important;
+    font-weight: 800 !important;
+    color: #000000 !important;
+    border: 1px solid #94a3b8 !important;
   }
 
-  th,
   td {
-    padding: 3px 4px !important;
-    font-size: 10px !important;
+    padding: 5px 6px !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #000000 !important;
+  }
+
+  /* Highlight strike price clearly in print */
+  td:nth-child(5), th:nth-child(5) {
+    font-size: 14px !important;
+    font-weight: 900 !important;
   }
 
   thead {
     display: table-header-group;
+  }
+
+  tr {
+    page-break-inside: avoid;
+    break-inside: avoid;
   }
 }

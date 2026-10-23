@@ -46,6 +46,10 @@ export interface ProcessedOptionRow {
   isTopCallVolume?: boolean;  // Light Yellow (#fde047) - Top 2
   isTopPutVolume?: boolean;   // Light Yellow (#fde047) - Top 2
 
+  // Close Formula Breakup / Breakdown Indicators
+  isFormulaAtm?: boolean;
+  breakLevelRole?: 'FORMULA_ATM' | 'ATM_MINUS_100' | 'ATM_PLUS_100';
+
   // Trading Signal Flags & Intraday Trade Engine
   ceSignal?: boolean;         // call_close > call_avg && call_close > call_premium
   peSignal?: boolean;         // put_close > put_avg && put_close > put_premium
@@ -59,6 +63,29 @@ export interface ProcessedOptionRow {
   prevPutClose?: number;
   callTickDirection?: 'up' | 'down' | 'neutral';
   putTickDirection?: 'up' | 'down' | 'neutral';
+}
+
+export type BreakLevelRole = 'FORMULA_ATM' | 'ATM_MINUS_100' | 'ATM_PLUS_100';
+
+export interface BreakLevelsInfo {
+  formulaAtmStrike: number;
+  atmCallClose: number;
+  atmPutClose: number;
+  atmDiff: number;
+  breakDown: {
+    value: number;
+    callStrike: number;
+    callClose: number;
+    putStrike: number;
+    putClose: number;
+  };
+  breakUp: {
+    value: number;
+    callStrike: number;
+    callClose: number;
+    putStrike: number;
+    putClose: number;
+  };
 }
 
 export interface TradeSettings {

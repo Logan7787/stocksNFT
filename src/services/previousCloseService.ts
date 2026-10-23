@@ -1,9 +1,11 @@
-import type { ProcessedOptionRow, MarketMetrics, MarketSnapshotRecord } from '../types/optionChain';
+import type { ProcessedOptionRow, MarketMetrics, MarketSnapshotRecord, BreakLevelsInfo } from '../types/optionChain';
 import { 
   generateBaseNiftyOptionData, 
   processRawOptionRow, 
   applyConditionalHighlights, 
-  round2 
+  round2,
+  calculateBreakLevels,
+  tagBreakLevelStrikes
 } from '../utils/formulas';
 import { 
   loadHistoricalSnapshotsList, 
@@ -36,6 +38,7 @@ export interface PreviousCloseChainResult {
   metrics: MarketMetrics;
   source: 'database' | 'generated' | 'cached';
   savedSnapshotId?: string;
+  breakLevels?: BreakLevelsInfo | null;
 }
 
 export const VERIFIED_MARKET_CLOSE_2026_10_21: ProcessedOptionRow[] = [
@@ -223,6 +226,41 @@ export interface PreviousCloseOptions {
 }
 
 /**
+ * Helper to build PreviousCloseChainResult with break levels calculated and rows tagged
+ */
+function buildCloseChainResult(
+  date: string,
+  slot: string,
+  spotPrice: number,
+  spotChange: number,
+  spotChangePercent: number,
+  highlightedRows: ProcessedOptionRow[],
+  metrics: MarketMetrics,
+  source: 'database' | 'generated' | 'cached',
+  savedSnapshotId?: string
+): PreviousCloseChainResult {
+  const breakLevels = calculateBreakLevels(highlightedRows);
+  const rows = tagBreakLevelStrikes(highlightedRows, breakLevels);
+  return {
+    date,
+    slot,
+    spotPrice,
+    spotChange,
+    spotChangePercent,
+    rows,
+    metrics: {
+      ...metrics,
+      spotPrice,
+      spotChange,
+      spotChangePercent,
+    },
+    source,
+    savedSnapshotId,
+    breakLevels,
+  };
+}
+
+/**
  * Loads or generates option chain data for a market close session
  */
 export async function getPreviousCloseOptionChain(
@@ -248,17 +286,17 @@ export async function getPreviousCloseOptionChain(
         if (loaded.snapshot && loaded.rows && loaded.rows.length > 0) {
           const spot = Number(loaded.snapshot.spot_close) || referenceSpot || niftyMarketService.getSpotPrice();
           const { highlightedRows, metrics } = applyConditionalHighlights(loaded.rows, spot);
-          return {
-            date: targetSnapshot.snapshot_date,
-            slot: targetSnapshot.hour_slot,
-            spotPrice: spot,
-            spotChange: options?.todaySpotChange !== undefined ? options.todaySpotChange : niftyMarketService.getSpotChange(),
-            spotChangePercent: options?.todaySpotChangePercent !== undefined ? options.todaySpotChangePercent : niftyMarketService.getSpotChangePercent(),
-            rows: highlightedRows,
+          return buildCloseChainResult(
+            targetSnapshot.snapshot_date,
+            targetSnapshot.hour_slot,
+            spot,
+            options?.todaySpotChange !== undefined ? options.todaySpotChange : niftyMarketService.getSpotChange(),
+            options?.todaySpotChangePercent !== undefined ? options.todaySpotChangePercent : niftyMarketService.getSpotChangePercent(),
+            highlightedRows,
             metrics,
-            source: 'database',
-            savedSnapshotId: targetSnapshot.id,
-          };
+            'database',
+            targetSnapshot.id
+          );
         }
       }
     } catch (err) {
@@ -288,58 +326,48 @@ export async function getPreviousCloseOptionChain(
         console.warn('Failed to cache today close:', e);
       }
 
-      return {
-        date: todayYMD,
-        slot: '15:30',
-        spotPrice: liveSpot,
-        spotChange: liveChange,
-        spotChangePercent: liveChangePct,
-        rows: highlightedRows,
-        metrics: {
-          ...metrics,
-          spotPrice: liveSpot,
-          spotChange: liveChange,
-          spotChangePercent: liveChangePct,
-        },
-        source: 'database',
-      };
+      return buildCloseChainResult(
+        todayYMD,
+        '15:30',
+        liveSpot,
+        liveChange,
+        liveChangePct,
+        highlightedRows,
+        metrics,
+        'database'
+      );
     }
 
     // 1C. Fallback: generate option chain for today's closing spot
     const rawRows = generateBaseNiftyOptionData(liveSpot);
     const processed = rawRows.map(r => processRawOptionRow(r));
     const { highlightedRows, metrics } = applyConditionalHighlights(processed, liveSpot);
-    return {
-      date: todayYMD,
-      slot: '15:30',
-      spotPrice: liveSpot,
-      spotChange: liveChange,
-      spotChangePercent: liveChangePct,
-      rows: highlightedRows,
-      metrics: {
-        ...metrics,
-        spotPrice: liveSpot,
-        spotChange: liveChange,
-        spotChangePercent: liveChangePct,
-      },
-      source: 'database',
-    };
+    return buildCloseChainResult(
+      todayYMD,
+      '15:30',
+      liveSpot,
+      liveChange,
+      liveChangePct,
+      highlightedRows,
+      metrics,
+      'database'
+    );
   }
 
   // 2. Official Verified Historical Dataset from 2026-10-21 Market Close Report
   if (effectiveDate === '2026-10-21') {
     const verifiedSpot = 22811.35;
     const { highlightedRows, metrics } = applyConditionalHighlights(VERIFIED_MARKET_CLOSE_2026_10_21, verifiedSpot);
-    return {
-      date: '2026-10-21',
-      slot: '15:30',
-      spotPrice: verifiedSpot,
-      spotChange: 0,
-      spotChangePercent: 0,
-      rows: highlightedRows,
+    return buildCloseChainResult(
+      '2026-10-21',
+      '15:30',
+      verifiedSpot,
+      0,
+      0,
+      highlightedRows,
       metrics,
-      source: 'database',
-    };
+      'database'
+    );
   }
 
   // 3. Check existing database/local snapshots for any other historical date
@@ -356,17 +384,17 @@ export async function getPreviousCloseOptionChain(
       if (loaded.snapshot && loaded.rows && loaded.rows.length > 0) {
         const spot = Number(loaded.snapshot.spot_close) || fallbackSpot;
         const { highlightedRows, metrics } = applyConditionalHighlights(loaded.rows, spot);
-        return {
-          date: targetSnapshot.snapshot_date,
-          slot: targetSnapshot.hour_slot,
-          spotPrice: spot,
-          spotChange: 0,
-          spotChangePercent: 0,
-          rows: highlightedRows,
+        return buildCloseChainResult(
+          targetSnapshot.snapshot_date,
+          targetSnapshot.hour_slot,
+          spot,
+          0,
+          0,
+          highlightedRows,
           metrics,
-          source: 'database',
-          savedSnapshotId: targetSnapshot.id,
-        };
+          'database',
+          targetSnapshot.id
+        );
       }
     }
   } catch (err) {
@@ -382,16 +410,16 @@ export async function getPreviousCloseOptionChain(
       if (parsed && Array.isArray(parsed.rows) && parsed.rows.length > 0) {
         const spot = Number(parsed.spotPrice) || fallbackSpot;
         const { highlightedRows, metrics } = applyConditionalHighlights(parsed.rows, spot);
-        return {
-          date: effectiveDate,
-          slot: '15:30',
-          spotPrice: spot,
-          spotChange: parsed.spotChange ?? 0,
-          spotChangePercent: parsed.spotChangePercent ?? 0,
-          rows: highlightedRows,
+        return buildCloseChainResult(
+          effectiveDate,
+          '15:30',
+          spot,
+          parsed.spotChange ?? 0,
+          parsed.spotChangePercent ?? 0,
+          highlightedRows,
           metrics,
-          source: 'cached',
-        };
+          'cached'
+        );
       }
     }
   } catch (e) {
@@ -412,21 +440,16 @@ export async function getPreviousCloseOptionChain(
   const processed = rawRows.map(r => processRawOptionRow(r));
   const { highlightedRows, metrics } = applyConditionalHighlights(processed, closingSpot);
 
-  const result: PreviousCloseChainResult = {
-    date: effectiveDate,
-    slot: '15:30',
-    spotPrice: closingSpot,
-    spotChange: closingSpotChange,
-    spotChangePercent: closingSpotPct,
-    rows: highlightedRows,
-    metrics: {
-      ...metrics,
-      spotPrice: closingSpot,
-      spotChange: closingSpotChange,
-      spotChangePercent: closingSpotPct,
-    },
-    source: 'generated',
-  };
+  const result = buildCloseChainResult(
+    effectiveDate,
+    '15:30',
+    closingSpot,
+    closingSpotChange,
+    closingSpotPct,
+    highlightedRows,
+    metrics,
+    'generated'
+  );
 
   // Cache to localStorage
   try {

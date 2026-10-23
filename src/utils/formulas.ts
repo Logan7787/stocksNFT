@@ -1,4 +1,4 @@
-import type { RawOptionData, ProcessedOptionRow, MarketMetrics } from '../types/optionChain';
+import type { RawOptionData, ProcessedOptionRow, MarketMetrics, BreakLevelsInfo } from '../types/optionChain';
 
 /**
  * Custom Mathematical Formulas for NIFTY 50 Option Chain:
@@ -277,3 +277,97 @@ export function generateBaseNiftyOptionData(spotPrice = 22620.45): RawOptionData
     };
   });
 }
+
+/**
+ * Calculates Close ATM strike and Break Up / Break Down values according to formula:
+ * 1. ATM Strike: The strike where |call_close - put_close| <= 25 points (or the strike with minimum |call_close - put_close|).
+ *    Note: Spot close strike is NOT used as ATM here.
+ * 2. Break Down: (Call Close at ATM+100 + Put Close at ATM-100) / 2
+ * 3. Break Up:   (Call Close at ATM-100 + Put Close at ATM+100) / 2
+ */
+export function calculateBreakLevels(rows: ProcessedOptionRow[]): BreakLevelsInfo | null {
+  if (!rows || rows.length === 0) return null;
+
+  // Find the strike where |call_close - put_close| is minimal (target <= 25 pts)
+  let bestRow = rows[0];
+  let minDiff = Math.abs(rows[0].call_close - rows[0].put_close);
+
+  for (const row of rows) {
+    const diff = Math.abs(row.call_close - row.put_close);
+    if (diff < minDiff) {
+      minDiff = diff;
+      bestRow = row;
+    }
+  }
+
+  const formulaAtmStrike = bestRow.strike;
+  const atmCallClose = round2(bestRow.call_close);
+  const atmPutClose = round2(bestRow.put_close);
+  const atmDiff = round2(minDiff);
+
+  // Reference strikes: ATM + 100 and ATM - 100
+  const plus100Strike = formulaAtmStrike + 100;
+  const minus100Strike = formulaAtmStrike - 100;
+
+  const plus100Row = rows.find(r => r.strike === plus100Strike);
+  const minus100Row = rows.find(r => r.strike === minus100Strike);
+
+  // For Break Down:
+  // Call Close at (ATM + 100)
+  // Put Close at (ATM - 100)
+  const bdCallClose = plus100Row ? round2(plus100Row.call_close) : 0;
+  const bdPutClose = minus100Row ? round2(minus100Row.put_close) : 0;
+  const breakDownValue = round2((bdCallClose + bdPutClose) / 2);
+
+  // For Break Up:
+  // Call Close at (ATM - 100) [ITM Call]
+  // Put Close at (ATM + 100) [ITM Put]
+  const buCallClose = minus100Row ? round2(minus100Row.call_close) : 0;
+  const buPutClose = plus100Row ? round2(plus100Row.put_close) : 0;
+  const breakUpValue = round2((buCallClose + buPutClose) / 2);
+
+  return {
+    formulaAtmStrike,
+    atmCallClose,
+    atmPutClose,
+    atmDiff,
+    breakDown: {
+      value: breakDownValue,
+      callStrike: plus100Strike,
+      callClose: bdCallClose,
+      putStrike: minus100Strike,
+      putClose: bdPutClose,
+    },
+    breakUp: {
+      value: breakUpValue,
+      callStrike: minus100Strike,
+      callClose: buCallClose,
+      putStrike: plus100Strike,
+      putClose: buPutClose,
+    },
+  };
+}
+
+/**
+ * Annotates rows with tags indicating their role in Break Up / Break Down calculations
+ */
+export function tagBreakLevelStrikes(
+  rows: ProcessedOptionRow[], 
+  breakLevels: BreakLevelsInfo | null
+): ProcessedOptionRow[] {
+  if (!breakLevels) return rows;
+
+  return rows.map(r => {
+    if (r.strike === breakLevels.formulaAtmStrike) {
+      return { ...r, isFormulaAtm: true, breakLevelRole: 'FORMULA_ATM' };
+    }
+    if (r.strike === breakLevels.breakUp.callStrike) { // ATM - 100
+      return { ...r, breakLevelRole: 'ATM_MINUS_100' };
+    }
+    if (r.strike === breakLevels.breakDown.callStrike) { // ATM + 100
+      return { ...r, breakLevelRole: 'ATM_PLUS_100' };
+    }
+    return r;
+  });
+}
+

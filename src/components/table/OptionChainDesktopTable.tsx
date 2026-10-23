@@ -1,25 +1,60 @@
 import React, { memo } from 'react';
 import type { ProcessedOptionRow } from '../../types/optionChain';
 
+export type TableFontSize = 'normal' | 'large' | 'xlarge';
+
 interface OptionChainDesktopTableProps {
   rows: ProcessedOptionRow[];
   spotPrice: number;
+  fontSize?: TableFontSize;
 }
 
 // Memoized single row component to ensure zero-lag rendering
-const OptionRowItem = memo(({ row, spotPrice }: { row: ProcessedOptionRow; spotPrice: number }) => {
+const OptionRowItem = memo(({ 
+  row, 
+  spotPrice, 
+  fontSize = 'large' 
+}: { 
+  row: ProcessedOptionRow; 
+  spotPrice: number;
+  fontSize?: TableFontSize;
+}) => {
   const isCallITM = row.strike < spotPrice;
   const isPutITM = row.strike > spotPrice;
 
+  const sizeConfig = {
+    normal: {
+      tr: 'text-[14px]',
+      cell: 'py-2 px-3',
+      strike: 'text-[15px]',
+      badge: 'text-[10px]',
+      signal: 'text-xs px-2 py-0.5',
+    },
+    large: {
+      tr: 'text-[16px]',
+      cell: 'py-2.5 px-3.5',
+      strike: 'text-[17px]',
+      badge: 'text-[11px]',
+      signal: 'text-[13px] px-2.5 py-1',
+    },
+    xlarge: {
+      tr: 'text-[18px]',
+      cell: 'py-3.5 px-4',
+      strike: 'text-[19px]',
+      badge: 'text-xs',
+      signal: 'text-sm px-3 py-1.5',
+    },
+  }[fontSize];
+
   return (
-    <tr className="border-b border-slate-200 dark:border-slate-800/60 hover:bg-slate-100/90 dark:hover:bg-slate-800/50 transition-colors font-mono text-[13px] group">
+    <tr className={`border-b border-slate-200 dark:border-slate-800/60 hover:bg-slate-100/90 dark:hover:bg-slate-800/50 transition-colors font-mono ${sizeConfig.tr} group`}>
       {/* ============================================================== */}
       {/* CALL SECTION (LEFT): VOLUME | PREMIUM | AVG | CLOSE           */}
       {/* ============================================================== */}
 
       {/* 1. CALL VOLUME */}
       <td
-        className={`py-2 px-3 text-right font-medium transition-all ${
+        className={`${sizeConfig.cell} text-right font-medium transition-all ${
           row.isTopCallVolume
             ? 'bg-[#fde047] text-slate-950 font-black shadow-inner'
             : isCallITM
@@ -30,7 +65,7 @@ const OptionRowItem = memo(({ row, spotPrice }: { row: ProcessedOptionRow; spotP
       >
         <span className="flex items-center justify-end gap-1">
           {row.isTopCallVolume && (
-            <span className="text-[9px] px-1 py-0.5 bg-black/80 text-yellow-300 rounded font-bold uppercase">
+            <span className={`${sizeConfig.badge} px-1.5 py-0.5 bg-black/80 text-yellow-300 rounded font-bold uppercase`}>
               TOP
             </span>
           )}
@@ -40,7 +75,7 @@ const OptionRowItem = memo(({ row, spotPrice }: { row: ProcessedOptionRow; spotP
 
       {/* 2. CALL PREMIUM: (Call Low + Put High) / 2 */}
       <td
-        className={`py-2 px-3 text-right transition-all ${
+        className={`${sizeConfig.cell} text-right transition-all ${
           row.isMinCallPremium
             ? 'bg-[#7dd3fc] text-slate-950 font-black shadow-inner ring-1 ring-sky-500'
             : isCallITM
@@ -51,7 +86,7 @@ const OptionRowItem = memo(({ row, spotPrice }: { row: ProcessedOptionRow; spotP
       >
         <div className="flex items-center justify-end gap-1">
           {row.isMinCallPremium && (
-            <span className="text-[9px] px-1 py-0.5 bg-black/80 text-sky-300 rounded font-bold uppercase">
+            <span className={`${sizeConfig.badge} px-1.5 py-0.5 bg-black/80 text-sky-300 rounded font-bold uppercase`}>
               MIN
             </span>
           )}
@@ -61,7 +96,7 @@ const OptionRowItem = memo(({ row, spotPrice }: { row: ProcessedOptionRow; spotP
 
       {/* 3. CALL AVG: (Call Close + Put Close) / 2 */}
       <td
-        className={`py-2 px-3 text-right transition-all ${
+        className={`${sizeConfig.cell} text-right transition-all ${
           row.isMinAvg
             ? 'bg-[#86efac] text-slate-950 font-black shadow-inner ring-1 ring-emerald-500'
             : isCallITM
@@ -72,7 +107,7 @@ const OptionRowItem = memo(({ row, spotPrice }: { row: ProcessedOptionRow; spotP
       >
         <div className="flex items-center justify-end gap-1">
           {row.isMinAvg && (
-            <span className="text-[9px] px-1 py-0.5 bg-black/80 text-emerald-300 rounded font-bold uppercase">
+            <span className={`${sizeConfig.badge} px-1.5 py-0.5 bg-black/80 text-emerald-300 rounded font-bold uppercase`}>
               MIN
             </span>
           )}
@@ -82,7 +117,7 @@ const OptionRowItem = memo(({ row, spotPrice }: { row: ProcessedOptionRow; spotP
 
       {/* 4. CALL CLOSE */}
       <td
-        className={`py-2 px-3 text-right font-bold transition-colors ${
+        className={`${sizeConfig.cell} text-right font-bold transition-colors ${
           row.callTickDirection === 'up'
             ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/30 dark:text-emerald-300'
             : row.callTickDirection === 'down'
@@ -100,15 +135,38 @@ const OptionRowItem = memo(({ row, spotPrice }: { row: ProcessedOptionRow; spotP
       {/* CENTER SECTION: STRIKE PRICE (Orange ATM Highlight)            */}
       {/* ============================================================== */}
       <td
-        className={`py-2 px-4 text-center font-black transition-all border-x-2 border-slate-300 dark:border-slate-700/80 ${
+        className={`${sizeConfig.cell} text-center font-black transition-all border-x-2 border-slate-300 dark:border-slate-700/80 ${
           row.isATM
-            ? 'bg-[#f97316] text-white shadow-lg shadow-orange-500/40 text-sm scale-105 z-10 ring-2 ring-orange-400'
+            ? 'bg-[#f97316] text-white shadow-lg shadow-orange-500/40 scale-105 z-10 ring-2 ring-orange-400'
+            : row.isFormulaAtm
+            ? 'bg-amber-400 dark:bg-amber-500 text-slate-950 shadow-md ring-2 ring-amber-400 font-black'
+            : row.breakLevelRole === 'ATM_MINUS_100'
+            ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 ring-1 ring-emerald-500/60'
+            : row.breakLevelRole === 'ATM_PLUS_100'
+            ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 ring-1 ring-rose-500/60'
             : 'bg-slate-100 dark:bg-slate-900/95 text-slate-900 dark:text-slate-200'
         }`}
       >
-        <div className="flex items-center justify-center gap-1">
-          {row.isATM && <span className="text-[10px] px-1 bg-black/70 rounded text-amber-200 font-sans">ATM</span>}
-          <span>{row.strike}</span>
+        <div className="flex flex-col items-center justify-center gap-0.5">
+          <div className="flex items-center justify-center gap-1.5">
+            {row.isATM && <span className="text-[10px] px-1.5 py-0.5 bg-black/70 rounded text-amber-200 font-sans font-black">ATM</span>}
+            {row.isFormulaAtm && !row.isATM && (
+              <span className="text-[9px] px-1.5 py-0.5 bg-black text-amber-300 rounded font-black font-sans uppercase">
+                FORMULA ATM
+              </span>
+            )}
+            <span className={sizeConfig.strike}>{row.strike}</span>
+          </div>
+          {row.breakLevelRole === 'ATM_MINUS_100' && (
+            <span className="text-[9px] px-1.5 py-0.5 bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-400/40 rounded font-sans font-bold whitespace-nowrap">
+              ATM - 100
+            </span>
+          )}
+          {row.breakLevelRole === 'ATM_PLUS_100' && (
+            <span className="text-[9px] px-1.5 py-0.5 bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-400/40 rounded font-sans font-bold whitespace-nowrap">
+              ATM + 100
+            </span>
+          )}
         </div>
       </td>
 
@@ -116,7 +174,7 @@ const OptionRowItem = memo(({ row, spotPrice }: { row: ProcessedOptionRow; spotP
       {/* ACTION SIGNALS COLUMN: BUY CE (Green) / BUY PE (Red) Badges    */}
       {/* ============================================================== */}
       <td
-        className="py-2 px-3 text-center transition-all border-r-2 border-slate-300 dark:border-slate-700/80 bg-slate-50/70 dark:bg-slate-900/60"
+        className={`${sizeConfig.cell} text-center transition-all border-r-2 border-slate-300 dark:border-slate-700/80 bg-slate-50/70 dark:bg-slate-900/60`}
         title={
           row.ceSignal && row.peSignal
             ? 'Dual Breakout: Both CE and PE breakout conditions triggered!'
@@ -129,19 +187,19 @@ const OptionRowItem = memo(({ row, spotPrice }: { row: ProcessedOptionRow; spotP
       >
         <div className="flex items-center justify-center gap-1.5 flex-wrap">
           {row.ceSignal && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-black bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-md shadow-emerald-500/30 ring-1 ring-emerald-400/60 transition-transform scale-100 hover:scale-105 cursor-default">
+            <span className={`inline-flex items-center gap-1.5 rounded-lg font-black bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-md shadow-emerald-500/30 ring-1 ring-emerald-400/60 transition-transform scale-100 hover:scale-105 cursor-default ${sizeConfig.signal}`}>
               <span className="w-1.5 h-1.5 rounded-full bg-slate-950"></span>
               BUY CE
             </span>
           )}
           {row.peSignal && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-black bg-rose-500 hover:bg-rose-400 text-white shadow-md shadow-rose-500/30 ring-1 ring-rose-400/60 transition-transform scale-100 hover:scale-105 cursor-default">
+            <span className={`inline-flex items-center gap-1.5 rounded-lg font-black bg-rose-500 hover:bg-rose-400 text-white shadow-md shadow-rose-500/30 ring-1 ring-rose-400/60 transition-transform scale-100 hover:scale-105 cursor-default ${sizeConfig.signal}`}>
               <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
               BUY PE
             </span>
           )}
           {!row.ceSignal && !row.peSignal && (
-            <span className="text-slate-400 dark:text-slate-600 text-xs font-mono">-</span>
+            <span className="text-slate-400 dark:text-slate-600 font-mono font-bold">-</span>
           )}
         </div>
       </td>
@@ -152,7 +210,7 @@ const OptionRowItem = memo(({ row, spotPrice }: { row: ProcessedOptionRow; spotP
 
       {/* 5. PUT CLOSE */}
       <td
-        className={`py-2 px-3 text-left font-bold transition-colors ${
+        className={`${sizeConfig.cell} text-left font-bold transition-colors ${
           row.putTickDirection === 'up'
             ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/30 dark:text-emerald-300'
             : row.putTickDirection === 'down'
@@ -168,7 +226,7 @@ const OptionRowItem = memo(({ row, spotPrice }: { row: ProcessedOptionRow; spotP
 
       {/* 6. PUT AVG: (Call Close + Put Close) / 2 */}
       <td
-        className={`py-2 px-3 text-left transition-all ${
+        className={`${sizeConfig.cell} text-left transition-all ${
           row.isMinAvg
             ? 'bg-[#86efac] text-slate-950 font-black shadow-inner ring-1 ring-emerald-500'
             : isPutITM
@@ -180,7 +238,7 @@ const OptionRowItem = memo(({ row, spotPrice }: { row: ProcessedOptionRow; spotP
         <div className="flex items-center justify-start gap-1">
           <span>{row.put_avg.toFixed(2)}</span>
           {row.isMinAvg && (
-            <span className="text-[9px] px-1 py-0.5 bg-black/80 text-emerald-300 rounded font-bold uppercase">
+            <span className={`${sizeConfig.badge} px-1.5 py-0.5 bg-black/80 text-emerald-300 rounded font-bold uppercase`}>
               MIN
             </span>
           )}
@@ -189,7 +247,7 @@ const OptionRowItem = memo(({ row, spotPrice }: { row: ProcessedOptionRow; spotP
 
       {/* 7. PUT PREMIUM: (Put Low + Call High) / 2 */}
       <td
-        className={`py-2 px-3 text-left transition-all ${
+        className={`${sizeConfig.cell} text-left transition-all ${
           row.isMinPutPremium
             ? 'bg-[#7dd3fc] text-slate-950 font-black shadow-inner ring-1 ring-sky-500'
             : isPutITM
@@ -201,7 +259,7 @@ const OptionRowItem = memo(({ row, spotPrice }: { row: ProcessedOptionRow; spotP
         <div className="flex items-center justify-start gap-1">
           <span>{row.put_premium.toFixed(2)}</span>
           {row.isMinPutPremium && (
-            <span className="text-[9px] px-1 py-0.5 bg-black/80 text-sky-300 rounded font-bold uppercase">
+            <span className={`${sizeConfig.badge} px-1.5 py-0.5 bg-black/80 text-sky-300 rounded font-bold uppercase`}>
               MIN
             </span>
           )}
@@ -210,7 +268,7 @@ const OptionRowItem = memo(({ row, spotPrice }: { row: ProcessedOptionRow; spotP
 
       {/* 8. PUT VOLUME */}
       <td
-        className={`py-2 px-3 text-left font-medium transition-all ${
+        className={`${sizeConfig.cell} text-left font-medium transition-all ${
           row.isTopPutVolume
             ? 'bg-[#fde047] text-slate-950 font-black shadow-inner'
             : isPutITM
@@ -222,7 +280,7 @@ const OptionRowItem = memo(({ row, spotPrice }: { row: ProcessedOptionRow; spotP
         <span className="flex items-center justify-start gap-1">
           <span>{row.put_volume.toLocaleString('en-IN')}</span>
           {row.isTopPutVolume && (
-            <span className="text-[9px] px-1 py-0.5 bg-black/80 text-yellow-300 rounded font-bold uppercase">
+            <span className={`${sizeConfig.badge} px-1.5 py-0.5 bg-black/80 text-yellow-300 rounded font-bold uppercase`}>
               TOP
             </span>
           )}
@@ -234,65 +292,83 @@ const OptionRowItem = memo(({ row, spotPrice }: { row: ProcessedOptionRow; spotP
 
 OptionRowItem.displayName = 'OptionRowItem';
 
-export const OptionChainDesktopTable: React.FC<OptionChainDesktopTableProps> = ({ rows, spotPrice }) => {
+export const OptionChainDesktopTable: React.FC<OptionChainDesktopTableProps> = ({ 
+  rows, 
+  spotPrice, 
+  fontSize = 'large' 
+}) => {
+  const headerSizes = {
+    normal: {
+      super: 'py-2.5 px-4 text-xs font-black',
+      col: 'py-2 px-3 text-xs font-bold',
+    },
+    large: {
+      super: 'py-3 px-4 text-sm font-black',
+      col: 'py-2.5 px-3.5 text-[13px] font-extrabold',
+    },
+    xlarge: {
+      super: 'py-3.5 px-4 text-base font-black',
+      col: 'py-3 px-4 text-[15px] font-extrabold',
+    },
+  }[fontSize];
   return (
     <div className="w-full overflow-x-auto shadow-2xl rounded-b-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#080b12] transition-colors">
       <table className="w-full text-left border-collapse select-text min-w-4xl">
         {/* Table Header Container */}
         <thead>
           {/* Top Super Header: CALLS (CE) | STRIKE | ACTION | PUTS (PE) */}
-          <tr className="border-b border-slate-300 dark:border-slate-700 text-xs font-bold uppercase tracking-wider">
-            <th colSpan={4} className="py-2.5 px-4 text-center text-cyan-800 dark:text-cyan-400 bg-cyan-100/70 dark:bg-cyan-950/40 border-r border-slate-300 dark:border-slate-700/80">
+          <tr className="border-b border-slate-300 dark:border-slate-700 uppercase tracking-wider">
+            <th colSpan={4} className={`${headerSizes.super} text-center text-cyan-800 dark:text-cyan-400 bg-cyan-100/70 dark:bg-cyan-950/40 border-r border-slate-300 dark:border-slate-700/80`}>
               CALLS (CE)
             </th>
-            <th className="py-2.5 px-4 text-center text-amber-800 dark:text-amber-400 bg-amber-100/70 dark:bg-amber-950/40 font-black border-r border-slate-300 dark:border-slate-700/80">
+            <th className={`${headerSizes.super} text-center text-amber-800 dark:text-amber-400 bg-amber-100/70 dark:bg-amber-950/40 border-r border-slate-300 dark:border-slate-700/80`}>
               STRIKE
             </th>
-            <th className="py-2.5 px-3 text-center text-emerald-800 dark:text-emerald-400 bg-emerald-100/70 dark:bg-emerald-950/40 font-black border-r border-slate-300 dark:border-slate-700/80">
+            <th className={`${headerSizes.super} text-center text-emerald-800 dark:text-emerald-400 bg-emerald-100/70 dark:bg-emerald-950/40 border-r border-slate-300 dark:border-slate-700/80`}>
               ACTION SIGNALS
             </th>
-            <th colSpan={4} className="py-2.5 px-4 text-center text-rose-800 dark:text-rose-400 bg-rose-100/70 dark:bg-rose-950/40">
+            <th colSpan={4} className={`${headerSizes.super} text-center text-rose-800 dark:text-rose-400 bg-rose-100/70 dark:bg-rose-950/40`}>
               PUTS (PE)
             </th>
           </tr>
 
           {/* Exact Columns Header: VOLUME | PREMIUM | AVG | CLOSE | STRIKE | ACTION | CLOSE | AVG | PREMIUM | VOLUME */}
-          <tr className="border-b border-slate-300 dark:border-slate-800 text-[11px] font-mono font-bold uppercase text-slate-700 dark:text-slate-300 bg-slate-200/90 dark:bg-[#0f172a]">
+          <tr className="border-b border-slate-300 dark:border-slate-800 font-mono uppercase text-slate-700 dark:text-slate-300 bg-slate-200/90 dark:bg-[#0f172a]">
             {/* CALLS */}
-            <th className="py-2.5 px-3 text-right text-yellow-700 dark:text-yellow-300/90">
+            <th className={`${headerSizes.col} text-right text-yellow-700 dark:text-yellow-300/90`}>
               VOLUME
             </th>
-            <th className="py-2.5 px-3 text-right text-sky-700 dark:text-sky-300/90">
+            <th className={`${headerSizes.col} text-right text-sky-700 dark:text-sky-300/90`}>
               PREMIUM
             </th>
-            <th className="py-2.5 px-3 text-right text-emerald-700 dark:text-emerald-300/90">
+            <th className={`${headerSizes.col} text-right text-emerald-700 dark:text-emerald-300/90`}>
               AVG
             </th>
-            <th className="py-2.5 px-3 text-right text-slate-900 dark:text-white">
+            <th className={`${headerSizes.col} text-right text-slate-900 dark:text-white`}>
               CLOSE
             </th>
 
             {/* CENTER STRIKE */}
-            <th className="py-2.5 px-4 text-center bg-slate-300/80 dark:bg-slate-950 text-amber-900 dark:text-amber-400 font-black border-x-2 border-slate-400 dark:border-slate-700">
+            <th className={`${headerSizes.col} text-center bg-slate-300/80 dark:bg-slate-950 text-amber-900 dark:text-amber-400 border-x-2 border-slate-400 dark:border-slate-700`}>
               STRIKE
             </th>
 
             {/* ACTION SIGNALS COLUMN */}
-            <th className="py-2.5 px-3 text-center bg-slate-200 dark:bg-slate-900/90 text-emerald-800 dark:text-emerald-400 font-black border-r-2 border-slate-400 dark:border-slate-700">
+            <th className={`${headerSizes.col} text-center bg-slate-200 dark:bg-slate-900/90 text-emerald-800 dark:text-emerald-400 border-r-2 border-slate-400 dark:border-slate-700`}>
               ACTION
             </th>
 
             {/* PUTS */}
-            <th className="py-2.5 px-3 text-left text-slate-900 dark:text-white">
+            <th className={`${headerSizes.col} text-left text-slate-900 dark:text-white`}>
               CLOSE
             </th>
-            <th className="py-2.5 px-3 text-left text-emerald-700 dark:text-emerald-300/90">
+            <th className={`${headerSizes.col} text-left text-emerald-700 dark:text-emerald-300/90`}>
               AVG
             </th>
-            <th className="py-2.5 px-3 text-left text-sky-700 dark:text-sky-300/90">
+            <th className={`${headerSizes.col} text-left text-sky-700 dark:text-sky-300/90`}>
               PREMIUM
             </th>
-            <th className="py-2.5 px-3 text-left text-yellow-700 dark:text-yellow-300/90">
+            <th className={`${headerSizes.col} text-left text-yellow-700 dark:text-yellow-300/90`}>
               VOLUME
             </th>
           </tr>
@@ -301,7 +377,7 @@ export const OptionChainDesktopTable: React.FC<OptionChainDesktopTableProps> = (
         {/* Table Body */}
         <tbody className="divide-y divide-slate-200 dark:divide-slate-800/40">
           {rows.map((row) => (
-            <OptionRowItem key={row.strike} row={row} spotPrice={spotPrice} />
+            <OptionRowItem key={row.strike} row={row} spotPrice={spotPrice} fontSize={fontSize} />
           ))}
         </tbody>
       </table>

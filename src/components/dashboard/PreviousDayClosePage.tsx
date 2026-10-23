@@ -15,7 +15,11 @@ import {
   Database,
   SlidersHorizontal,
   Info,
-  Printer
+  Printer,
+  ArrowUpRight,
+  ArrowDownRight,
+  Target,
+  Type
 } from 'lucide-react';
 import { 
   getMarketCloseStatusInfo, 
@@ -27,11 +31,12 @@ import {
   PreviousCloseChainResult,
   MarketCloseStatusInfo 
 } from '../../services/previousCloseService';
-import { OptionChainDesktopTable } from '../table/OptionChainDesktopTable';
+import { OptionChainDesktopTable, TableFontSize } from '../table/OptionChainDesktopTable';
 import { OptionChainMobileTable } from '../table/OptionChainMobileTable';
 import { HighlightLegend } from '../table/HighlightLegend';
 import { evaluateAllTradeSignals, getStoredTradeSettings } from '../../utils/tradeEngine';
-import type { ProcessedOptionRow, MarketMetrics, TradeSettings } from '../../types/optionChain';
+import { calculateBreakLevels } from '../../utils/formulas';
+import type { ProcessedOptionRow, MarketMetrics, TradeSettings, BreakLevelsInfo } from '../../types/optionChain';
 
 interface PreviousDayClosePageProps {
   onOpenSettings?: () => void;
@@ -58,6 +63,18 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [tradeSettings] = useState<TradeSettings>(getStoredTradeSettings());
+
+  // Font size state for table & print visibility
+  const [tableFontSize, setTableFontSize] = useState<TableFontSize>(() => {
+    const saved = localStorage.getItem('nifty_prev_close_font_size');
+    if (saved === 'normal' || saved === 'large' || saved === 'xlarge') return saved;
+    return 'large'; // Default to large for comfortable reading and printing
+  });
+
+  const handleSetFontSize = (size: TableFontSize) => {
+    setTableFontSize(size);
+    localStorage.setItem('nifty_prev_close_font_size', size);
+  };
 
   const showToast = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
     setToast(null);
@@ -132,6 +149,15 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
     }
     return evaluateAllTradeSignals(dataResult.rows, dataResult.spotPrice, tradeSettings);
   }, [dataResult, tradeSettings]);
+
+  // Calculate or retrieve formula Break Up & Break Down levels
+  const breakLevels: BreakLevelsInfo | null = useMemo(() => {
+    if (dataResult?.breakLevels) return dataResult.breakLevels;
+    if (dataResult?.rows && dataResult.rows.length > 0) {
+      return calculateBreakLevels(dataResult.rows);
+    }
+    return null;
+  }, [dataResult]);
 
   // Handle Save snapshot
   const handleSaveToDb = async () => {
@@ -260,8 +286,49 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
             </div>
           </div>
 
-          {/* Right Action Controls: Save DB + Print + Export CSV */}
-          <div className="flex items-center gap-2 print:hidden">
+          {/* Right Action Controls: Font Size + Save DB + Print + Export CSV */}
+          <div className="flex items-center gap-2 print:hidden flex-wrap">
+            {/* Font Size Selector */}
+            <div className="flex items-center bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-xl p-0.5 shadow-xs">
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 px-2 font-bold font-mono flex items-center gap-1">
+                <Type className="w-3 h-3 text-cyan-500" />
+                Font:
+              </span>
+              <button
+                onClick={() => handleSetFontSize('normal')}
+                className={`px-2 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  tableFontSize === 'normal'
+                    ? 'bg-cyan-500 text-slate-950 font-black shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white'
+                }`}
+                title="Normal font size (14px)"
+              >
+                Medium
+              </button>
+              <button
+                onClick={() => handleSetFontSize('large')}
+                className={`px-2 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  tableFontSize === 'large'
+                    ? 'bg-cyan-500 text-slate-950 font-black shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white'
+                }`}
+                title="Large font size (16px) - Recommended for high readability & printing"
+              >
+                Large
+              </button>
+              <button
+                onClick={() => handleSetFontSize('xlarge')}
+                className={`px-2 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  tableFontSize === 'xlarge'
+                    ? 'bg-cyan-500 text-slate-950 font-black shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white'
+                }`}
+                title="Extra Large font size (18px) - Maximum visibility"
+              >
+                X-Large
+              </button>
+            </div>
+
             <button
               onClick={handleSaveToDb}
               disabled={isSaving || loading}
@@ -275,7 +342,7 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
               onClick={handlePrint}
               disabled={loading || !dataResult}
               className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer transition-all disabled:opacity-50"
-              title="Print data to printer"
+              title="Print data to printer or save as PDF"
             >
               <Printer className="w-3.5 h-3.5" />
               <span>Print</span>
@@ -369,6 +436,188 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Break Up & Break Down Analysis Cards */}
+      {breakLevels && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {/* 1. Break Up Card (BU) */}
+          <div className="relative overflow-hidden bg-linear-to-br from-emerald-500/10 via-emerald-500/5 to-teal-500/10 dark:from-emerald-950/40 dark:via-slate-900/90 dark:to-teal-950/30 border-2 border-emerald-500/30 dark:border-emerald-500/40 rounded-2xl p-4 shadow-lg backdrop-blur-sm transition-all hover:border-emerald-500/60">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 shadow-xs">
+                  <ArrowUpRight className="w-5 h-5 stroke-[2.5]" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
+                      Break Up Value
+                    </span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full font-black bg-emerald-500 text-slate-950 uppercase tracking-widest shadow-xs">
+                      BU
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+                    ITM Call + ITM Put Average
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Main Value Display */}
+            <div className="mt-3 flex items-baseline gap-2">
+              <span className="text-3xl font-black font-mono tracking-tight text-emerald-600 dark:text-emerald-400">
+                {breakLevels.breakUp.value.toFixed(2)}
+              </span>
+              <span className="text-xs font-mono font-bold text-slate-500 dark:text-slate-400">
+                pts
+              </span>
+            </div>
+
+            {/* Formula Breakdown Details */}
+            <div className="mt-3 pt-3 border-t border-emerald-500/20 dark:border-emerald-500/20 space-y-1.5 font-mono text-[11px]">
+              <div className="flex items-center justify-between text-slate-600 dark:text-slate-300">
+                <span className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                  ATM - 100 CE ({breakLevels.breakUp.callStrike}):
+                </span>
+                <span className="font-bold text-slate-900 dark:text-white">
+                  ₹{breakLevels.breakUp.callClose.toFixed(2)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-slate-600 dark:text-slate-300">
+                <span className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-teal-500"></span>
+                  ATM + 100 PE ({breakLevels.breakUp.putStrike}):
+                </span>
+                <span className="font-bold text-slate-900 dark:text-white">
+                  ₹{breakLevels.breakUp.putClose.toFixed(2)}
+                </span>
+              </div>
+              <div className="text-[10px] text-slate-500 dark:text-slate-400 pt-1 text-right italic">
+                Formula: ({breakLevels.breakUp.callClose.toFixed(2)} + {breakLevels.breakUp.putClose.toFixed(2)}) / 2 = {breakLevels.breakUp.value.toFixed(2)}
+              </div>
+            </div>
+          </div>
+
+          {/* 2. Break Down Card (BD) */}
+          <div className="relative overflow-hidden bg-linear-to-br from-rose-500/10 via-rose-500/5 to-amber-500/10 dark:from-rose-950/40 dark:via-slate-900/90 dark:to-red-950/30 border-2 border-rose-500/30 dark:border-rose-500/40 rounded-2xl p-4 shadow-lg backdrop-blur-sm transition-all hover:border-rose-500/60">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30 shadow-xs">
+                  <ArrowDownRight className="w-5 h-5 stroke-[2.5]" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-black uppercase tracking-wider text-rose-700 dark:text-rose-300">
+                      Break Down Value
+                    </span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full font-black bg-rose-500 text-white uppercase tracking-widest shadow-xs">
+                      BD
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+                    OTM Call + OTM Put Average
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Main Value Display */}
+            <div className="mt-3 flex items-baseline gap-2">
+              <span className="text-3xl font-black font-mono tracking-tight text-rose-600 dark:text-rose-400">
+                {breakLevels.breakDown.value.toFixed(2)}
+              </span>
+              <span className="text-xs font-mono font-bold text-slate-500 dark:text-slate-400">
+                pts
+              </span>
+            </div>
+
+            {/* Formula Breakdown Details */}
+            <div className="mt-3 pt-3 border-t border-rose-500/20 dark:border-rose-500/20 space-y-1.5 font-mono text-[11px]">
+              <div className="flex items-center justify-between text-slate-600 dark:text-slate-300">
+                <span className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                  ATM + 100 CE ({breakLevels.breakDown.callStrike}):
+                </span>
+                <span className="font-bold text-slate-900 dark:text-white">
+                  ₹{breakLevels.breakDown.callClose.toFixed(2)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-slate-600 dark:text-slate-300">
+                <span className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                  ATM - 100 PE ({breakLevels.breakDown.putStrike}):
+                </span>
+                <span className="font-bold text-slate-900 dark:text-white">
+                  ₹{breakLevels.breakDown.putClose.toFixed(2)}
+                </span>
+              </div>
+              <div className="text-[10px] text-slate-500 dark:text-slate-400 pt-1 text-right italic">
+                Formula: ({breakLevels.breakDown.callClose.toFixed(2)} + {breakLevels.breakDown.putClose.toFixed(2)}) / 2 = {breakLevels.breakDown.value.toFixed(2)}
+              </div>
+            </div>
+          </div>
+
+          {/* 3. Formula ATM Strike Selection Card */}
+          <div className="relative overflow-hidden bg-linear-to-br from-amber-500/10 via-amber-500/5 to-cyan-500/10 dark:from-amber-950/40 dark:via-slate-900/90 dark:to-cyan-950/30 border-2 border-amber-500/30 dark:border-amber-500/40 rounded-2xl p-4 shadow-lg backdrop-blur-sm transition-all hover:border-amber-500/60">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 shadow-xs">
+                  <Target className="w-5 h-5 stroke-[2.5]" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-black uppercase tracking-wider text-amber-700 dark:text-amber-300">
+                      Formula ATM Strike
+                    </span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full font-black bg-amber-400 text-slate-950 uppercase tracking-widest shadow-xs">
+                      ATM
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+                    |Call Close - Put Close| ≤ 25 pts
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Main Strike Display */}
+            <div className="mt-3 flex items-baseline gap-2">
+              <span className="text-3xl font-black font-mono tracking-tight text-amber-500 dark:text-amber-400">
+                {breakLevels.formulaAtmStrike}
+              </span>
+              <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                (Spread: {breakLevels.atmDiff.toFixed(2)} pts)
+              </span>
+            </div>
+
+            {/* ATM Breakdown Details */}
+            <div className="mt-3 pt-3 border-t border-amber-500/20 dark:border-amber-500/20 space-y-1.5 font-mono text-[11px]">
+              <div className="flex items-center justify-between text-slate-600 dark:text-slate-300">
+                <span className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-500"></span>
+                  Call Close:
+                </span>
+                <span className="font-bold text-slate-900 dark:text-white">
+                  ₹{breakLevels.atmCallClose.toFixed(2)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-slate-600 dark:text-slate-300">
+                <span className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-orange-500"></span>
+                  Put Close:
+                </span>
+                <span className="font-bold text-slate-900 dark:text-white">
+                  ₹{breakLevels.atmPutClose.toFixed(2)}
+                </span>
+              </div>
+              <div className="text-[10px] text-slate-500 dark:text-slate-400 pt-1 text-right italic">
+                Difference: |{breakLevels.atmCallClose.toFixed(2)} - {breakLevels.atmPutClose.toFixed(2)}| = {breakLevels.atmDiff.toFixed(2)} pts (Target &lt; 25)
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Spot Price & Key Metrics Card */}
       {dataResult && (
@@ -483,6 +732,7 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
             <OptionChainDesktopTable
               rows={rowsWithSignals}
               spotPrice={dataResult.spotPrice}
+              fontSize={tableFontSize}
             />
           </div>
 
