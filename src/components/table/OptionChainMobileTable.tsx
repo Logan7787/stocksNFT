@@ -73,6 +73,7 @@ export const OptionChainMobileTable: React.FC<OptionChainMobileTableProps> = ({
                 </th>
                 <th className="py-2.5 px-2 text-center text-emerald-800 dark:text-emerald-400 font-bold">SIGNAL</th>
                 <th className="py-2.5 px-3 text-right text-slate-900 dark:text-white">CLOSE</th>
+                <th className="py-2.5 px-3 text-right text-cyan-700 dark:text-cyan-300 font-bold">LTP</th>
                 <th className="py-2.5 px-3 text-right text-emerald-700 dark:text-emerald-300">AVG</th>
                 <th className="py-2.5 px-3 text-right text-sky-700 dark:text-sky-300">PREMIUM</th>
                 <th className="py-2.5 px-3 text-right text-yellow-700 dark:text-yellow-300">VOLUME</th>
@@ -98,6 +99,7 @@ export const OptionChainMobileTable: React.FC<OptionChainMobileTableProps> = ({
                     )}
                   </td>
                   <td className="py-2 px-3 text-right text-slate-900 dark:text-white font-bold">{row.call_close.toFixed(2)}</td>
+                  <td className="py-2 px-3 text-right text-cyan-900 dark:text-cyan-300 font-black">{(row.call_ltp ?? row.call_close).toFixed(2)}</td>
                   <td
                     className={`py-2 px-3 text-right ${
                       row.isMinAvg ? 'bg-[#86efac] text-slate-950 font-bold' : 'text-emerald-700 dark:text-emerald-400'
@@ -136,6 +138,7 @@ export const OptionChainMobileTable: React.FC<OptionChainMobileTableProps> = ({
                   STRIKE
                 </th>
                 <th className="py-2.5 px-2 text-center text-rose-800 dark:text-rose-400 font-bold">SIGNAL</th>
+                <th className="py-2.5 px-3 text-right text-cyan-700 dark:text-cyan-300 font-bold">LTP</th>
                 <th className="py-2.5 px-3 text-right text-slate-900 dark:text-white">CLOSE</th>
                 <th className="py-2.5 px-3 text-right text-emerald-700 dark:text-emerald-300">AVG</th>
                 <th className="py-2.5 px-3 text-right text-sky-700 dark:text-sky-300">PREMIUM</th>
@@ -161,6 +164,7 @@ export const OptionChainMobileTable: React.FC<OptionChainMobileTableProps> = ({
                       <span className="text-slate-400 text-[10px]">-</span>
                     )}
                   </td>
+                  <td className="py-2 px-3 text-right text-cyan-900 dark:text-cyan-300 font-black">{(row.put_ltp ?? row.put_close).toFixed(2)}</td>
                   <td className="py-2 px-3 text-right text-slate-900 dark:text-white font-bold">{row.put_close.toFixed(2)}</td>
                   <td
                     className={`py-2 px-3 text-right ${
@@ -199,14 +203,16 @@ export const OptionChainMobileTable: React.FC<OptionChainMobileTableProps> = ({
                 <th className="py-2 px-2 text-right text-yellow-700 dark:text-yellow-300">CE VOL</th>
                 <th className="py-2 px-2 text-right text-sky-700 dark:text-sky-300">CE PREM</th>
                 <th className="py-2 px-2 text-right text-emerald-700 dark:text-emerald-300">AVG</th>
-                <th className="py-2 px-2 text-right text-slate-900 dark:text-white">CE LTP</th>
+                <th className="py-2 px-2 text-right text-slate-900 dark:text-white">CE CLOSE</th>
+                <th className="py-2 px-2 text-right text-cyan-700 dark:text-cyan-300 font-bold">CE LTP</th>
                 <th className="py-2 px-3 text-center bg-slate-200 dark:bg-slate-950 text-amber-900 dark:text-amber-400 sticky left-0 z-20 border-x border-slate-300 dark:border-slate-700 font-black">
                   STRIKE
                 </th>
                 <th className="py-2 px-2.5 text-center bg-slate-200 dark:bg-slate-900 text-emerald-800 dark:text-emerald-400 font-black border-r border-slate-300 dark:border-slate-700">
                   ACTION
                 </th>
-                <th className="py-2 px-2 text-left text-slate-900 dark:text-white">PE LTP</th>
+                <th className="py-2 px-2 text-left text-cyan-700 dark:text-cyan-300 font-bold">PE LTP</th>
+                <th className="py-2 px-2 text-left text-slate-900 dark:text-white">PE CLOSE</th>
                 <th className="py-2 px-2 text-left text-emerald-700 dark:text-emerald-300">AVG</th>
                 <th className="py-2 px-2 text-left text-sky-700 dark:text-sky-300">PE PREM</th>
                 <th className="py-2 px-2 text-left text-yellow-700 dark:text-yellow-300">PE VOL</th>
@@ -237,6 +243,7 @@ export const OptionChainMobileTable: React.FC<OptionChainMobileTableProps> = ({
                     {row.call_avg.toFixed(2)}
                   </td>
                   <td className="py-1.5 px-2 text-right text-slate-900 dark:text-white font-bold">{row.call_close.toFixed(2)}</td>
+                  <td className="py-1.5 px-2 text-right text-cyan-900 dark:text-cyan-300 font-bold">{(row.call_ltp ?? row.call_close).toFixed(2)}</td>
 
                   {/* Sticky Center Strike */}
                   <td
@@ -266,6 +273,7 @@ export const OptionChainMobileTable: React.FC<OptionChainMobileTableProps> = ({
                     </div>
                   </td>
 
+                  <td className="py-1.5 px-2 text-left text-cyan-900 dark:text-cyan-300 font-bold">{(row.put_ltp ?? row.put_close).toFixed(2)}</td>
                   <td className="py-1.5 px-2 text-left text-slate-900 dark:text-white font-bold">{row.put_close.toFixed(2)}</td>
                   <td
                     className={`py-1.5 px-2 text-left ${

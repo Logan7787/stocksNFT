@@ -19,7 +19,10 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Target,
-  Type
+  Scale,
+  Type,
+  RefreshCw,
+  Zap
 } from 'lucide-react';
 import { 
   getMarketCloseStatusInfo, 
@@ -31,6 +34,7 @@ import {
   PreviousCloseChainResult,
   MarketCloseStatusInfo 
 } from '../../services/previousCloseService';
+import { autoSyncService, AutoSyncStatus } from '../../services/autoSyncService';
 import { OptionChainDesktopTable, TableFontSize } from '../table/OptionChainDesktopTable';
 import { OptionChainMobileTable } from '../table/OptionChainMobileTable';
 import { HighlightLegend } from '../table/HighlightLegend';
@@ -89,24 +93,34 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
     return getMarketCloseStatusInfo(forcedMode, customDate || undefined);
   }, [forcedMode, customDate]);
 
+  // Auto-Sync Status & manual sync state
+  const [syncStatus, setSyncStatus] = useState<AutoSyncStatus>(autoSyncService.getStatus());
+  const [isManualSyncing, setIsManualSyncing] = useState<boolean>(false);
+
+  useEffect(() => {
+    return autoSyncService.subscribe(setSyncStatus);
+  }, []);
+
   // Cache key ref to ensure we load exactly once per date/mode and never blink or re-fetch on background ticks
   const loadedKeyRef = React.useRef<string>('');
 
-  useEffect(() => {
+  const loadData = useCallback((forceRefresh = false) => {
     const isToday = statusInfo.effectiveCloseDate === formatDateYMD(getISTNow());
     const effectiveSpot = isToday ? (referenceSpotPrice || 22687.65) : 22811.35;
     const modeKey = `${statusInfo.effectiveCloseDate}_${forcedMode}_${customDate}`;
 
-    const dateOrModeChanged = loadedKeyRef.current !== modeKey;
-
-    if (dateOrModeChanged) {
+    if (forceRefresh) {
       loadedKeyRef.current = modeKey;
       setLoading(true);
-    } else if (dataResult && dataResult.rows.length > 0) {
-      return; // Already loaded with valid rows for this mode & date
+    } else {
+      const dateOrModeChanged = loadedKeyRef.current !== modeKey;
+      if (dateOrModeChanged) {
+        loadedKeyRef.current = modeKey;
+        setLoading(true);
+      } else if (dataResult && dataResult.rows.length > 0) {
+        return;
+      }
     }
-
-    let isMounted = true;
 
     getPreviousCloseOptionChain(statusInfo.effectiveCloseDate, effectiveSpot, {
       todayRows: currentRows,
@@ -115,21 +129,13 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
       todayMetrics: currentMetrics,
     })
       .then((res) => {
-        if (isMounted) {
-          setDataResult(res);
-          setLoading(false);
-        }
+        setDataResult(res);
+        setLoading(false);
       })
       .catch((err: any) => {
-        if (isMounted) {
-          showToast(err.message || 'Error loading market close data', 'error');
-          setLoading(false);
-        }
+        showToast(err.message || 'Error loading market close data', 'error');
+        setLoading(false);
       });
-
-    return () => {
-      isMounted = false;
-    };
   }, [
     statusInfo.effectiveCloseDate, 
     forcedMode, 
@@ -138,9 +144,45 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
     currentRows, 
     spotChange, 
     spotChangePercent, 
-    currentMetrics,
+    currentMetrics, 
     dataResult
   ]);
+
+  useEffect(() => {
+    loadData(false);
+  }, [loadData]);
+
+  // Listen to background sync completions from autoSyncService
+  useEffect(() => {
+    const handleCloseSynced = (event: any) => {
+      const detail = event?.detail;
+      if (!detail || detail.date === statusInfo.effectiveCloseDate) {
+        showToast(`Auto-Sync updated latest close data (${detail?.strikesCount || ''} strikes)`, 'info');
+        loadData(true);
+      }
+    };
+    window.addEventListener('nifty-market-close-synced', handleCloseSynced);
+    return () => window.removeEventListener('nifty-market-close-synced', handleCloseSynced);
+  }, [statusInfo.effectiveCloseDate, loadData]);
+
+  // Manual Trigger for Instant Background Sync from NSE
+  const handleManualSync = async () => {
+    setIsManualSyncing(true);
+    showToast('Syncing option chain matching official NSE settlement data...', 'info');
+    try {
+      const res = await autoSyncService.performSync(statusInfo.effectiveCloseDate, 'manual');
+      if (res.success) {
+        showToast(res.message, 'success');
+        loadData(true);
+      } else {
+        showToast(res.message, 'error');
+      }
+    } catch (err: any) {
+      showToast(err.message || 'Manual sync failed', 'error');
+    } finally {
+      setIsManualSyncing(false);
+    }
+  };
 
   // Evaluate trade signals on the closed option chain data
   const { rows: rowsWithSignals } = useMemo(() => {
@@ -150,13 +192,13 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
     return evaluateAllTradeSignals(dataResult.rows, dataResult.spotPrice, tradeSettings);
   }, [dataResult, tradeSettings]);
 
-  // Calculate or retrieve formula Break Up & Break Down levels
+  // Calculate or retrieve formula Break Up, Break Down, Break Even & ATM levels
   const breakLevels: BreakLevelsInfo | null = useMemo(() => {
-    if (dataResult?.breakLevels) return dataResult.breakLevels;
+    if (dataResult?.breakLevels && dataResult.breakLevels.breakEven) return dataResult.breakLevels;
     if (dataResult?.rows && dataResult.rows.length > 0) {
-      return calculateBreakLevels(dataResult.rows);
+      return calculateBreakLevels(dataResult.rows, dataResult.spotPrice);
     }
-    return null;
+    return dataResult?.breakLevels || null;
   }, [dataResult]);
 
   // Handle Save snapshot
@@ -192,9 +234,11 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
       'CALL_PREMIUM',
       'CALL_AVG',
       'CALL_CLOSE',
+      'CALL_LTP',
       'CALL_LOW',
       'CALL_HIGH',
       'STRIKE',
+      'PUT_LTP',
       'PUT_CLOSE',
       'PUT_AVG',
       'PUT_PREMIUM',
@@ -211,9 +255,11 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
         r.call_premium,
         r.call_avg,
         r.call_close,
+        r.call_ltp ?? r.call_close,
         r.call_low,
         r.call_high,
         r.strike,
+        r.put_ltp ?? r.put_close,
         r.put_close,
         r.put_avg,
         r.put_premium,
@@ -286,8 +332,31 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
             </div>
           </div>
 
-          {/* Right Action Controls: Font Size + Save DB + Print + Export CSV */}
+          {/* Right Action Controls: Auto-Sync + Sync Now + Font Size + Save DB + Print + Export CSV */}
           <div className="flex items-center gap-2 print:hidden flex-wrap">
+            {/* Background Auto-Sync Status Badge */}
+            <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-xs font-mono text-emerald-600 dark:text-emerald-400">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              <span className="font-bold">Auto-Sync Active</span>
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 hidden xl:inline">
+                ({syncStatus.nextScheduledCheck || '15:30 & 20:30 IST'})
+              </span>
+            </div>
+
+            {/* Sync from NSE Now button */}
+            <button
+              onClick={handleManualSync}
+              disabled={isManualSyncing || loading}
+              className="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-black text-xs rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer transition-all disabled:opacity-50"
+              title="Force sync now matching official NSE data"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isManualSyncing ? 'animate-spin' : ''}`} />
+              <span>{isManualSyncing ? 'Syncing...' : 'Sync from NSE Now'}</span>
+            </button>
+
             {/* Font Size Selector */}
             <div className="flex items-center bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-xl p-0.5 shadow-xs">
               <span className="text-[10px] text-slate-500 dark:text-slate-400 px-2 font-bold font-mono flex items-center gap-1">
@@ -439,7 +508,7 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
 
       {/* Break Up & Break Down Analysis Cards */}
       {breakLevels && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {/* 1. Break Up Card (BU) */}
           <div className="relative overflow-hidden bg-linear-to-br from-emerald-500/10 via-emerald-500/5 to-teal-500/10 dark:from-emerald-950/40 dark:via-slate-900/90 dark:to-teal-950/30 border-2 border-emerald-500/30 dark:border-emerald-500/40 rounded-2xl p-4 shadow-lg backdrop-blur-sm transition-all hover:border-emerald-500/60">
             <div className="flex items-center justify-between">
@@ -558,7 +627,72 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
             </div>
           </div>
 
-          {/* 3. Formula ATM Strike Selection Card */}
+          {/* 3. Break Even Card (BE) */}
+          {breakLevels.breakEven ? (
+            <div className="relative overflow-hidden bg-linear-to-br from-indigo-500/10 via-indigo-500/5 to-purple-500/10 dark:from-indigo-950/40 dark:via-slate-900/90 dark:to-purple-950/30 border-2 border-indigo-500/30 dark:border-indigo-500/40 rounded-2xl p-4 shadow-lg backdrop-blur-sm transition-all hover:border-indigo-500/60">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-xl bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30 shadow-xs">
+                    <Scale className="w-5 h-5 stroke-[2.5]" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-black uppercase tracking-wider text-indigo-700 dark:text-indigo-300">
+                        Break Even Value
+                      </span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full font-black bg-indigo-500 text-white uppercase tracking-widest shadow-xs">
+                        BE
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+                      ATM (Max High + Min Low) / 2
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Main Value Display */}
+              <div className="mt-3 flex items-baseline gap-2">
+                <span className="text-3xl font-black font-mono tracking-tight text-indigo-600 dark:text-indigo-400">
+                  {breakLevels.breakEven.value.toFixed(2)}
+                </span>
+                <span className="text-xs font-mono font-bold text-slate-500 dark:text-slate-400">
+                  pts
+                </span>
+              </div>
+
+              {/* Formula Breakdown Details */}
+              <div className="mt-3 pt-3 border-t border-indigo-500/20 dark:border-indigo-500/20 space-y-1.5 font-mono text-[11px]">
+                <div className="flex items-center justify-between text-slate-600 dark:text-slate-300">
+                  <span className="flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+                    Max High ({breakLevels.breakEven.highestSource}):
+                  </span>
+                  <span className="font-bold text-slate-900 dark:text-white">
+                    ₹{breakLevels.breakEven.highestValue.toFixed(2)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-slate-600 dark:text-slate-300">
+                  <span className="flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-cyan-500"></span>
+                    Min Low ({breakLevels.breakEven.lowestSource}):
+                  </span>
+                  <span className="font-bold text-slate-900 dark:text-white">
+                    ₹{breakLevels.breakEven.lowestValue.toFixed(2)}
+                  </span>
+                </div>
+                <div className="text-[10px] text-slate-500 dark:text-slate-400 pt-1 text-right italic">
+                  Formula: ({breakLevels.breakEven.highestValue.toFixed(2)} + {breakLevels.breakEven.lowestValue.toFixed(2)}) / 2 = {breakLevels.breakEven.value.toFixed(2)}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="relative overflow-hidden bg-slate-100 dark:bg-slate-900/60 border border-slate-300 dark:border-slate-800 rounded-2xl p-4 flex items-center justify-center">
+              <span className="text-xs text-slate-400 font-mono">Break Even Unavailable</span>
+            </div>
+          )}
+
+          {/* 4. Formula ATM Strike Selection Card */}
           <div className="relative overflow-hidden bg-linear-to-br from-amber-500/10 via-amber-500/5 to-cyan-500/10 dark:from-amber-950/40 dark:via-slate-900/90 dark:to-cyan-950/30 border-2 border-amber-500/30 dark:border-amber-500/40 rounded-2xl p-4 shadow-lg backdrop-blur-sm transition-all hover:border-amber-500/60">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">

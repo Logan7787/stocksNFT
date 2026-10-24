@@ -1,4 +1,4 @@
-import type { ProcessedOptionRow, MarketMetrics, MarketSnapshotRecord, BreakLevelsInfo } from '../types/optionChain';
+import type { ProcessedOptionRow, RawOptionData, MarketMetrics, MarketSnapshotRecord, BreakLevelsInfo } from '../types/optionChain';
 import { 
   generateBaseNiftyOptionData, 
   processRawOptionRow, 
@@ -25,7 +25,7 @@ export interface MarketCloseStatusInfo {
   headline: string;
   subtext: string;
   currentISTFormatted: string;
-  isCustomDateSelected: boolean;
+  isCustomDateSelected?: boolean;
 }
 
 export interface PreviousCloseChainResult {
@@ -41,7 +41,42 @@ export interface PreviousCloseChainResult {
   breakLevels?: BreakLevelsInfo | null;
 }
 
-export const VERIFIED_MARKET_CLOSE_2026_10_21: ProcessedOptionRow[] = [
+/**
+ * Official Verified Historical Dataset from 2026-10-23 (Expiry 27-Oct-2026) NSE Derivatives Report
+ * Source: https://www.nseindia.com/get-quote/derivatives/NIFTY/NIFTY-50 (Post 8:30 PM Final Settlement)
+ */
+export const RAW_MARKET_CLOSE_2026_10_23: RawOptionData[] = [
+  { strike: 22000, call_low: 465.00, call_high: 861.35, call_close: 585.70, call_ltp: 606.90, call_volume: 46533, put_low: 5.95, put_high: 29.15, put_close: 13.15, put_ltp: 12.05, put_volume: 3768135 },
+  { strike: 22100, call_low: 378.60, call_high: 757.15, call_close: 492.05, call_ltp: 514.35, call_volume: 12695, put_low: 8.85, put_high: 42.90, put_close: 20.05, put_ltp: 17.75, put_volume: 2004441 },
+  { strike: 22200, call_low: 300.00, call_high: 666.00, call_close: 402.50, call_ltp: 421.25, call_volume: 86052, put_low: 11.90, put_high: 64.00, put_close: 31.65, put_ltp: 28.00, put_volume: 3658784 },
+  { strike: 22250, call_low: 262.70, call_high: 621.55, call_close: 358.15, call_ltp: 380.65, call_volume: 51697, put_low: 16.15, put_high: 76.40, put_close: 39.60, put_ltp: 33.70, put_volume: 2052061 },
+  { strike: 22300, call_low: 228.70, call_high: 574.90, call_close: 317.65, call_ltp: 335.45, call_volume: 288959, put_low: 20.55, put_high: 92.50, put_close: 48.25, put_ltp: 41.85, put_volume: 4416337 },
+  { strike: 22350, call_low: 196.55, call_high: 528.00, call_close: 275.95, call_ltp: 297.55, call_volume: 288064, put_low: 24.20, put_high: 111.00, put_close: 60.00, put_ltp: 51.30, put_volume: 3321318 },
+  { strike: 22400, call_low: 167.40, call_high: 483.65, call_close: 242.10, call_ltp: 254.25, call_volume: 1651864, put_low: 30.90, put_high: 131.80, put_close: 73.20, put_ltp: 64.15, put_volume: 7059514 },
+  { strike: 22450, call_low: 141.30, call_high: 440.10, call_close: 207.25, call_ltp: 224.85, call_volume: 1744480, put_low: 37.65, put_high: 155.95, put_close: 89.30, put_ltp: 76.20, put_volume: 4956300 },
+  { strike: 22500, call_low: 118.15, call_high: 398.80, call_close: 175.80, call_ltp: 190.00, call_volume: 4411314, put_low: 46.35, put_high: 182.00, put_close: 107.05, put_ltp: 95.00, put_volume: 9111326 },
+  { strike: 22550, call_low: 98.25, call_high: 358.65, call_close: 147.80, call_ltp: 157.00, call_volume: 2589637, put_low: 55.85, put_high: 213.00, put_close: 129.05, put_ltp: 115.05, put_volume: 3776844 },
+  { strike: 22600, call_low: 81.00, call_high: 320.25, call_close: 124.40, call_ltp: 132.45, call_volume: 3995812, put_low: 67.70, put_high: 244.05, put_close: 150.70, put_ltp: 137.65, put_volume: 4511492 },
+  { strike: 22650, call_low: 66.60, call_high: 282.10, call_close: 101.20, call_ltp: 110.90, call_volume: 2448881, put_low: 80.90, put_high: 279.90, put_close: 181.40, put_ltp: 167.20, put_volume: 2112771 },
+  { strike: 22700, call_low: 54.50, call_high: 247.30, call_close: 82.45, call_ltp: 88.80, call_volume: 4970835, put_low: 95.20, put_high: 317.65, put_close: 210.25, put_ltp: 190.15, put_volume: 3473424 },
+  { strike: 22750, call_low: 44.40, call_high: 213.60, call_close: 66.45, call_ltp: 70.95, call_volume: 3070081, put_low: 112.25, put_high: 357.45, put_close: 245.90, put_ltp: 228.00, put_volume: 1558036 },
+  { strike: 22800, call_low: 36.30, call_high: 182.80, call_close: 53.35, call_ltp: 58.45, call_volume: 5271868, put_low: 131.10, put_high: 398.40, put_close: 280.55, put_ltp: 262.00, put_volume: 1530803 },
+  { strike: 22850, call_low: 29.50, call_high: 154.80, call_close: 41.95, call_ltp: 45.20, call_volume: 2150734, put_low: 153.30, put_high: 442.00, put_close: 323.20, put_ltp: 301.00, put_volume: 372846 },
+  { strike: 22900, call_low: 24.40, call_high: 129.20, call_close: 33.90, call_ltp: 37.45, call_volume: 3389306, put_low: 177.50, put_high: 486.60, put_close: 362.55, put_ltp: 339.85, put_volume: 335066 },
+  { strike: 22950, call_low: 20.25, call_high: 107.00, call_close: 27.10, call_ltp: 29.95, call_volume: 1716210, put_low: 205.00, put_high: 531.20, put_close: 408.65, put_ltp: 381.50, put_volume: 74117 },
+  { strike: 23000, call_low: 16.90, call_high: 87.25, call_close: 22.20, call_ltp: 23.50, call_volume: 4812390, put_low: 235.35, put_high: 578.35, put_close: 448.30, put_ltp: 428.00, put_volume: 254310 },
+  { strike: 23050, call_low: 14.00, call_high: 70.45, call_close: 17.65, call_ltp: 18.65, call_volume: 1427243, put_low: 268.60, put_high: 625.30, put_close: 499.90, put_ltp: 473.00, put_volume: 19936 },
+  { strike: 23100, call_low: 11.60, call_high: 56.25, call_close: 14.40, call_ltp: 15.40, call_volume: 2201450, put_low: 304.15, put_high: 672.80, put_close: 537.40, put_ltp: 519.30, put_volume: 35642 },
+  { strike: 23200, call_low: 8.15, call_high: 34.75, call_close: 9.65, call_ltp: 10.25, call_volume: 1868576, put_low: 382.80, put_high: 770.00, put_close: 635.10, put_ltp: 615.60, put_volume: 22657 },
+  { strike: 23300, call_low: 5.65, call_high: 20.95, call_close: 6.80, call_ltp: 7.10, call_volume: 1408704, put_low: 469.00, put_high: 866.60, put_close: 732.20, put_ltp: 710.50, put_volume: 18913 },
+  { strike: 23400, call_low: 4.20, call_high: 12.60, call_close: 5.00, call_ltp: 5.10, call_volume: 1306731, put_low: 565.00, put_high: 969.80, put_close: 823.60, put_ltp: 804.40, put_volume: 6819 },
+  { strike: 23500, call_low: 3.30, call_high: 8.20, call_close: 4.05, call_ltp: 4.10, call_volume: 1888795, put_low: 658.45, put_high: 1060.35, put_close: 932.60, put_ltp: 909.75, put_volume: 59016 },
+];
+
+export const VERIFIED_MARKET_CLOSE_2026_10_23: ProcessedOptionRow[] = 
+  RAW_MARKET_CLOSE_2026_10_23.map(r => processRawOptionRow(r));
+
+export const VERIFIED_MARKET_CLOSE_2026_10_21: ProcessedOptionRow[] = ([
   { strike: 22200, call_volume: 305760, call_premium: 269.3, call_avg: 295.1, call_close: 565.4, call_low: 260, call_high: 570, put_close: 24.85, put_avg: 295.1, put_premium: 478.0, put_volume: 68993080, put_low: 20, put_high: 50 },
   { strike: 22250, call_volume: 66560, call_premium: 252.5, call_avg: 275.3, call_close: 520.75, call_low: 240, call_high: 530, put_close: 29.8, put_avg: 275.3, put_premium: 447.9, put_volume: 33057505, put_low: 25, put_high: 55 },
   { strike: 22300, call_volume: 629915, call_premium: 232.95, call_avg: 256.3, call_close: 476.75, call_low: 220, call_high: 485, put_close: 35.85, put_avg: 256.3, put_premium: 428.0, put_volume: 69978935, put_low: 30, put_high: 60 },
@@ -66,7 +101,11 @@ export const VERIFIED_MARKET_CLOSE_2026_10_21: ProcessedOptionRow[] = [
   { strike: 23250, call_volume: 63658985, call_premium: 316.45, call_avg: 283.5, call_close: 29.65, call_low: 24, call_high: 35, put_close: 537.4, put_avg: 283.5, put_premium: 172.25, put_volume: 2957500, put_low: 410, put_high: 580 },
   { strike: 23300, call_volume: 96178420, call_premium: 336.15, call_avg: 303.3, call_close: 24.9, call_low: 20, call_high: 30, put_close: 581.7, put_avg: 303.3, put_premium: 177.95, put_volume: 5109065, put_low: 450, put_high: 620 },
   { strike: 23350, call_volume: 44359510, call_premium: 359.3, call_avg: 324.5, call_close: 21.05, call_low: 17, call_high: 26, put_close: 627.95, put_avg: 324.5, put_premium: 186.1, put_volume: 770445, put_low: 490, put_high: 670 },
-];
+] as any[]).map(r => ({
+  ...r,
+  call_ltp: Number(r.call_ltp ?? r.call_close),
+  put_ltp: Number(r.put_ltp ?? r.put_close),
+})) as ProcessedOptionRow[];
 
 /**
  * Returns current Date in Indian Standard Time (IST, UTC+5:30)
@@ -239,7 +278,7 @@ function buildCloseChainResult(
   source: 'database' | 'generated' | 'cached',
   savedSnapshotId?: string
 ): PreviousCloseChainResult {
-  const breakLevels = calculateBreakLevels(highlightedRows);
+  const breakLevels = calculateBreakLevels(highlightedRows, spotPrice);
   const rows = tagBreakLevelStrikes(highlightedRows, breakLevels);
   return {
     date,
@@ -354,7 +393,22 @@ export async function getPreviousCloseOptionChain(
     );
   }
 
-  // 2. Official Verified Historical Dataset from 2026-10-21 Market Close Report
+  // 2. Official Verified Historical Datasets from NSE India Reports
+  if (effectiveDate === '2026-10-23') {
+    const verifiedSpot = 22600.00;
+    const { highlightedRows, metrics } = applyConditionalHighlights(VERIFIED_MARKET_CLOSE_2026_10_23, verifiedSpot);
+    return buildCloseChainResult(
+      '2026-10-23',
+      '15:30',
+      verifiedSpot,
+      -87.65,
+      -0.39,
+      highlightedRows,
+      metrics,
+      'database'
+    );
+  }
+
   if (effectiveDate === '2026-10-21') {
     const verifiedSpot = 22811.35;
     const { highlightedRows, metrics } = applyConditionalHighlights(VERIFIED_MARKET_CLOSE_2026_10_21, verifiedSpot);

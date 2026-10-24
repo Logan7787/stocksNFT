@@ -52,11 +52,13 @@ export function processRawOptionRow(raw: RawOptionData, prevRow?: ProcessedOptio
     call_premium: callPremium,
     call_avg: avgPrice,
     call_close: round2(raw.call_close),
+    call_ltp: raw.call_ltp !== undefined ? round2(raw.call_ltp) : round2(raw.call_close),
     call_low: round2(raw.call_low),
     call_high: round2(raw.call_high),
     call_change: raw.call_change ? round2(raw.call_change) : 0,
 
     // PUT Section
+    put_ltp: raw.put_ltp !== undefined ? round2(raw.put_ltp) : round2(raw.put_close),
     put_close: round2(raw.put_close),
     put_avg: avgPrice,
     put_premium: putPremium,
@@ -264,15 +266,20 @@ export function generateBaseNiftyOptionData(spotPrice = 22620.45): RawOptionData
     const call_volume = Math.round((350000 + 1200000 * baseVolFactor * multiplier) + (Math.sin(strike) * 50000));
     const put_volume = Math.round((320000 + 1150000 * baseVolFactor * multiplier) + (Math.cos(strike) * 45000));
 
+    const call_ltp = round2(callClose * (1 + (Math.sin(strike * 3) * 0.015)));
+    const put_ltp = round2(putClose * (1 + (Math.cos(strike * 3) * 0.015)));
+
     return {
       strike,
       call_low,
       call_high,
       call_close: round2(callClose),
+      call_ltp,
       call_volume: Math.max(10000, call_volume),
       put_low,
       put_high,
       put_close: round2(putClose),
+      put_ltp,
       put_volume: Math.max(10000, put_volume),
     };
   });
@@ -280,23 +287,75 @@ export function generateBaseNiftyOptionData(spotPrice = 22620.45): RawOptionData
 
 /**
  * Calculates Close ATM strike and Break Up / Break Down values according to formula:
- * 1. ATM Strike: The strike where |call_close - put_close| <= 25 points (or the strike with minimum |call_close - put_close|).
- *    Note: Spot close strike is NOT used as ATM here.
- * 2. Break Down: (Call Close at ATM+100 + Put Close at ATM-100) / 2
- * 3. Break Up:   (Call Close at ATM-100 + Put Close at ATM+100) / 2
+ * 1. Base ATM Strike: Strike closest to Spot Market Close.
+ * 2. Formula ATM Strike: Evaluates strikes near the base ATM strike (within ±200 pts / ±4 strikes).
+ *    Finds the strike where |Call Close - Put Close| <= 25 pts with the lowest spread.
+ *    If no strike has spread <= 25 pts, falls back to the nearby strike with minimum spread.
+ * 3. Break Down: (Call Close at ATM+100 + Put Close at ATM-100) / 2
+ * 4. Break Up:   (Call Close at ATM-100 + Put Close at ATM+100) / 2
  */
-export function calculateBreakLevels(rows: ProcessedOptionRow[]): BreakLevelsInfo | null {
+export function calculateBreakLevels(
+  rows: ProcessedOptionRow[],
+  spotClose?: number
+): BreakLevelsInfo | null {
   if (!rows || rows.length === 0) return null;
 
-  // Find the strike where |call_close - put_close| is minimal (target <= 25 pts)
-  let bestRow = rows[0];
-  let minDiff = Math.abs(rows[0].call_close - rows[0].put_close);
+  // 1. Determine the base Spot ATM strike
+  let baseAtmStrike: number;
+  if (spotClose !== undefined && spotClose > 0) {
+    let closest = rows[0].strike;
+    let minD = Math.abs(rows[0].strike - spotClose);
+    for (const r of rows) {
+      const d = Math.abs(r.strike - spotClose);
+      if (d < minD) {
+        minD = d;
+        closest = r.strike;
+      }
+    }
+    baseAtmStrike = closest;
+  } else {
+    const atmRow = rows.find(r => r.isATM);
+    if (atmRow) {
+      baseAtmStrike = atmRow.strike;
+    } else {
+      baseAtmStrike = rows[Math.floor(rows.length / 2)].strike;
+    }
+  }
 
-  for (const row of rows) {
-    const diff = Math.abs(row.call_close - row.put_close);
-    if (diff < minDiff) {
-      minDiff = diff;
-      bestRow = row;
+  // 2. Bound the search window strictly NEAR the base ATM strike (within ±200 pts, i.e., ±4 strikes)
+  // This prevents picking deep OTM strikes (e.g. 26950) where near-zero option prices produce tiny spreads.
+  const windowRange = 200;
+  const nearbyRows = rows.filter(r => Math.abs(r.strike - baseAtmStrike) <= windowRange);
+  const candidates = nearbyRows.length > 0 ? nearbyRows : rows;
+
+  // Filter strikes where |call_close - put_close| <= 25 pts
+  const qualifying = candidates.filter(r => Math.abs(r.call_close - r.put_close) <= 25);
+
+  let bestRow: ProcessedOptionRow;
+  let minDiff: number;
+
+  if (qualifying.length > 0) {
+    // Pick the qualifying strike with lowest spread; if tied, closest to base ATM
+    qualifying.sort((a, b) => {
+      const diffA = Math.abs(a.call_close - a.put_close);
+      const diffB = Math.abs(b.call_close - b.put_close);
+      if (Math.abs(diffA - diffB) > 0.001) {
+        return diffA - diffB;
+      }
+      return Math.abs(a.strike - baseAtmStrike) - Math.abs(b.strike - baseAtmStrike);
+    });
+    bestRow = qualifying[0];
+    minDiff = Math.abs(bestRow.call_close - bestRow.put_close);
+  } else {
+    // Fallback: If no strike has spread <= 25 pts, pick the nearby strike with the minimum spread
+    bestRow = candidates[0];
+    minDiff = Math.abs(candidates[0].call_close - candidates[0].put_close);
+    for (const r of candidates) {
+      const diff = Math.abs(r.call_close - r.put_close);
+      if (diff < minDiff) {
+        minDiff = diff;
+        bestRow = r;
+      }
     }
   }
 
@@ -313,8 +372,8 @@ export function calculateBreakLevels(rows: ProcessedOptionRow[]): BreakLevelsInf
   const minus100Row = rows.find(r => r.strike === minus100Strike);
 
   // For Break Down:
-  // Call Close at (ATM + 100)
-  // Put Close at (ATM - 100)
+  // Call Close at (ATM + 100) [OTM Call]
+  // Put Close at (ATM - 100) [OTM Put]
   const bdCallClose = plus100Row ? round2(plus100Row.call_close) : 0;
   const bdPutClose = minus100Row ? round2(minus100Row.put_close) : 0;
   const breakDownValue = round2((bdCallClose + bdPutClose) / 2);
@@ -325,6 +384,29 @@ export function calculateBreakLevels(rows: ProcessedOptionRow[]): BreakLevelsInf
   const buCallClose = minus100Row ? round2(minus100Row.call_close) : 0;
   const buPutClose = plus100Row ? round2(plus100Row.put_close) : 0;
   const breakUpValue = round2((buCallClose + buPutClose) / 2);
+
+  // For Break Even:
+  // Take Formula ATM Strike (bestRow).
+  // 4 values: Call High, Call Low, Put High, Put Low.
+  // Formula: (Max High among all 4 + Min Low among all 4) / 2
+  const callHigh = round2(bestRow.call_high);
+  const callLow = round2(bestRow.call_low);
+  const putHigh = round2(bestRow.put_high);
+  const putLow = round2(bestRow.put_low);
+
+  const highestValue = Math.max(callHigh, callLow, putHigh, putLow);
+  const lowestValue = Math.min(callHigh, callLow, putHigh, putLow);
+  const breakEvenValue = round2((highestValue + lowestValue) / 2);
+
+  let highestSource = 'Call High';
+  if (highestValue === putHigh) highestSource = 'Put High';
+  else if (highestValue === callLow) highestSource = 'Call Low';
+  else if (highestValue === putLow) highestSource = 'Put Low';
+
+  let lowestSource = 'Put Low';
+  if (lowestValue === callLow) lowestSource = 'Call Low';
+  else if (lowestValue === callHigh) lowestSource = 'Call High';
+  else if (lowestValue === putHigh) lowestSource = 'Put High';
 
   return {
     formulaAtmStrike,
@@ -344,6 +426,18 @@ export function calculateBreakLevels(rows: ProcessedOptionRow[]): BreakLevelsInf
       callClose: buCallClose,
       putStrike: plus100Strike,
       putClose: buPutClose,
+    },
+    breakEven: {
+      value: breakEvenValue,
+      strike: formulaAtmStrike,
+      highestValue,
+      highestSource,
+      lowestValue,
+      lowestSource,
+      callHigh,
+      callLow,
+      putHigh,
+      putLow,
     },
   };
 }

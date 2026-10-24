@@ -506,11 +506,13 @@ class NiftyMarketDataService {
               const callGreeks = item.call_options?.option_greeks;
               const putGreeks = item.put_options?.option_greeks;
 
-              const callClose = callMd?.ltp ?? callMd?.close_price ?? 0;
+              const callClose = callMd?.close_price ?? callMd?.ltp ?? 0;
+              const callLtp = callMd?.ltp ?? callClose;
               const callLow = callMd?.low_price || callClose;
               const callHigh = callMd?.high_price || callClose;
 
-              const putClose = putMd?.ltp ?? putMd?.close_price ?? 0;
+              const putClose = putMd?.close_price ?? putMd?.ltp ?? 0;
+              const putLtp = putMd?.ltp ?? putClose;
               const putLow = putMd?.low_price || putClose;
               const putHigh = putMd?.high_price || putClose;
 
@@ -519,12 +521,14 @@ class NiftyMarketDataService {
                 call_low: round2(callLow),
                 call_high: round2(callHigh),
                 call_close: round2(callClose),
+                call_ltp: round2(callLtp),
                 call_volume: Number(callMd?.volume || 0),
                 call_oi: Number(callMd?.oi || 0),
                 call_iv: callGreeks?.iv ? round2(callGreeks.iv) : undefined,
                 put_low: round2(putLow),
                 put_high: round2(putHigh),
                 put_close: round2(putClose),
+                put_ltp: round2(putLtp),
                 put_volume: Number(putMd?.volume || 0),
                 put_oi: Number(putMd?.oi || 0),
                 put_iv: putGreeks?.iv ? round2(putGreeks.iv) : undefined,

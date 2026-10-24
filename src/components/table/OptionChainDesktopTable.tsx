@@ -131,6 +131,18 @@ const OptionRowItem = memo(({
         <span>{row.call_close.toFixed(2)}</span>
       </td>
 
+      {/* 5. CALL LTP */}
+      <td
+        className={`${sizeConfig.cell} text-right font-black transition-colors ${
+          isCallITM
+            ? 'bg-cyan-50/80 dark:bg-cyan-950/25 text-cyan-950 dark:text-cyan-200 font-extrabold'
+            : 'text-cyan-900 dark:text-cyan-300 font-bold'
+        }`}
+        title={`Call LTP (Last Traded Price): ${(row.call_ltp ?? row.call_close).toFixed(2)}`}
+      >
+        <span>{(row.call_ltp ?? row.call_close).toFixed(2)}</span>
+      </td>
+
       {/* ============================================================== */}
       {/* CENTER SECTION: STRIKE PRICE (Orange ATM Highlight)            */}
       {/* ============================================================== */}
@@ -205,10 +217,22 @@ const OptionRowItem = memo(({
       </td>
 
       {/* ============================================================== */}
-      {/* PUT SECTION (RIGHT): CLOSE | AVG | PREMIUM | VOLUME            */}
+      {/* PUT SECTION (RIGHT): LTP | CLOSE | AVG | PREMIUM | VOLUME      */}
       {/* ============================================================== */}
 
-      {/* 5. PUT CLOSE */}
+      {/* 1. PUT LTP */}
+      <td
+        className={`${sizeConfig.cell} text-left font-black transition-colors ${
+          isPutITM
+            ? 'bg-cyan-50/80 dark:bg-cyan-950/25 text-cyan-950 dark:text-cyan-200 font-extrabold'
+            : 'text-cyan-900 dark:text-cyan-300 font-bold'
+        }`}
+        title={`Put LTP (Last Traded Price): ${(row.put_ltp ?? row.put_close).toFixed(2)}`}
+      >
+        <span>{(row.put_ltp ?? row.put_close).toFixed(2)}</span>
+      </td>
+
+      {/* 2. PUT CLOSE */}
       <td
         className={`${sizeConfig.cell} text-left font-bold transition-colors ${
           row.putTickDirection === 'up'
@@ -318,7 +342,7 @@ export const OptionChainDesktopTable: React.FC<OptionChainDesktopTableProps> = (
         <thead>
           {/* Top Super Header: CALLS (CE) | STRIKE | ACTION | PUTS (PE) */}
           <tr className="border-b border-slate-300 dark:border-slate-700 uppercase tracking-wider">
-            <th colSpan={4} className={`${headerSizes.super} text-center text-cyan-800 dark:text-cyan-400 bg-cyan-100/70 dark:bg-cyan-950/40 border-r border-slate-300 dark:border-slate-700/80`}>
+            <th colSpan={5} className={`${headerSizes.super} text-center text-cyan-800 dark:text-cyan-400 bg-cyan-100/70 dark:bg-cyan-950/40 border-r border-slate-300 dark:border-slate-700/80`}>
               CALLS (CE)
             </th>
             <th className={`${headerSizes.super} text-center text-amber-800 dark:text-amber-400 bg-amber-100/70 dark:bg-amber-950/40 border-r border-slate-300 dark:border-slate-700/80`}>
@@ -327,12 +351,12 @@ export const OptionChainDesktopTable: React.FC<OptionChainDesktopTableProps> = (
             <th className={`${headerSizes.super} text-center text-emerald-800 dark:text-emerald-400 bg-emerald-100/70 dark:bg-emerald-950/40 border-r border-slate-300 dark:border-slate-700/80`}>
               ACTION SIGNALS
             </th>
-            <th colSpan={4} className={`${headerSizes.super} text-center text-rose-800 dark:text-rose-400 bg-rose-100/70 dark:bg-rose-950/40`}>
+            <th colSpan={5} className={`${headerSizes.super} text-center text-rose-800 dark:text-rose-400 bg-rose-100/70 dark:bg-rose-950/40`}>
               PUTS (PE)
             </th>
           </tr>
 
-          {/* Exact Columns Header: VOLUME | PREMIUM | AVG | CLOSE | STRIKE | ACTION | CLOSE | AVG | PREMIUM | VOLUME */}
+          {/* Exact Columns Header: VOLUME | PREMIUM | AVG | CLOSE | LTP | STRIKE | ACTION | LTP | CLOSE | AVG | PREMIUM | VOLUME */}
           <tr className="border-b border-slate-300 dark:border-slate-800 font-mono uppercase text-slate-700 dark:text-slate-300 bg-slate-200/90 dark:bg-[#0f172a]">
             {/* CALLS */}
             <th className={`${headerSizes.col} text-right text-yellow-700 dark:text-yellow-300/90`}>
@@ -347,6 +371,9 @@ export const OptionChainDesktopTable: React.FC<OptionChainDesktopTableProps> = (
             <th className={`${headerSizes.col} text-right text-slate-900 dark:text-white`}>
               CLOSE
             </th>
+            <th className={`${headerSizes.col} text-right text-cyan-800 dark:text-cyan-300 font-black`}>
+              LTP
+            </th>
 
             {/* CENTER STRIKE */}
             <th className={`${headerSizes.col} text-center bg-slate-300/80 dark:bg-slate-950 text-amber-900 dark:text-amber-400 border-x-2 border-slate-400 dark:border-slate-700`}>
@@ -359,6 +386,9 @@ export const OptionChainDesktopTable: React.FC<OptionChainDesktopTableProps> = (
             </th>
 
             {/* PUTS */}
+            <th className={`${headerSizes.col} text-left text-cyan-800 dark:text-cyan-300 font-black`}>
+              LTP
+            </th>
             <th className={`${headerSizes.col} text-left text-slate-900 dark:text-white`}>
               CLOSE
             </th>

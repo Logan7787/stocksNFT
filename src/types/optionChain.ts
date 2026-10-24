@@ -9,6 +9,8 @@ export interface RawOptionData {
   put_close: number;
   put_volume: number;
   // Optional extra market fields
+  call_ltp?: number;
+  put_ltp?: number;
   call_oi?: number;
   put_oi?: number;
   call_iv?: number;
@@ -25,11 +27,13 @@ export interface ProcessedOptionRow {
   call_premium: number; // (Call Low + Put High) / 2
   call_avg: number;     // (Call Close + Put Close) / 2
   call_close: number;
+  call_ltp: number;
   call_low: number;
   call_high: number;
   call_change?: number;
 
   // PUT Side (Right)
+  put_ltp: number;
   put_close: number;
   put_avg: number;      // (Call Close + Put Close) / 2
   put_premium: number;  // (Put Low + Call High) / 2
@@ -67,6 +71,19 @@ export interface ProcessedOptionRow {
 
 export type BreakLevelRole = 'FORMULA_ATM' | 'ATM_MINUS_100' | 'ATM_PLUS_100';
 
+export interface BreakEvenInfo {
+  value: number;
+  strike: number;
+  highestValue: number;
+  highestSource: string;
+  lowestValue: number;
+  lowestSource: string;
+  callHigh: number;
+  callLow: number;
+  putHigh: number;
+  putLow: number;
+}
+
 export interface BreakLevelsInfo {
   formulaAtmStrike: number;
   atmCallClose: number;
@@ -86,6 +103,7 @@ export interface BreakLevelsInfo {
     putStrike: number;
     putClose: number;
   };
+  breakEven?: BreakEvenInfo;
 }
 
 export interface TradeSettings {
