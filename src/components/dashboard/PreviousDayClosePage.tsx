@@ -192,6 +192,19 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
     return evaluateAllTradeSignals(dataResult.rows, dataResult.spotPrice, tradeSettings);
   }, [dataResult, tradeSettings]);
 
+  // Screen filter state: All strikes vs ATM ± 500 strikes
+  const [strikeFilter, setStrikeFilter] = useState<'all' | 'atm500'>('all');
+
+  const atmStrike = dataResult?.metrics.atmStrike ?? (dataResult ? Math.round(dataResult.spotPrice / 50) * 50 : 22750);
+
+  // Filtered rows for on-screen view
+  const displayedRows = useMemo(() => {
+    if (strikeFilter === 'atm500') {
+      return rowsWithSignals.filter((r) => Math.abs(r.strike - atmStrike) <= 500);
+    }
+    return rowsWithSignals;
+  }, [rowsWithSignals, strikeFilter, atmStrike]);
+
   // Calculate or retrieve formula Break Up, Break Down, Break Even & ATM levels
   const breakLevels: BreakLevelsInfo | null = useMemo(() => {
     if (dataResult?.breakLevels && dataResult.breakLevels.breakEven) return dataResult.breakLevels;
@@ -398,6 +411,35 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
               </button>
             </div>
 
+            {/* Strike Range Selector */}
+            <div className="flex items-center bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-xl p-0.5 shadow-xs">
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 px-2 font-bold font-mono">
+                Strikes:
+              </span>
+              <button
+                onClick={() => setStrikeFilter('all')}
+                className={`px-2 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  strikeFilter === 'all'
+                    ? 'bg-cyan-500 text-slate-950 font-black shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white'
+                }`}
+                title="View all strikes"
+              >
+                All ({rowsWithSignals.length})
+              </button>
+              <button
+                onClick={() => setStrikeFilter('atm500')}
+                className={`px-2 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  strikeFilter === 'atm500'
+                    ? 'bg-cyan-500 text-slate-950 font-black shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white'
+                }`}
+                title={`Filter screen view to ATM ±500 (${atmStrike - 500} to ${atmStrike + 500})`}
+              >
+                ATM ±500
+              </button>
+            </div>
+
             <button
               onClick={handleSaveToDb}
               disabled={isSaving || loading}
@@ -411,10 +453,10 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
               onClick={handlePrint}
               disabled={loading || !dataResult}
               className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer transition-all disabled:opacity-50"
-              title="Print data to printer or save as PDF"
+              title={`Print to printer or PDF (Only ATM ±500 rows: ${atmStrike - 500} to ${atmStrike + 500})`}
             >
               <Printer className="w-3.5 h-3.5" />
-              <span>Print</span>
+              <span>Print (ATM ±500)</span>
             </button>
             <button
               onClick={handleExportCsv}
@@ -864,16 +906,18 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
           {/* Desktop Option Chain Table View */}
           <div className="hidden lg:block">
             <OptionChainDesktopTable
-              rows={rowsWithSignals}
+              rows={displayedRows}
               spotPrice={dataResult.spotPrice}
               fontSize={tableFontSize}
+              atmStrike={atmStrike}
+              printAtmRangeOnly={true}
             />
           </div>
 
           {/* Mobile Option Chain Table View */}
           <div className="lg:hidden">
             <OptionChainMobileTable
-              rows={rowsWithSignals}
+              rows={displayedRows}
               spotPrice={dataResult.spotPrice}
               metrics={dataResult.metrics}
             />

@@ -73,6 +73,7 @@ body {
   /* Hide application navigation, header, toasts, and buttons */
   header,
   nav,
+  tr.print\:hidden,
   .print\:hidden,
   .no-print {
     display: none !important;

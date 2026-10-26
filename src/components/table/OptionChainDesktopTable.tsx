@@ -7,17 +7,21 @@ interface OptionChainDesktopTableProps {
   rows: ProcessedOptionRow[];
   spotPrice: number;
   fontSize?: TableFontSize;
+  atmStrike?: number;
+  printAtmRangeOnly?: boolean;
 }
 
 // Memoized single row component to ensure zero-lag rendering
 const OptionRowItem = memo(({ 
   row, 
   spotPrice, 
-  fontSize = 'large' 
+  fontSize = 'large',
+  isPrintHidden = false,
 }: { 
   row: ProcessedOptionRow; 
   spotPrice: number;
   fontSize?: TableFontSize;
+  isPrintHidden?: boolean;
 }) => {
   const isCallITM = row.strike < spotPrice;
   const isPutITM = row.strike > spotPrice;
@@ -47,7 +51,7 @@ const OptionRowItem = memo(({
   }[fontSize];
 
   return (
-    <tr className={`border-b border-slate-200 dark:border-slate-800/60 hover:bg-slate-100/90 dark:hover:bg-slate-800/50 transition-colors font-mono ${sizeConfig.tr} group`}>
+    <tr className={`border-b border-slate-200 dark:border-slate-800/60 hover:bg-slate-100/90 dark:hover:bg-slate-800/50 transition-colors font-mono ${sizeConfig.tr} group ${isPrintHidden ? 'print:hidden' : ''}`}>
       {/* ============================================================== */}
       {/* CALL SECTION (LEFT): VOLUME | PREMIUM | AVG | CLOSE           */}
       {/* ============================================================== */}
@@ -319,8 +323,11 @@ OptionRowItem.displayName = 'OptionRowItem';
 export const OptionChainDesktopTable: React.FC<OptionChainDesktopTableProps> = ({ 
   rows, 
   spotPrice, 
-  fontSize = 'large' 
+  fontSize = 'large',
+  atmStrike,
+  printAtmRangeOnly = true,
 }) => {
+  const effectiveAtm = atmStrike ?? rows.find((r) => r.isATM)?.strike ?? (spotPrice ? Math.round(spotPrice / 50) * 50 : undefined);
   const headerSizes = {
     normal: {
       super: 'py-2.5 px-4 text-xs font-black',
@@ -359,19 +366,19 @@ export const OptionChainDesktopTable: React.FC<OptionChainDesktopTableProps> = (
           {/* Exact Columns Header: VOLUME | PREMIUM | AVG | CLOSE | LTP | STRIKE | ACTION | LTP | CLOSE | AVG | PREMIUM | VOLUME */}
           <tr className="border-b border-slate-300 dark:border-slate-800 font-mono uppercase text-slate-700 dark:text-slate-300 bg-slate-200/90 dark:bg-[#0f172a]">
             {/* CALLS */}
-            <th className={`${headerSizes.col} text-right text-yellow-700 dark:text-yellow-300/90`}>
+            <th className={`${headerSizes.col} text-right bg-amber-100/90 text-amber-950 font-bold dark:bg-amber-950/70 dark:text-amber-300 border-r border-slate-300/80 dark:border-slate-800`}>
               VOLUME
             </th>
-            <th className={`${headerSizes.col} text-right text-sky-700 dark:text-sky-300/90`}>
+            <th className={`${headerSizes.col} text-right bg-sky-100/90 text-sky-950 font-bold dark:bg-sky-950/70 dark:text-sky-300 border-r border-slate-300/80 dark:border-slate-800`}>
               PREMIUM
             </th>
-            <th className={`${headerSizes.col} text-right text-emerald-700 dark:text-emerald-300/90`}>
+            <th className={`${headerSizes.col} text-right bg-emerald-100/90 text-emerald-950 font-bold dark:bg-emerald-950/70 dark:text-emerald-300 border-r border-slate-300/80 dark:border-slate-800`}>
               AVG
             </th>
-            <th className={`${headerSizes.col} text-right text-slate-900 dark:text-white`}>
+            <th className={`${headerSizes.col} text-right bg-purple-100/90 text-purple-950 font-bold dark:bg-purple-950/70 dark:text-purple-300 border-r border-slate-300/80 dark:border-slate-800`}>
               CLOSE
             </th>
-            <th className={`${headerSizes.col} text-right text-cyan-800 dark:text-cyan-300 font-black`}>
+            <th className={`${headerSizes.col} text-right bg-cyan-100/90 text-cyan-950 font-black dark:bg-cyan-950/70 dark:text-cyan-300`}>
               LTP
             </th>
 
@@ -386,19 +393,19 @@ export const OptionChainDesktopTable: React.FC<OptionChainDesktopTableProps> = (
             </th>
 
             {/* PUTS */}
-            <th className={`${headerSizes.col} text-left text-cyan-800 dark:text-cyan-300 font-black`}>
+            <th className={`${headerSizes.col} text-left bg-cyan-100/90 text-cyan-950 font-black dark:bg-cyan-950/70 dark:text-cyan-300 border-r border-slate-300/80 dark:border-slate-800`}>
               LTP
             </th>
-            <th className={`${headerSizes.col} text-left text-slate-900 dark:text-white`}>
+            <th className={`${headerSizes.col} text-left bg-purple-100/90 text-purple-950 font-bold dark:bg-purple-950/70 dark:text-purple-300 border-r border-slate-300/80 dark:border-slate-800`}>
               CLOSE
             </th>
-            <th className={`${headerSizes.col} text-left text-emerald-700 dark:text-emerald-300/90`}>
+            <th className={`${headerSizes.col} text-left bg-emerald-100/90 text-emerald-950 font-bold dark:bg-emerald-950/70 dark:text-emerald-300 border-r border-slate-300/80 dark:border-slate-800`}>
               AVG
             </th>
-            <th className={`${headerSizes.col} text-left text-sky-700 dark:text-sky-300/90`}>
+            <th className={`${headerSizes.col} text-left bg-sky-100/90 text-sky-950 font-bold dark:bg-sky-950/70 dark:text-sky-300 border-r border-slate-300/80 dark:border-slate-800`}>
               PREMIUM
             </th>
-            <th className={`${headerSizes.col} text-left text-yellow-700 dark:text-yellow-300/90`}>
+            <th className={`${headerSizes.col} text-left bg-amber-100/90 text-amber-950 font-bold dark:bg-amber-950/70 dark:text-amber-300`}>
               VOLUME
             </th>
           </tr>
@@ -406,9 +413,22 @@ export const OptionChainDesktopTable: React.FC<OptionChainDesktopTableProps> = (
 
         {/* Table Body */}
         <tbody className="divide-y divide-slate-200 dark:divide-slate-800/40">
-          {rows.map((row) => (
-            <OptionRowItem key={row.strike} row={row} spotPrice={spotPrice} fontSize={fontSize} />
-          ))}
+          {rows.map((row) => {
+            const isOutsidePrintRange =
+              printAtmRangeOnly &&
+              effectiveAtm != null &&
+              Math.abs(row.strike - effectiveAtm) > 500;
+
+            return (
+              <OptionRowItem
+                key={row.strike}
+                row={row}
+                spotPrice={spotPrice}
+                fontSize={fontSize}
+                isPrintHidden={isOutsidePrintRange}
+              />
+            );
+          })}
         </tbody>
       </table>
     </div>

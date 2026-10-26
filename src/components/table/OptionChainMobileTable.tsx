@@ -72,16 +72,18 @@ export const OptionChainMobileTable: React.FC<OptionChainMobileTableProps> = ({
                   STRIKE
                 </th>
                 <th className="py-2.5 px-2 text-center text-emerald-800 dark:text-emerald-400 font-bold">SIGNAL</th>
-                <th className="py-2.5 px-3 text-right text-slate-900 dark:text-white">CLOSE</th>
-                <th className="py-2.5 px-3 text-right text-cyan-700 dark:text-cyan-300 font-bold">LTP</th>
-                <th className="py-2.5 px-3 text-right text-emerald-700 dark:text-emerald-300">AVG</th>
-                <th className="py-2.5 px-3 text-right text-sky-700 dark:text-sky-300">PREMIUM</th>
-                <th className="py-2.5 px-3 text-right text-yellow-700 dark:text-yellow-300">VOLUME</th>
+                <th className="py-2.5 px-3 text-right bg-purple-100/90 text-purple-950 font-bold dark:bg-purple-950/70 dark:text-purple-300">CLOSE</th>
+                <th className="py-2.5 px-3 text-right bg-cyan-100/90 text-cyan-950 font-black dark:bg-cyan-950/70 dark:text-cyan-300">LTP</th>
+                <th className="py-2.5 px-3 text-right bg-emerald-100/90 text-emerald-950 font-bold dark:bg-emerald-950/70 dark:text-emerald-300">AVG</th>
+                <th className="py-2.5 px-3 text-right bg-sky-100/90 text-sky-950 font-bold dark:bg-sky-950/70 dark:text-sky-300">PREMIUM</th>
+                <th className="py-2.5 px-3 text-right bg-amber-100/90 text-amber-950 font-bold dark:bg-amber-950/70 dark:text-amber-300">VOLUME</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-800/50">
-              {rows.map((row) => (
-                <tr key={row.strike} className="hover:bg-slate-50 dark:hover:bg-slate-800/30">
+              {rows.map((row) => {
+                const isOutsidePrint = metrics?.atmStrike != null && Math.abs(row.strike - metrics.atmStrike) > 500;
+                return (
+                <tr key={row.strike} className={`hover:bg-slate-50 dark:hover:bg-slate-800/30 ${isOutsidePrint ? 'print:hidden' : ''}`}>
                   <td
                     className={`py-2 px-3 text-center font-bold sticky left-0 z-10 border-r border-slate-300 dark:border-slate-800 ${
                       row.isATM ? 'bg-[#f97316] text-white' : 'bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-200'
@@ -122,7 +124,8 @@ export const OptionChainMobileTable: React.FC<OptionChainMobileTableProps> = ({
                     {row.call_volume.toLocaleString('en-IN')}
                   </td>
                 </tr>
-              ))}
+              );
+            })}
             </tbody>
           </table>
         </div>
@@ -138,16 +141,18 @@ export const OptionChainMobileTable: React.FC<OptionChainMobileTableProps> = ({
                   STRIKE
                 </th>
                 <th className="py-2.5 px-2 text-center text-rose-800 dark:text-rose-400 font-bold">SIGNAL</th>
-                <th className="py-2.5 px-3 text-right text-cyan-700 dark:text-cyan-300 font-bold">LTP</th>
-                <th className="py-2.5 px-3 text-right text-slate-900 dark:text-white">CLOSE</th>
-                <th className="py-2.5 px-3 text-right text-emerald-700 dark:text-emerald-300">AVG</th>
-                <th className="py-2.5 px-3 text-right text-sky-700 dark:text-sky-300">PREMIUM</th>
-                <th className="py-2.5 px-3 text-right text-yellow-700 dark:text-yellow-300">VOLUME</th>
+                <th className="py-2.5 px-3 text-right bg-cyan-100/90 text-cyan-950 font-black dark:bg-cyan-950/70 dark:text-cyan-300">LTP</th>
+                <th className="py-2.5 px-3 text-right bg-purple-100/90 text-purple-950 font-bold dark:bg-purple-950/70 dark:text-purple-300">CLOSE</th>
+                <th className="py-2.5 px-3 text-right bg-emerald-100/90 text-emerald-950 font-bold dark:bg-emerald-950/70 dark:text-emerald-300">AVG</th>
+                <th className="py-2.5 px-3 text-right bg-sky-100/90 text-sky-950 font-bold dark:bg-sky-950/70 dark:text-sky-300">PREMIUM</th>
+                <th className="py-2.5 px-3 text-right bg-amber-100/90 text-amber-950 font-bold dark:bg-amber-950/70 dark:text-amber-300">VOLUME</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-800/50">
-              {rows.map((row) => (
-                <tr key={row.strike} className="hover:bg-slate-50 dark:hover:bg-slate-800/30">
+              {rows.map((row) => {
+                const isOutsidePrint = metrics?.atmStrike != null && Math.abs(row.strike - metrics.atmStrike) > 500;
+                return (
+                <tr key={row.strike} className={`hover:bg-slate-50 dark:hover:bg-slate-800/30 ${isOutsidePrint ? 'print:hidden' : ''}`}>
                   <td
                     className={`py-2 px-3 text-center font-bold sticky left-0 z-10 border-r border-slate-300 dark:border-slate-800 ${
                       row.isATM ? 'bg-[#f97316] text-white' : 'bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-200'
@@ -188,7 +193,8 @@ export const OptionChainMobileTable: React.FC<OptionChainMobileTableProps> = ({
                     {row.put_volume.toLocaleString('en-IN')}
                   </td>
                 </tr>
-              ))}
+              );
+            })}
             </tbody>
           </table>
         </div>
