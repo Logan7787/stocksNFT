@@ -22,8 +22,10 @@ import {
   Scale,
   Type,
   RefreshCw,
-  Zap
+  Zap,
+  UploadCloud
 } from 'lucide-react';
+import { ImportNseReportModal } from '../modals/ImportNseReportModal';
 import { 
   getMarketCloseStatusInfo, 
   getPreviousCloseOptionChain, 
@@ -66,6 +68,7 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
   const [dataResult, setDataResult] = useState<PreviousCloseChainResult | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
   const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState<boolean>(false);
   const [tradeSettings] = useState<TradeSettings>(getStoredTradeSettings());
 
   // Font size state for table & print visibility
@@ -368,6 +371,16 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isManualSyncing ? 'animate-spin' : ''}`} />
               <span>{isManualSyncing ? 'Syncing...' : 'Sync from NSE Now'}</span>
+            </button>
+
+            {/* Import / Paste NSE Data button */}
+            <button
+              onClick={() => setIsImportModalOpen(true)}
+              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-cyan-300 font-bold text-xs rounded-xl shadow-xs border border-cyan-500/30 flex items-center gap-1.5 cursor-pointer transition-all"
+              title="Import or paste official NSE report or OCR text without editing code"
+            >
+              <UploadCloud className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Import / Paste NSE Data</span>
             </button>
 
             {/* Font Size Selector */}
@@ -928,6 +941,17 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
           No data available for this market close session.
         </div>
       )}
+
+      {/* Import / Paste NSE Report Modal */}
+      <ImportNseReportModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        defaultDate={statusInfo.effectiveCloseDate}
+        onSuccess={(msg) => {
+          showToast(msg, 'success');
+          loadData(true);
+        }}
+      />
     </div>
   );
 };

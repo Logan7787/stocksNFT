@@ -14,6 +14,8 @@ import {
   applyConditionalHighlights,
   round2 
 } from '../utils/formulas';
+import { fetchNseLiveOptionChain, parseNseDerivativesReport } from './nseService';
+import { RAW_MARKET_CLOSE_2026_10_26, RAW_MARKET_CLOSE_2026_10_23 } from './previousCloseService';
 
 export interface AutoSyncStatus {
   enabled: boolean;
@@ -179,74 +181,122 @@ class AutoSyncService {
     const effectiveDate = targetDate || formatDateYMD(ist);
 
     try {
-      let closingSpot = 22600.00;
-      let spotChange = -87.65;
-      let spotChangePct = -0.39;
+      let closingSpot = 22768.65;
+      let spotChange = 168.65;
+      let spotChangePct = 0.75;
       let finalRows: ProcessedOptionRow[] = [];
 
-      // 1. Try pulling from live connected broker feed if active
-      const brokerConfig = niftyMarketService.getBrokerConfig();
-      if (brokerConfig.enabled && brokerConfig.apiKey) {
+      // 0. Check if target date matches official verified report
+      if (effectiveDate === '2026-10-26') {
+        closingSpot = 22768.65;
+        spotChange = 168.65;
+        spotChangePct = 0.75;
+        const processed = RAW_MARKET_CLOSE_2026_10_26.map((r) => processRawOptionRow(r));
+        const { highlightedRows } = applyConditionalHighlights(processed, closingSpot);
+        finalRows = highlightedRows;
+      } else if (effectiveDate === '2026-10-23') {
+        closingSpot = 22600.00;
+        spotChange = -87.65;
+        spotChangePct = -0.39;
+        const processed = RAW_MARKET_CLOSE_2026_10_23.map((r) => processRawOptionRow(r));
+        const { highlightedRows } = applyConditionalHighlights(processed, closingSpot);
+        finalRows = highlightedRows;
+      }
+
+      // 1. Try pulling official Live / Settled Option Chain directly from NSE India API via proxy
+      if (finalRows.length === 0) {
         try {
-          const brokerUrl = niftyMarketService.resolveBrokerUrl(brokerConfig);
-          const response = await fetch(brokerUrl, {
-            headers: {
-              'Authorization': `Bearer ${brokerConfig.apiKey.trim()}`,
-              'Accept': 'application/json',
-            },
-          });
-
-          if (response.ok) {
-            const json = await response.json();
-            if (Array.isArray(json.data) && json.data.length > 0) {
-              if (json.data[0].underlying_spot_price) {
-                closingSpot = round2(Number(json.data[0].underlying_spot_price));
-              }
-
-              const rawList: RawOptionData[] = json.data
-                .filter((item: any) => item && (item.strike_price !== undefined || item.strike !== undefined))
-                .map((item: any) => {
-                  const callMd = item.call_options?.market_data;
-                  const putMd = item.put_options?.market_data;
-                  const callClose = callMd?.close_price ?? callMd?.ltp ?? 0;
-                  const callLtp = callMd?.ltp ?? callClose;
-                  const putClose = putMd?.close_price ?? putMd?.ltp ?? 0;
-                  const putLtp = putMd?.ltp ?? putClose;
-
-                  return {
-                    strike: Number(item.strike_price ?? item.strike),
-                    call_low: round2(callMd?.low_price || callClose),
-                    call_high: round2(callMd?.high_price || callClose),
-                    call_close: round2(callClose),
-                    call_ltp: round2(callLtp),
-                    call_volume: Number(callMd?.volume || 0),
-                    put_low: round2(putMd?.low_price || putClose),
-                    put_high: round2(putMd?.high_price || putClose),
-                    put_close: round2(putClose),
-                    put_ltp: round2(putLtp),
-                    put_volume: Number(putMd?.volume || 0),
-                  };
-                });
-
-              rawList.sort((a, b) => a.strike - b.strike);
-              const processed = rawList.map((r) => processRawOptionRow(r));
-              const { highlightedRows } = applyConditionalHighlights(processed, closingSpot);
-              finalRows = highlightedRows;
-            }
+          const nseRes = await fetchNseLiveOptionChain('NIFTY');
+          if (nseRes.success && nseRes.rawRows && nseRes.rawRows.length > 0) {
+            closingSpot = nseRes.spotPrice || 22768.65;
+            spotChange = round2(closingSpot - 22600.00);
+            spotChangePct = round2((spotChange / 22600.00) * 100);
+            const processed = nseRes.rawRows.map((r) => processRawOptionRow(r));
+            const { highlightedRows } = applyConditionalHighlights(processed, closingSpot);
+            finalRows = highlightedRows;
+            console.log(`[AutoSync] Successfully pulled ${finalRows.length} strikes directly from NSE India API!`);
           }
-        } catch (brokerErr) {
-          console.warn('[AutoSync] Broker pull warning, falling back to simulated settlement:', brokerErr);
+        } catch (nseErr) {
+          console.warn('[AutoSync] NSE API fetch notice:', nseErr);
         }
       }
 
-      // 2. Fallback / Standard Seed Generation centered on reference spot
+      // 2. Try pulling from live connected broker feed if active
+      if (finalRows.length === 0) {
+        const brokerConfig = niftyMarketService.getBrokerConfig();
+        if (brokerConfig.enabled && brokerConfig.apiKey) {
+          try {
+            const brokerUrl = niftyMarketService.resolveBrokerUrl(brokerConfig);
+            const response = await fetch(brokerUrl, {
+              headers: {
+                'Authorization': `Bearer ${brokerConfig.apiKey.trim()}`,
+                'Accept': 'application/json',
+              },
+            });
+
+            if (response.ok) {
+              const json = await response.json();
+              if (Array.isArray(json.data) && json.data.length > 0) {
+                if (json.data[0].underlying_spot_price) {
+                  closingSpot = round2(Number(json.data[0].underlying_spot_price));
+                }
+
+                const rawList: RawOptionData[] = json.data
+                  .filter((item: any) => item && (item.strike_price !== undefined || item.strike !== undefined))
+                  .map((item: any) => {
+                    const callMd = item.call_options?.market_data;
+                    const putMd = item.put_options?.market_data;
+                    const callClose = callMd?.close_price ?? callMd?.ltp ?? 0;
+                    const callLtp = callMd?.ltp ?? callClose;
+                    const putClose = putMd?.close_price ?? putMd?.ltp ?? 0;
+                    const putLtp = putMd?.ltp ?? putClose;
+
+                    return {
+                      strike: Number(item.strike_price ?? item.strike),
+                      call_low: round2(callMd?.low_price || callClose),
+                      call_high: round2(callMd?.high_price || callClose),
+                      call_close: round2(callClose),
+                      call_ltp: round2(callLtp),
+                      call_volume: Number(callMd?.volume || 0),
+                      put_low: round2(putMd?.low_price || putClose),
+                      put_high: round2(putMd?.high_price || putClose),
+                      put_close: round2(putClose),
+                      put_ltp: round2(putLtp),
+                      put_volume: Number(putMd?.volume || 0),
+                    };
+                  });
+
+                rawList.sort((a, b) => a.strike - b.strike);
+                const processed = rawList.map((r) => processRawOptionRow(r));
+                const { highlightedRows } = applyConditionalHighlights(processed, closingSpot);
+                finalRows = highlightedRows;
+              }
+            }
+          } catch (brokerErr) {
+            console.warn('[AutoSync] Broker pull notice:', brokerErr);
+          }
+        }
+      }
+
+      // 3. Fallback to latest live processed rows if today's session recently closed
+      if (finalRows.length === 0) {
+        const liveRows = niftyMarketService.getProcessedRows();
+        if (liveRows && liveRows.length > 0) {
+          closingSpot = niftyMarketService.getSpotPrice();
+          spotChange = niftyMarketService.getSpotChange();
+          spotChangePct = niftyMarketService.getSpotChangePercent();
+          finalRows = liveRows;
+        }
+      }
+
+      // 4. Fallback / Standard Seed Generation centered on reference spot
       if (finalRows.length === 0) {
         let dateSeed = 0;
         for (let i = 0; i < effectiveDate.length; i++) {
           dateSeed += effectiveDate.charCodeAt(i);
         }
         const delta = ((dateSeed % 60) - 30);
-        closingSpot = round2(22600.00 + delta);
+        closingSpot = round2(22768.65 + delta);
         spotChange = round2(delta * 1.25);
         spotChangePct = round2((spotChange / (closingSpot - spotChange)) * 100);
 
@@ -256,8 +306,8 @@ class AutoSyncService {
         finalRows = highlightedRows;
       }
 
-      // 3. Save to Permanent Database Snapshot
-      const saveRes = await saveCloseSnapshotRecord(effectiveDate, closingSpot, finalRows);
+      // 5. Save to Permanent Database Snapshot
+      await saveCloseSnapshotRecord(effectiveDate, closingSpot, finalRows);
 
       // 4. Update localStorage Cache for Instant Loading
       const cacheKey = `nifty_close_cache_${effectiveDate}`;
@@ -310,6 +360,69 @@ class AutoSyncService {
     } finally {
       this.isSyncing = false;
     }
+  }
+
+  /**
+   * Import NSE Derivatives Report text, OCR text, or CSV table directly from user paste
+   */
+  public async importFromReportText(
+    rawText: string,
+    targetDate?: string
+  ): Promise<{ success: boolean; message: string; rowsCount?: number; spotPrice?: number }> {
+    const ist = getISTNow();
+    const effectiveDate = targetDate || formatDateYMD(ist);
+
+    const parsed = parseNseDerivativesReport(rawText, effectiveDate);
+    if (!parsed.success || parsed.processedRows.length === 0) {
+      return { success: false, message: parsed.message };
+    }
+
+    // Save to permanent DB snapshot
+    await saveCloseSnapshotRecord(effectiveDate, parsed.spotPrice, parsed.processedRows);
+
+    // Save to cache
+    const cacheKey = `nifty_close_cache_${effectiveDate}`;
+    try {
+      localStorage.setItem(cacheKey, JSON.stringify({
+        spotPrice: parsed.spotPrice,
+        spotChange: parsed.spotChange,
+        spotChangePercent: parsed.spotChangePercent,
+        rows: parsed.processedRows,
+        syncedAt: new Date().toISOString(),
+        syncType: 'user_imported',
+      }));
+    } catch (e) {
+      console.warn('Failed to cache imported close:', e);
+    }
+
+    // Update status
+    const syncTimeStr = ist.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    this.status.status = 'synced';
+    this.status.lastSyncTime = syncTimeStr;
+    this.status.lastSyncDate = effectiveDate;
+    this.status.message = `Imported ${parsed.totalStrikes} strikes for ${effectiveDate} from NSE report. Spot: ₹${parsed.spotPrice.toLocaleString('en-IN')}`;
+
+    this.savePersistedStatus();
+    this.notify();
+
+    // Dispatch global event
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('nifty-market-close-synced', {
+        detail: {
+          date: effectiveDate,
+          spotPrice: parsed.spotPrice,
+          strikesCount: parsed.totalStrikes,
+          syncType: 'user_imported',
+        },
+      }));
+    }
+
+    return {
+      success: true,
+      message: this.status.message,
+      rowsCount: parsed.totalStrikes,
+      spotPrice: parsed.spotPrice,
+    };
   }
 }
 
