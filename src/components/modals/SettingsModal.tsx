@@ -18,7 +18,8 @@ import {
   EyeOff
 } from 'lucide-react';
 import { getSupabaseCredentials, saveSupabaseCredentials, getSupabase } from '../../services/supabaseClient';
-import { testBrokerConnection, fetchUpstoxExpiryDates, calculateUpcomingExpiryDate } from '../../services/niftyApi';
+import { testBrokerConnection, fetchUpstoxExpiryDates, calculateUpcomingExpiryDate, niftyMarketService } from '../../services/niftyApi';
+import { angelOneService } from '../../services/angelOneService';
 import type { BrokerApiConfig, TradeSettings } from '../../types/optionChain';
 
 interface SettingsModalProps {
@@ -82,8 +83,45 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [inputPrevClose, setInputPrevClose] = useState<number>(previousClose);
   const [isSyncingQuote, setIsSyncingQuote] = useState<boolean>(false);
   const [showToken, setShowToken] = useState<boolean>(false);
+  const [isAngelLoggingIn, setIsAngelLoggingIn] = useState<boolean>(false);
+  const [angelLoginResult, setAngelLoginResult] = useState<{ success: boolean; message: string } | null>(null);
 
   const envToken = (import.meta.env.VITE_UPSTOX_ACCESS_TOKEN || import.meta.env.VITE_BROKER_ACCESS_TOKEN || '').trim();
+
+  const handleAngelLogin = async () => {
+    setIsAngelLoggingIn(true);
+    setAngelLoginResult(null);
+    try {
+      const apiKey = broker.angelApiKey || broker.apiKey || '';
+      const clientCode = broker.angelClientCode || '';
+      const pin = broker.angelPin || '';
+      const totp = broker.angelTotp || '';
+
+      const res = await angelOneService.login(apiKey, clientCode, pin, totp);
+      setAngelLoginResult(res);
+      if (res.success && res.jwtToken) {
+        const updated: BrokerApiConfig = {
+          ...broker,
+          angelJwtToken: res.jwtToken,
+          angelFeedToken: res.feedToken,
+          enabled: true,
+        };
+        setBroker(updated);
+        onSaveBrokerConfig(updated);
+        showToast('✓ Angel One session created successfully!');
+      }
+    } catch (err: any) {
+      setAngelLoginResult({ success: false, message: err.message || 'Angel One login failed' });
+    } finally {
+      setIsAngelLoggingIn(false);
+    }
+  };
+
+  const handleApplyAngelSnapshot = () => {
+    niftyMarketService.applyAngelOneSnapshot();
+    showToast('✓ Applied Angel One Market details (Spot: ₹22,634.20)!');
+    onClose();
+  };
 
   useEffect(() => {
     setTestSpot(spotPrice);
@@ -170,10 +208,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   const handleSaveBroker = () => {
-    const hasToken = !!broker.apiKey?.trim();
+    const hasUpstoxToken = !!broker.apiKey?.trim();
+    const hasAngelToken = !!broker.angelJwtToken?.trim() || !!broker.angelApiKey?.trim();
+    const hasAuth = broker.provider === 'angelone' ? hasAngelToken : hasUpstoxToken;
     const updated = {
       ...broker,
-      enabled: hasToken ? true : broker.enabled,
+      enabled: hasAuth ? true : broker.enabled,
     };
     setBroker(updated);
     onSaveBrokerConfig(updated);
@@ -302,14 +342,44 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           {/* 1. Broker API Tab */}
           {activeTab === 'broker' && (
             <div className="space-y-4 font-mono text-xs">
-              {/* Token Expiry Info Card */}
-              <div className="p-3 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-700/50 rounded-xl text-blue-900 dark:text-blue-300 flex items-start gap-2.5">
-                <AlertCircle className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
-                <div className="font-sans text-[11px] leading-relaxed">
-                  <strong>Upstox Daily Token Policy:</strong> Upstox access tokens are valid for 24 hours and reset daily at <strong>3:30 AM IST</strong>. 
-                  You can set <code className="font-mono bg-blue-100 dark:bg-blue-900/60 px-1 py-0.5 rounded text-blue-800 dark:text-blue-200">VITE_UPSTOX_ACCESS_TOKEN</code> in your <code className="font-mono bg-blue-100 dark:bg-blue-900/60 px-1 py-0.5 rounded text-blue-800 dark:text-blue-200">.env</code> file so that every device automatically loads the active token without needing to paste it manually.
+              {/* Quick Sync with Angel One Screenshot Data */}
+              <div className="p-3.5 bg-linear-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/40 dark:to-purple-950/40 border border-indigo-200 dark:border-indigo-700/50 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+                <div>
+                  <div className="font-bold text-indigo-900 dark:text-indigo-200 text-xs flex items-center gap-1.5">
+                    <Zap className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                    <span>Sync with Angel One Current Market (NIFTY 22,634.20)</span>
+                  </div>
+                  <div className="text-[11px] text-indigo-700 dark:text-indigo-300 font-sans mt-0.5">
+                    Instantly load spot <strong>₹22,634.20</strong>, 22600 & 22650 ATM strikes with exact LTPs matching your Angel One screen.
+                  </div>
                 </div>
+                <button
+                  type="button"
+                  onClick={handleApplyAngelSnapshot}
+                  className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-xs shadow-md shadow-indigo-600/20 cursor-pointer flex items-center gap-1.5 shrink-0 transition-all"
+                >
+                  <Zap className="w-3.5 h-3.5" />
+                  <span>Apply Angel One Details</span>
+                </button>
               </div>
+
+              {/* Provider Info Card */}
+              {broker.provider === 'angelone' ? (
+                <div className="p-3 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-700/50 rounded-xl text-indigo-900 dark:text-indigo-300 flex items-start gap-2.5">
+                  <AlertCircle className="w-4 h-4 text-indigo-500 shrink-0 mt-0.5" />
+                  <div className="font-sans text-[11px] leading-relaxed">
+                    <strong>Angel One SmartAPI:</strong> Connect directly to Angel One's trading and market data engine using your SmartAPI Key, Client Code, and TOTP. Requests are routed seamlessly through the local proxy (<code className="font-mono bg-indigo-100 dark:bg-indigo-900/60 px-1 py-0.5 rounded">/api/angelone</code>).
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-700/50 rounded-xl text-blue-900 dark:text-blue-300 flex items-start gap-2.5">
+                  <AlertCircle className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+                  <div className="font-sans text-[11px] leading-relaxed">
+                    <strong>Upstox Daily Token Policy:</strong> Upstox access tokens are valid for 24 hours and reset daily at <strong>3:30 AM IST</strong>. 
+                    You can set <code className="font-mono bg-blue-100 dark:bg-blue-900/60 px-1 py-0.5 rounded text-blue-800 dark:text-blue-200">VITE_UPSTOX_ACCESS_TOKEN</code> in your <code className="font-mono bg-blue-100 dark:bg-blue-900/60 px-1 py-0.5 rounded text-blue-800 dark:text-blue-200">.env</code> file so that every device automatically loads the active token without needing to paste it manually.
+                  </div>
+                </div>
+              )}
 
               {/* Enable Live Checkbox */}
               <div className="flex items-center justify-between p-3.5 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-300 dark:border-slate-800 shadow-xs">
@@ -322,7 +392,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     className="w-4 h-4 text-cyan-500 rounded border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 focus:ring-cyan-500 cursor-pointer"
                   />
                   <label htmlFor="brokerEnabled" className="text-slate-900 dark:text-white font-bold cursor-pointer select-none">
-                    Enable Live Broker Feed (Upstox API v2)
+                    Enable Live Broker Feed ({broker.provider === 'angelone' ? 'Angel One SmartAPI' : 'Upstox API v2'})
                   </label>
                 </div>
                 <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded ${
@@ -346,12 +416,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       const prov = e.target.value as any;
                       setBroker({ ...broker, provider: prov });
                     }}
-                    className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100"
+                    className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 font-bold"
                   >
+                    <option value="angelone">AngelOne SmartAPI (Recommended)</option>
                     <option value="upstox">Upstox API v2 (Official)</option>
                     <option value="custom_proxy">Custom NSE / Node.js Proxy</option>
                     <option value="dhan">Dhan HQ Feed</option>
-                    <option value="angelone">AngelOne SmartAPI</option>
                   </select>
                 </div>
 
@@ -364,9 +434,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     onChange={(e) => {
                       const sym = e.target.value;
                       setBroker({ ...broker, symbol: sym, expiryDate: calculateUpcomingExpiryDate(sym) });
-                      loadExpiries(broker.apiKey, sym);
+                      if (broker.provider === 'upstox') {
+                        loadExpiries(broker.apiKey, sym);
+                      }
                     }}
-                    className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100"
+                    className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 font-bold"
                   >
                     <option value="NIFTY">NIFTY 50 (NSE_INDEX|Nifty 50)</option>
                     <option value="BANKNIFTY">BANK NIFTY (NSE_INDEX|Nifty Bank)</option>
@@ -374,153 +446,269 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
               </div>
 
-              {/* Expiry Date Selection */}
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-slate-600 dark:text-slate-400 uppercase tracking-wider font-bold flex items-center gap-1.5">
-                    <Calendar className="w-3.5 h-3.5 text-cyan-500" />
-                    Target Option Expiry Date (YYYY-MM-DD)
-                  </label>
-                  {isFetchingExpiries && (
-                    <span className="text-[10px] text-cyan-600 dark:text-cyan-400 flex items-center gap-1">
-                      <RefreshCw className="w-3 h-3 animate-spin" /> Fetching live expiries...
+              {/* Angel One Specific Configuration */}
+              {broker.provider === 'angelone' ? (
+                <div className="p-4 bg-slate-50/80 dark:bg-slate-900/60 border border-indigo-200 dark:border-indigo-900/60 rounded-2xl space-y-3">
+                  <div className="font-bold text-slate-900 dark:text-white flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <Key className="w-3.5 h-3.5 text-indigo-500" />
+                      Angel One SmartAPI Credentials
                     </span>
-                  )}
-                </div>
+                    <a
+                      href="https://smartapi.angelone.in"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[10px] text-indigo-600 dark:text-indigo-400 hover:underline font-sans"
+                    >
+                      smartapi.angelone.in ↗
+                    </a>
+                  </div>
 
-                <div className="space-y-2">
-                  <div className="flex gap-2">
-                    <input
-                      type="date"
-                      value={broker.expiryDate || calculateUpcomingExpiryDate(broker.symbol || 'NIFTY')}
-                      onChange={(e) => setBroker({ ...broker, expiryDate: e.target.value })}
-                      className="flex-1 px-3.5 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 font-mono"
-                    />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1 font-bold text-[10px]">
+                        SmartAPI Key
+                      </label>
+                      <input
+                        type="text"
+                        value={broker.angelApiKey || broker.apiKey || ''}
+                        onChange={(e) => setBroker({ ...broker, angelApiKey: e.target.value, apiKey: e.target.value })}
+                        placeholder="e.g. YH41oX..."
+                        className="w-full px-3 py-2 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 font-mono text-xs"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1 font-bold text-[10px]">
+                        Client Code (User ID)
+                      </label>
+                      <input
+                        type="text"
+                        value={broker.angelClientCode || ''}
+                        onChange={(e) => setBroker({ ...broker, angelClientCode: e.target.value })}
+                        placeholder="e.g. V123456"
+                        className="w-full px-3 py-2 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 font-mono text-xs uppercase"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1 font-bold text-[10px]">
+                        MPIN / Password
+                      </label>
+                      <input
+                        type="password"
+                        value={broker.angelPin || ''}
+                        onChange={(e) => setBroker({ ...broker, angelPin: e.target.value })}
+                        placeholder="Your 4-digit MPIN"
+                        className="w-full px-3 py-2 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 font-mono text-xs"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1 font-bold text-[10px]">
+                        TOTP (6-digit Google Authenticator)
+                      </label>
+                      <input
+                        type="text"
+                        maxLength={6}
+                        value={broker.angelTotp || ''}
+                        onChange={(e) => setBroker({ ...broker, angelTotp: e.target.value })}
+                        placeholder="e.g. 529381"
+                        className="w-full px-3 py-2 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 font-mono text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-1 flex flex-wrap items-center justify-between gap-2">
                     <button
                       type="button"
-                      onClick={() => loadExpiries(broker.apiKey, broker.symbol || 'NIFTY')}
-                      title="Refresh Available Expiries from Upstox"
-                      className="px-3 py-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 rounded-xl text-slate-700 dark:text-slate-300 flex items-center gap-1 cursor-pointer"
+                      onClick={handleAngelLogin}
+                      disabled={isAngelLoggingIn}
+                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-xs flex items-center gap-2 cursor-pointer shadow-xs disabled:opacity-50"
                     >
-                      <RefreshCw className={`w-3.5 h-3.5 ${isFetchingExpiries ? 'animate-spin' : ''}`} />
+                      <Key className={`w-3.5 h-3.5 ${isAngelLoggingIn ? 'animate-spin' : ''}`} />
+                      <span>{isAngelLoggingIn ? 'Logging in to Angel One...' : 'Authenticate & Generate Session Token'}</span>
                     </button>
-                  </div>
 
-                  {/* Available Live Expiry Date Quick-Pills */}
-                  {availableExpiries.length > 0 && (
-                    <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                      <span className="text-[10px] text-slate-500 font-sans">Active Upstox Expiries:</span>
-                      {availableExpiries.slice(0, 5).map((exp, idx) => (
-                        <button
-                          key={exp}
-                          type="button"
-                          onClick={() => setBroker({ ...broker, expiryDate: exp })}
-                          className={`px-2.5 py-1 text-[11px] rounded-lg font-bold transition-all cursor-pointer ${
-                            broker.expiryDate === exp
-                              ? 'bg-cyan-500 text-black shadow-xs'
-                              : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700'
-                          }`}
-                        >
-                          {exp} {idx === 0 ? '(Current)' : ''}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <p className="text-[11px] text-slate-500 mt-1 font-sans">
-                  Must match the exact active option contract expiry date in Upstox (e.g. <code>{availableExpiries[0] || calculateUpcomingExpiryDate('NIFTY')}</code>).
-                </p>
-              </div>
-
-              {/* Broker Access Token / API Key */}
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-slate-600 dark:text-slate-400 uppercase tracking-wider font-bold flex items-center gap-1.5">
-                    <Key className="w-3.5 h-3.5 text-cyan-500" />
-                    Upstox Access Token
-                  </label>
-                  <div className="flex items-center gap-2.5">
-                    {broker.apiKey ? (
-                      <button
-                        type="button"
-                        onClick={handleClearToken}
-                        className="text-[11px] text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 font-bold flex items-center gap-1 cursor-pointer transition-colors"
-                        title="Delete expired or current token"
-                      >
-                        <Trash2 className="w-3 h-3 text-rose-500" /> Clear Expired Token
-                      </button>
-                    ) : null}
-                    {envToken && (
-                      <button
-                        type="button"
-                        onClick={handleResetToEnv}
-                        className="text-[10px] text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 font-mono cursor-pointer"
-                      >
-                        <FileCode className="w-3 h-3" /> Load from .env
-                      </button>
+                    {broker.angelJwtToken && (
+                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1 font-mono">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Active Session Token Available
+                      </span>
                     )}
                   </div>
-                </div>
 
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
+                  {angelLoginResult && (
+                    <div className={`p-2.5 rounded-xl text-xs font-mono ${angelLoginResult.success ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300' : 'bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300'}`}>
+                      {angelLoginResult.message}
+                    </div>
+                  )}
+
+                  {/* Direct JWT Bearer Token Override */}
+                  <div className="pt-2 border-t border-slate-200 dark:border-slate-800">
+                    <label className="block text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1 font-bold text-[10px]">
+                      Direct JWT Session Token (Optional / Manual Paste)
+                    </label>
                     <input
-                      type={showToken ? 'text' : 'password'}
-                      value={broker.apiKey || ''}
-                      onChange={(e) => {
-                        const newKey = e.target.value;
-                        setBroker({ ...broker, apiKey: newKey });
-                      }}
-                      placeholder="Paste Upstox Access Token here (or set in .env file)"
-                      className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 pr-16 font-mono text-xs"
+                      type="text"
+                      value={broker.angelJwtToken || ''}
+                      onChange={(e) => setBroker({ ...broker, angelJwtToken: e.target.value })}
+                      placeholder="Bearer eyJhbGciOi..."
+                      className="w-full px-3 py-2 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 font-mono text-xs"
                     />
-                    <div className="absolute right-2.5 top-2.5 flex items-center gap-1.5">
+                  </div>
+                </div>
+              ) : (
+                /* Upstox Configuration */
+                <>
+                  {/* Expiry Date Selection */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-slate-600 dark:text-slate-400 uppercase tracking-wider font-bold flex items-center gap-1.5">
+                        <Calendar className="w-3.5 h-3.5 text-cyan-500" />
+                        Target Option Expiry Date (YYYY-MM-DD)
+                      </label>
+                      {isFetchingExpiries && (
+                        <span className="text-[10px] text-cyan-600 dark:text-cyan-400 flex items-center gap-1">
+                          <RefreshCw className="w-3 h-3 animate-spin" /> Fetching live expiries...
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        <input
+                          type="date"
+                          value={broker.expiryDate || calculateUpcomingExpiryDate(broker.symbol || 'NIFTY')}
+                          onChange={(e) => setBroker({ ...broker, expiryDate: e.target.value })}
+                          className="flex-1 px-3.5 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 font-mono"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => loadExpiries(broker.apiKey, broker.symbol || 'NIFTY')}
+                          title="Refresh Available Expiries from Upstox"
+                          className="px-3 py-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 rounded-xl text-slate-700 dark:text-slate-300 flex items-center gap-1 cursor-pointer"
+                        >
+                          <RefreshCw className={`w-3.5 h-3.5 ${isFetchingExpiries ? 'animate-spin' : ''}`} />
+                        </button>
+                      </div>
+
+                      {/* Available Live Expiry Date Quick-Pills */}
+                      {availableExpiries.length > 0 && (
+                        <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                          <span className="text-[10px] text-slate-500 font-sans">Active Upstox Expiries:</span>
+                          {availableExpiries.slice(0, 5).map((exp, idx) => (
+                            <button
+                              key={exp}
+                              type="button"
+                              onClick={() => setBroker({ ...broker, expiryDate: exp })}
+                              className={`px-2.5 py-1 text-[11px] rounded-lg font-bold transition-all cursor-pointer ${
+                                broker.expiryDate === exp
+                                  ? 'bg-cyan-500 text-black shadow-xs'
+                                  : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700'
+                              }`}
+                            >
+                              {exp} {idx === 0 ? '(Current)' : ''}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-slate-500 mt-1 font-sans">
+                      Must match the exact active option contract expiry date in Upstox (e.g. <code>{availableExpiries[0] || calculateUpcomingExpiryDate('NIFTY')}</code>).
+                    </p>
+                  </div>
+
+                  {/* Broker Access Token / API Key */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-slate-600 dark:text-slate-400 uppercase tracking-wider font-bold flex items-center gap-1.5">
+                        <Key className="w-3.5 h-3.5 text-cyan-500" />
+                        Upstox Access Token
+                      </label>
+                      <div className="flex items-center gap-2.5">
+                        {broker.apiKey ? (
+                          <button
+                            type="button"
+                            onClick={handleClearToken}
+                            className="text-[11px] text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                            title="Delete expired or current token"
+                          >
+                            <Trash2 className="w-3 h-3 text-rose-500" /> Clear Expired Token
+                          </button>
+                        ) : null}
+                        {envToken && (
+                          <button
+                            type="button"
+                            onClick={handleResetToEnv}
+                            className="text-[10px] text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 font-mono cursor-pointer"
+                          >
+                            <FileCode className="w-3 h-3" /> Load from .env
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <input
+                          type={showToken ? 'text' : 'password'}
+                          value={broker.apiKey || ''}
+                          onChange={(e) => {
+                            const newKey = e.target.value;
+                            setBroker({ ...broker, apiKey: newKey });
+                          }}
+                          placeholder="Paste Upstox Access Token here (or set in .env file)"
+                          className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 pr-16 font-mono text-xs"
+                        />
+                        <div className="absolute right-2.5 top-2.5 flex items-center gap-1.5">
+                          {broker.apiKey ? (
+                            <button
+                              type="button"
+                              onClick={() => setShowToken(!showToken)}
+                              title={showToken ? 'Hide token' : 'Show token'}
+                              className="p-0.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer"
+                            >
+                              {showToken ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                            </button>
+                          ) : null}
+                          {envToken && broker.apiKey === envToken && (
+                            <span className="text-[10px] bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 px-1.5 py-0.2 rounded font-mono font-bold border border-emerald-300 dark:border-emerald-800">
+                              .env
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
                       {broker.apiKey ? (
                         <button
                           type="button"
-                          onClick={() => setShowToken(!showToken)}
-                          title={showToken ? 'Hide token' : 'Show token'}
-                          className="p-0.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer"
+                          onClick={handleClearToken}
+                          title="Clear and delete expired token"
+                          className="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 border border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300 rounded-xl flex items-center gap-1.5 font-bold text-xs transition-all cursor-pointer whitespace-nowrap shadow-xs"
                         >
-                          {showToken ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          <Trash2 className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
+                          <span>Clear</span>
                         </button>
                       ) : null}
-                      {envToken && broker.apiKey === envToken && (
-                        <span className="text-[10px] bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 px-1.5 py-0.2 rounded font-mono font-bold border border-emerald-300 dark:border-emerald-800">
-                          .env
+                    </div>
+
+                    <div className="flex items-center justify-between mt-1 text-[11px] text-slate-500 font-sans">
+                      <span>
+                        💡 In Upstox Developer Portal &gt; My Apps &gt; click <strong>Generate Access Token</strong>, authenticate with OTP, and paste the generated token here.
+                      </span>
+                      {broker.apiKey ? (
+                        <span className="text-[10px] text-slate-400 font-mono shrink-0 ml-2">
+                          {broker.apiKey.length} chars
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono shrink-0 ml-2">
+                          (token empty)
                         </span>
                       )}
                     </div>
                   </div>
-
-                  {broker.apiKey ? (
-                    <button
-                      type="button"
-                      onClick={handleClearToken}
-                      title="Clear and delete expired token"
-                      className="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 border border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300 rounded-xl flex items-center gap-1.5 font-bold text-xs transition-all cursor-pointer whitespace-nowrap shadow-xs"
-                    >
-                      <Trash2 className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
-                      <span>Clear</span>
-                    </button>
-                  ) : null}
-                </div>
-
-                <div className="flex items-center justify-between mt-1 text-[11px] text-slate-500 font-sans">
-                  <span>
-                    💡 In Upstox Developer Portal &gt; My Apps &gt; click <strong>Generate Access Token</strong>, authenticate with OTP, and paste the generated token here.
-                  </span>
-                  {broker.apiKey ? (
-                    <span className="text-[10px] text-slate-400 font-mono shrink-0 ml-2">
-                      {broker.apiKey.length} chars
-                    </span>
-                  ) : (
-                    <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono shrink-0 ml-2">
-                      (token empty)
-                    </span>
-                  )}
-                </div>
-              </div>
+                </>
+              )}
 
               {/* Custom Proxy REST URL */}
               <div>

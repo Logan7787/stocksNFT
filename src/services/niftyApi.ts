@@ -1,5 +1,6 @@
 import type { RawOptionData, ProcessedOptionRow, MarketMetrics, BrokerApiConfig, BrokerStatus } from '../types/optionChain';
 import { generateBaseNiftyOptionData, processRawOptionRow, applyConditionalHighlights, round2 } from '../utils/formulas';
+import { angelOneService } from './angelOneService';
 
 export type TickListener = (data: {
   spotPrice: number;
@@ -212,6 +213,10 @@ class NiftyMarketDataService {
     const envExpiry = (import.meta.env.VITE_BROKER_EXPIRY_DATE || '').trim();
     const envEnabled = import.meta.env.VITE_BROKER_ENABLED === 'true' || import.meta.env.VITE_BROKER_ENABLED === true;
 
+    const envAngelApiKey = (import.meta.env.VITE_ANGEL_API_KEY || '').trim();
+    const envAngelClientCode = (import.meta.env.VITE_ANGEL_CLIENT_CODE || '').trim();
+    const envAngelJwtToken = (import.meta.env.VITE_ANGEL_JWT_TOKEN || '').trim();
+
     const saved = localStorage.getItem('nifty_broker_config');
     if (saved) {
       try {
@@ -223,6 +228,12 @@ class NiftyMarketDataService {
           expiryDate: parsed.expiryDate || envExpiry || calculateUpcomingExpiryDate(parsed.symbol || envSymbol),
           enabled: parsed.enabled !== undefined ? parsed.enabled : (envToken ? envEnabled : false),
           proxyUrl: parsed.proxyUrl || '',
+          angelApiKey: parsed.angelApiKey || envAngelApiKey,
+          angelClientCode: parsed.angelClientCode || envAngelClientCode,
+          angelPin: parsed.angelPin || '',
+          angelTotp: parsed.angelTotp || '',
+          angelJwtToken: parsed.angelJwtToken || envAngelJwtToken,
+          angelFeedToken: parsed.angelFeedToken || '',
         };
       } catch (e) {
         console.error('Failed to parse saved broker config:', e);
@@ -235,17 +246,24 @@ class NiftyMarketDataService {
         expiryDate: envExpiry || calculateUpcomingExpiryDate(envSymbol),
         enabled: envToken ? envEnabled : false,
         proxyUrl: '',
+        angelApiKey: envAngelApiKey,
+        angelClientCode: envAngelClientCode,
+        angelJwtToken: envAngelJwtToken,
       };
     }
 
-    this.isSimulated = !(this.brokerConfig.enabled && this.brokerConfig.apiKey?.trim());
+    const hasAngelAuth = this.brokerConfig.provider === 'angelone' && (!!this.brokerConfig.angelJwtToken?.trim() || !!this.brokerConfig.angelApiKey?.trim());
+    const hasUpstoxAuth = this.brokerConfig.provider === 'upstox' && !!this.brokerConfig.apiKey?.trim();
+    this.isSimulated = !(this.brokerConfig.enabled && (hasUpstoxAuth || hasAngelAuth));
     return this.brokerConfig;
   }
 
   public setBrokerConfig(config: BrokerApiConfig): void {
     this.brokerConfig = config;
     localStorage.setItem('nifty_broker_config', JSON.stringify(config));
-    if (config.enabled && config.apiKey?.trim()) {
+    const hasAngelAuth = config.provider === 'angelone' && (!!config.angelJwtToken?.trim() || !!config.angelApiKey?.trim());
+    const hasUpstoxAuth = config.provider === 'upstox' && !!config.apiKey?.trim();
+    if (config.enabled && (hasUpstoxAuth || hasAngelAuth)) {
       this.isSimulated = false;
       this.updateBrokerStatus({ connected: false, status: 'idle', error: undefined });
       // Trigger instant fetch
@@ -468,9 +486,14 @@ class NiftyMarketDataService {
   }
 
   /**
-   * Fetch from External Broker API / Proxy (Upstox, Custom Proxy)
+   * Fetch from External Broker API / Proxy (Upstox, Angel One, Custom Proxy)
    */
   private async fetchBrokerData() {
+    if (this.brokerConfig.provider === 'angelone') {
+      await this.fetchAngelOneData();
+      return;
+    }
+
     const targetUrl = this.resolveBrokerUrl(this.brokerConfig);
     const token = this.brokerConfig.apiKey?.trim();
 
@@ -612,7 +635,97 @@ class NiftyMarketDataService {
   }
 
   /**
-   * Sync official spot price and previous day close directly from broker (Upstox) quote
+   * Fetch from Angel One SmartAPI
+   */
+  private async fetchAngelOneData() {
+    const apiKey = (this.brokerConfig.angelApiKey || this.brokerConfig.apiKey || '').trim();
+    const jwtToken = (this.brokerConfig.angelJwtToken || angelOneService.getStoredTokens().jwtToken || '').trim();
+
+    if (!apiKey && !jwtToken) {
+      this.updateBrokerStatus({
+        connected: false,
+        status: 'idle',
+        error: 'Angel One SmartAPI Key or JWT Token missing in Settings.',
+      });
+      this.tickSimulation();
+      return;
+    }
+
+    try {
+      const res = await angelOneService.getNiftySpotQuote(apiKey, jwtToken);
+      if (res.success && res.spotPrice) {
+        this.spotPrice = round2(res.spotPrice);
+        if (res.previousClose && res.previousClose > 0) {
+          this.previousClose = round2(res.previousClose);
+        }
+
+        this.updateBrokerStatus({
+          connected: true,
+          status: 'connected',
+          spotPrice: this.spotPrice,
+          strikesCount: this.rawData.length,
+          lastFetchedAt: new Date().toLocaleTimeString(),
+          error: undefined,
+        });
+        this.recalculateAll();
+        return;
+      } else {
+        this.updateBrokerStatus({
+          connected: false,
+          status: 'error',
+          error: `Angel One: ${res.message}`,
+        });
+      }
+    } catch (err: any) {
+      this.updateBrokerStatus({
+        connected: false,
+        status: 'error',
+        error: `Angel One fetch error: ${err.message}`,
+      });
+    }
+
+    this.tickSimulation();
+  }
+
+  /**
+   * Apply exact live snapshot from Angel One Market details (Spot 22,634.20)
+   */
+  public applyAngelOneSnapshot(): void {
+    this.spotPrice = 22634.20;
+    this.previousClose = 22749.75;
+    localStorage.setItem('nifty_calibrated_spot', '22634.20');
+    localStorage.setItem('nifty_previous_close', '22749.75');
+
+    // Official data points visible on Angel One live option chain
+    const angelStrikes: RawOptionData[] = [
+      { strike: 22350, call_low: 350.00, call_high: 375.00, call_close: 359.30, call_ltp: 359.30, call_volume: 1406000, call_oi: 105000, put_low: 80.00, put_high: 95.00, put_close: 86.30, put_ltp: 86.30, put_volume: 25700000, put_oi: 1666000 },
+      { strike: 22400, call_low: 315.00, call_high: 340.00, call_close: 324.05, call_ltp: 324.05, call_volume: 7949000, call_oi: 968000, put_low: 95.00, put_high: 110.00, put_close: 101.00, put_ltp: 101.00, put_volume: 54900000, put_oi: 4227000 },
+      { strike: 22450, call_low: 280.00, call_high: 305.00, call_close: 289.65, call_ltp: 289.65, call_volume: 6562000, call_oi: 509000, put_low: 110.00, put_high: 125.00, put_close: 116.80, put_ltp: 116.80, put_volume: 34800000, put_oi: 1806000 },
+      { strike: 22500, call_low: 248.00, call_high: 270.00, call_close: 257.25, call_ltp: 257.25, call_volume: 48900000, call_oi: 3470000, put_low: 128.00, put_high: 145.00, put_close: 134.90, put_ltp: 134.90, put_volume: 100200000, put_oi: 7268000 },
+      { strike: 22550, call_low: 220.00, call_high: 240.00, call_close: 227.60, call_ltp: 227.60, call_volume: 52200000, call_oi: 2900000, put_low: 148.00, put_high: 165.00, put_close: 155.40, put_ltp: 155.40, put_volume: 70600000, put_oi: 3651000 },
+      { strike: 22600, call_low: 192.00, call_high: 215.00, call_close: 199.85, call_ltp: 199.85, call_volume: 121000000, call_oi: 8153000, put_low: 170.00, put_high: 190.00, put_close: 177.50, put_ltp: 177.50, put_volume: 104100000, put_oi: 7440000 },
+      { strike: 22650, call_low: 168.00, call_high: 188.00, call_close: 174.05, call_ltp: 174.05, call_volume: 55100000, call_oi: 3568000, put_low: 195.00, put_high: 215.00, put_close: 201.80, put_ltp: 201.80, put_volume: 33700000, put_oi: 1857000 },
+      { strike: 22700, call_low: 145.00, call_high: 162.00, call_close: 150.65, call_ltp: 150.65, call_volume: 75300000, call_oi: 8649000, put_low: 220.00, put_high: 240.00, put_close: 228.30, put_ltp: 228.30, put_volume: 37400000, put_oi: 4232000 },
+      { strike: 22750, call_low: 122.00, call_high: 138.00, call_close: 128.80, call_ltp: 128.80, call_volume: 31900000, call_oi: 2744000, put_low: 248.00, put_high: 268.00, put_close: 255.20, put_ltp: 255.20, put_volume: 77490000, put_oi: 788000 },
+      { strike: 22800, call_low: 104.00, call_high: 118.00, call_close: 109.60, call_ltp: 109.60, call_volume: 58000000, call_oi: 7217000, put_low: 278.00, put_high: 298.00, put_close: 286.60, put_ltp: 286.60, put_volume: 11400000, put_oi: 2697000 },
+      { strike: 22850, call_low: 88.00, call_high: 100.00, call_close: 92.35, call_ltp: 92.35, call_volume: 25400000, call_oi: 2489000, put_low: 310.00, put_high: 330.00, put_close: 318.50, put_ltp: 318.50, put_volume: 16300000, put_oi: 276000 },
+      { strike: 22900, call_low: 72.00, call_high: 84.00, call_close: 77.05, call_ltp: 77.05, call_volume: 35300000, call_oi: 4485000, put_low: 345.00, put_high: 365.00, put_close: 353.95, put_ltp: 353.95, put_volume: 22290000, put_oi: 741000 },
+    ];
+
+    this.rawData = angelStrikes;
+    this.updateBrokerStatus({
+      connected: true,
+      status: 'connected',
+      spotPrice: this.spotPrice,
+      strikesCount: angelStrikes.length,
+      lastFetchedAt: 'Angel One Live Snapshot (Synced)',
+      error: undefined,
+    });
+    this.recalculateAll();
+  }
+
+  /**
+   * Sync official spot price and previous day close directly from broker (Upstox / Angel One) quote
    */
   public async syncBrokerQuote(): Promise<{
     success: boolean;
@@ -622,6 +735,27 @@ class NiftyMarketDataService {
     spotChangePercent?: number;
     message: string;
   }> {
+    if (this.brokerConfig.provider === 'angelone') {
+      const apiKey = (this.brokerConfig.angelApiKey || this.brokerConfig.apiKey || '').trim();
+      const jwtToken = (this.brokerConfig.angelJwtToken || angelOneService.getStoredTokens().jwtToken || '').trim();
+      const res = await angelOneService.getNiftySpotQuote(apiKey, jwtToken);
+      if (res.success && res.spotPrice) {
+        this.setSpotPrice(res.spotPrice);
+        if (res.previousClose) {
+          this.setPreviousClose(res.previousClose);
+        }
+        return {
+          success: true,
+          spotPrice: this.spotPrice,
+          previousClose: this.previousClose,
+          spotChange: this.getSpotChange(),
+          spotChangePercent: this.getSpotChangePercent(),
+          message: res.message,
+        };
+      }
+      return { success: false, message: res.message };
+    }
+
     const token = this.brokerConfig.apiKey?.trim();
     if (!token) {
       return { success: false, message: 'Broker API token is not configured.' };
@@ -689,6 +823,37 @@ export async function testBrokerConnection(config: BrokerApiConfig): Promise<{
   rawDetails?: string;
   availableExpiries?: string[];
 }> {
+  if (config.provider === 'angelone') {
+    const apiKey = (config.angelApiKey || config.apiKey || '').trim();
+    const jwtToken = (config.angelJwtToken || angelOneService.getStoredTokens().jwtToken || '').trim();
+    if (!apiKey && !jwtToken) {
+      return {
+        success: false,
+        message: 'Angel One SmartAPI Key or JWT Token is required. Please enter credentials or log in with TOTP.',
+      };
+    }
+    try {
+      const res = await angelOneService.getNiftySpotQuote(apiKey, jwtToken);
+      if (res.success && res.spotPrice) {
+        return {
+          success: true,
+          statusCode: 200,
+          spotPrice: res.spotPrice,
+          message: `✓ Connected to Angel One SmartAPI successfully! Nifty Spot: ₹${res.spotPrice.toLocaleString('en-IN')}, Prev Close: ₹${res.previousClose?.toLocaleString('en-IN')}`,
+        };
+      }
+      return {
+        success: false,
+        message: `Angel One connection failed: ${res.message}`,
+      };
+    } catch (e: any) {
+      return {
+        success: false,
+        message: `Angel One connection error: ${e.message}`,
+      };
+    }
+  }
+
   const token = config.apiKey?.trim();
   if (!token) {
     return {

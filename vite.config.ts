@@ -25,6 +25,25 @@ export default defineConfig({
         },
         rewrite: (path) => path.replace(/^\/api\/nse/, ''),
       },
+      '/api/angelone': {
+        target: 'https://apiconnect.angelone.in',
+        changeOrigin: true,
+        secure: false,
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        rewrite: (path) => path.replace(/^\/api\/angelone/, ''),
+        configure: (proxy) => {
+          proxy.on('error', (err, _req, res) => {
+            console.warn('[AngelOne Proxy Warning]:', err.message);
+            if (res && 'writeHead' in res && !(res as any).headersSent) {
+              res.writeHead(502, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: 'Angel One proxy error', message: err.message }));
+            }
+          });
+        },
+      },
     },
   },
 })

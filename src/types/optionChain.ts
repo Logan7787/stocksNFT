@@ -189,6 +189,13 @@ export interface BrokerApiConfig {
   symbol: string;
   expiryDate: string;
   enabled: boolean;
+  // Angel One SmartAPI parameters
+  angelApiKey?: string;
+  angelClientCode?: string;
+  angelPin?: string;
+  angelTotp?: string;
+  angelJwtToken?: string;
+  angelFeedToken?: string;
 }
 
 export interface BrokerStatus {
