@@ -11,6 +11,10 @@ export interface RawOptionData {
   // Optional extra market fields
   call_ltp?: number;
   put_ltp?: number;
+  call_prev_close?: number;
+  put_prev_close?: number;
+  call_settlement_close?: number;
+  put_settlement_close?: number;
   call_oi?: number;
   put_oi?: number;
   call_iv?: number;
@@ -27,6 +31,7 @@ export interface ProcessedOptionRow {
   call_premium: number; // (Call Low + Put High) / 2
   call_avg: number;     // (Call Close + Put Close) / 2
   call_close: number;
+  call_prev_close?: number;
   call_ltp: number;
   call_low: number;
   call_high: number;
@@ -35,6 +40,7 @@ export interface ProcessedOptionRow {
   // PUT Side (Right)
   put_ltp: number;
   put_close: number;
+  put_prev_close?: number;
   put_avg: number;      // (Call Close + Put Close) / 2
   put_premium: number;  // (Put Low + Call High) / 2
   put_volume: number;

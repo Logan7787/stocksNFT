@@ -9,6 +9,7 @@ interface OptionChainDesktopTableProps {
   fontSize?: TableFontSize;
   atmStrike?: number;
   printAtmRangeOnly?: boolean;
+  showPreviousCloseColumn?: boolean;
 }
 
 // Memoized single row component to ensure zero-lag rendering
@@ -17,11 +18,13 @@ const OptionRowItem = memo(({
   spotPrice, 
   fontSize = 'large',
   isPrintHidden = false,
+  showPreviousCloseColumn = false,
 }: { 
   row: ProcessedOptionRow; 
   spotPrice: number;
   fontSize?: TableFontSize;
   isPrintHidden?: boolean;
+  showPreviousCloseColumn?: boolean;
 }) => {
   const isCallITM = row.strike < spotPrice;
   const isPutITM = row.strike > spotPrice;
@@ -119,7 +122,21 @@ const OptionRowItem = memo(({
         </div>
       </td>
 
-      {/* 4. CALL CLOSE */}
+      {/* 3B. CALL PREVIOUS CLOSE (Only for Previous Day Market Close Data view) */}
+      {showPreviousCloseColumn && (
+        <td
+          className={`${sizeConfig.cell} text-right font-semibold transition-colors ${
+            isCallITM
+              ? 'bg-slate-100/90 dark:bg-slate-900/50 text-slate-700 dark:text-slate-300'
+              : 'text-slate-600 dark:text-slate-400'
+          }`}
+          title={`Call Previous Day Close: ${(row.call_prev_close !== undefined ? row.call_prev_close : row.call_close).toFixed(2)}`}
+        >
+          <span>{(row.call_prev_close !== undefined ? row.call_prev_close : row.call_close).toFixed(2)}</span>
+        </td>
+      )}
+
+      {/* 4. CALL CLOSE (Official Settlement Close after 20:30 PM NSE) */}
       <td
         className={`${sizeConfig.cell} text-right font-bold transition-colors ${
           row.callTickDirection === 'up'
@@ -130,7 +147,11 @@ const OptionRowItem = memo(({
             ? 'bg-emerald-100/70 dark:bg-emerald-950/30 text-emerald-950 dark:text-white font-extrabold'
             : 'text-slate-900 dark:text-slate-100'
         }`}
-        title={`Call Close: ${row.call_close.toFixed(2)} | Low: ${row.call_low.toFixed(2)} | High: ${row.call_high.toFixed(2)}`}
+        title={
+          showPreviousCloseColumn
+            ? `Call Official Settlement Close (Derived after 20:30 PM from NSE): ${row.call_close.toFixed(2)}`
+            : `Call Close: ${row.call_close.toFixed(2)} | Low: ${row.call_low.toFixed(2)} | High: ${row.call_high.toFixed(2)}`
+        }
       >
         <span>{row.call_close.toFixed(2)}</span>
       </td>
@@ -236,7 +257,7 @@ const OptionRowItem = memo(({
         <span>{((row.put_ltp && row.put_ltp > 0) ? row.put_ltp : row.put_close).toFixed(2)}</span>
       </td>
 
-      {/* 2. PUT CLOSE */}
+      {/* 2. PUT CLOSE (Official Settlement Close after 20:30 PM NSE) */}
       <td
         className={`${sizeConfig.cell} text-left font-bold transition-colors ${
           row.putTickDirection === 'up'
@@ -247,10 +268,28 @@ const OptionRowItem = memo(({
             ? 'bg-rose-100/70 dark:bg-rose-950/30 text-rose-950 dark:text-white font-extrabold'
             : 'text-slate-900 dark:text-slate-100'
         }`}
-        title={`Put Close: ${row.put_close.toFixed(2)} | Low: ${row.put_low.toFixed(2)} | High: ${row.put_high.toFixed(2)}`}
+        title={
+          showPreviousCloseColumn
+            ? `Put Official Settlement Close (Derived after 20:30 PM from NSE): ${row.put_close.toFixed(2)}`
+            : `Put Close: ${row.put_close.toFixed(2)} | Low: ${row.put_low.toFixed(2)} | High: ${row.put_high.toFixed(2)}`
+        }
       >
         <span>{row.put_close.toFixed(2)}</span>
       </td>
+
+      {/* 2B. PUT PREVIOUS CLOSE (Only for Previous Day Market Close Data view) */}
+      {showPreviousCloseColumn && (
+        <td
+          className={`${sizeConfig.cell} text-left font-semibold transition-colors ${
+            isPutITM
+              ? 'bg-slate-100/90 dark:bg-slate-900/50 text-slate-700 dark:text-slate-300'
+              : 'text-slate-600 dark:text-slate-400'
+          }`}
+          title={`Put Previous Day Close: ${(row.put_prev_close !== undefined ? row.put_prev_close : row.put_close).toFixed(2)}`}
+        >
+          <span>{(row.put_prev_close !== undefined ? row.put_prev_close : row.put_close).toFixed(2)}</span>
+        </td>
+      )}
 
       {/* 6. PUT AVG: (Call Close + Put Close) / 2 */}
       <td
@@ -326,6 +365,7 @@ export const OptionChainDesktopTable: React.FC<OptionChainDesktopTableProps> = (
   fontSize = 'large',
   atmStrike,
   printAtmRangeOnly = true,
+  showPreviousCloseColumn = false,
 }) => {
   const effectiveAtm = atmStrike ?? rows.find((r) => r.isATM)?.strike ?? (spotPrice ? Math.round(spotPrice / 50) * 50 : undefined);
   const headerSizes = {
@@ -349,7 +389,7 @@ export const OptionChainDesktopTable: React.FC<OptionChainDesktopTableProps> = (
         <thead>
           {/* Top Super Header: CALLS (CE) | STRIKE | ACTION | PUTS (PE) */}
           <tr className="border-b border-slate-300 dark:border-slate-700 uppercase tracking-wider">
-            <th colSpan={5} className={`${headerSizes.super} text-center text-cyan-800 dark:text-cyan-400 bg-cyan-100/70 dark:bg-cyan-950/40 border-r border-slate-300 dark:border-slate-700/80`}>
+            <th colSpan={showPreviousCloseColumn ? 6 : 5} className={`${headerSizes.super} text-center text-cyan-800 dark:text-cyan-400 bg-cyan-100/70 dark:bg-cyan-950/40 border-r border-slate-300 dark:border-slate-700/80`}>
               CALLS (CE)
             </th>
             <th className={`${headerSizes.super} text-center text-amber-800 dark:text-amber-400 bg-amber-100/70 dark:bg-amber-950/40 border-r border-slate-300 dark:border-slate-700/80`}>
@@ -358,12 +398,12 @@ export const OptionChainDesktopTable: React.FC<OptionChainDesktopTableProps> = (
             <th className={`${headerSizes.super} text-center text-emerald-800 dark:text-emerald-400 bg-emerald-100/70 dark:bg-emerald-950/40 border-r border-slate-300 dark:border-slate-700/80`}>
               ACTION SIGNALS
             </th>
-            <th colSpan={5} className={`${headerSizes.super} text-center text-rose-800 dark:text-rose-400 bg-rose-100/70 dark:bg-rose-950/40`}>
+            <th colSpan={showPreviousCloseColumn ? 6 : 5} className={`${headerSizes.super} text-center text-rose-800 dark:text-rose-400 bg-rose-100/70 dark:bg-rose-950/40`}>
               PUTS (PE)
             </th>
           </tr>
 
-          {/* Exact Columns Header: VOLUME | PREMIUM | AVG | CLOSE | LTP | STRIKE | ACTION | LTP | CLOSE | AVG | PREMIUM | VOLUME */}
+          {/* Exact Columns Header */}
           <tr className="border-b border-slate-300 dark:border-slate-800 font-mono uppercase text-slate-700 dark:text-slate-300 bg-slate-200/90 dark:bg-[#0f172a]">
             {/* CALLS */}
             <th className={`${headerSizes.col} text-right bg-amber-100/90 text-amber-950 font-bold dark:bg-amber-950/70 dark:text-amber-300 border-r border-slate-300/80 dark:border-slate-800`}>
@@ -375,7 +415,12 @@ export const OptionChainDesktopTable: React.FC<OptionChainDesktopTableProps> = (
             <th className={`${headerSizes.col} text-right bg-emerald-100/90 text-emerald-950 font-bold dark:bg-emerald-950/70 dark:text-emerald-300 border-r border-slate-300/80 dark:border-slate-800`}>
               AVG
             </th>
-            <th className={`${headerSizes.col} text-right bg-purple-100/90 text-purple-950 font-bold dark:bg-purple-950/70 dark:text-purple-300 border-r border-slate-300/80 dark:border-slate-800`}>
+            {showPreviousCloseColumn && (
+              <th className={`${headerSizes.col} text-right bg-slate-200/90 text-slate-900 font-bold dark:bg-slate-800 dark:text-slate-200 border-r border-slate-300/80 dark:border-slate-800`} title="Previous Day Close (T-1 Settlement Close)">
+                PREVIOUS CLOSE
+              </th>
+            )}
+            <th className={`${headerSizes.col} text-right bg-purple-100/90 text-purple-950 font-black dark:bg-purple-950/70 dark:text-purple-300 border-r border-slate-300/80 dark:border-slate-800`} title={showPreviousCloseColumn ? "Official Settlement Close (Derived after 20:30 PM from NSE)" : "Call Close"}>
               CLOSE
             </th>
             <th className={`${headerSizes.col} text-right bg-cyan-100/90 text-cyan-950 font-black dark:bg-cyan-950/70 dark:text-cyan-300`}>
@@ -396,9 +441,14 @@ export const OptionChainDesktopTable: React.FC<OptionChainDesktopTableProps> = (
             <th className={`${headerSizes.col} text-left bg-cyan-100/90 text-cyan-950 font-black dark:bg-cyan-950/70 dark:text-cyan-300 border-r border-slate-300/80 dark:border-slate-800`}>
               LTP
             </th>
-            <th className={`${headerSizes.col} text-left bg-purple-100/90 text-purple-950 font-bold dark:bg-purple-950/70 dark:text-purple-300 border-r border-slate-300/80 dark:border-slate-800`}>
+            <th className={`${headerSizes.col} text-left bg-purple-100/90 text-purple-950 font-black dark:bg-purple-950/70 dark:text-purple-300 border-r border-slate-300/80 dark:border-slate-800`} title={showPreviousCloseColumn ? "Official Settlement Close (Derived after 20:30 PM from NSE)" : "Put Close"}>
               CLOSE
             </th>
+            {showPreviousCloseColumn && (
+              <th className={`${headerSizes.col} text-left bg-slate-200/90 text-slate-900 font-bold dark:bg-slate-800 dark:text-slate-200 border-r border-slate-300/80 dark:border-slate-800`} title="Previous Day Close (T-1 Settlement Close)">
+                PREVIOUS CLOSE
+              </th>
+            )}
             <th className={`${headerSizes.col} text-left bg-emerald-100/90 text-emerald-950 font-bold dark:bg-emerald-950/70 dark:text-emerald-300 border-r border-slate-300/80 dark:border-slate-800`}>
               AVG
             </th>
@@ -426,6 +476,7 @@ export const OptionChainDesktopTable: React.FC<OptionChainDesktopTableProps> = (
                 spotPrice={spotPrice}
                 fontSize={fontSize}
                 isPrintHidden={isOutsidePrintRange}
+                showPreviousCloseColumn={showPreviousCloseColumn}
               />
             );
           })}

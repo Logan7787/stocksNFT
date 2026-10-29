@@ -270,12 +270,14 @@ export async function fetchNseLiveOptionChain(symbol: string = 'NIFTY'): Promise
         const pe = d.PE;
 
         const call_close = ce?.closePrice || ce?.lastPrice || 0;
+        const call_prev_close = ce?.pClose ?? ce?.prevClose ?? ce?.previousClose ?? call_close;
         const call_ltp = (ce?.lastPrice && ce.lastPrice > 0) ? ce.lastPrice : call_close;
         const call_low = ce?.lowPrice || call_close;
         const call_high = ce?.highPrice || call_close;
         const call_volume = ce?.totalTradedVolume || 0;
 
         const put_close = pe?.closePrice || pe?.lastPrice || 0;
+        const put_prev_close = pe?.pClose ?? pe?.prevClose ?? pe?.previousClose ?? put_close;
         const put_ltp = (pe?.lastPrice && pe.lastPrice > 0) ? pe.lastPrice : put_close;
         const put_low = pe?.lowPrice || put_close;
         const put_high = pe?.highPrice || put_close;
@@ -286,6 +288,7 @@ export async function fetchNseLiveOptionChain(symbol: string = 'NIFTY'): Promise
           call_low: round2(call_low),
           call_high: round2(call_high),
           call_close: round2(call_close),
+          call_prev_close: round2(call_prev_close),
           call_ltp: round2(call_ltp),
           call_volume,
           call_oi: ce?.openInterest,
@@ -293,6 +296,7 @@ export async function fetchNseLiveOptionChain(symbol: string = 'NIFTY'): Promise
           put_low: round2(put_low),
           put_high: round2(put_high),
           put_close: round2(put_close),
+          put_prev_close: round2(put_prev_close),
           put_ltp: round2(put_ltp),
           put_volume,
           put_oi: pe?.openInterest,

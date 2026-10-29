@@ -253,6 +253,7 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
       'CALL_VOLUME',
       'CALL_PREMIUM',
       'CALL_AVG',
+      'CALL_PREV_CLOSE',
       'CALL_CLOSE',
       'CALL_LTP',
       'CALL_LOW',
@@ -260,6 +261,7 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
       'STRIKE',
       'PUT_LTP',
       'PUT_CLOSE',
+      'PUT_PREV_CLOSE',
       'PUT_AVG',
       'PUT_PREMIUM',
       'PUT_VOLUME',
@@ -274,6 +276,7 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
         r.call_volume,
         r.call_premium,
         r.call_avg,
+        r.call_prev_close ?? r.call_close,
         r.call_close,
         r.call_ltp ?? r.call_close,
         r.call_low,
@@ -281,6 +284,7 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
         r.strike,
         r.put_ltp ?? r.put_close,
         r.put_close,
+        r.put_prev_close ?? r.put_close,
         r.put_avg,
         r.put_premium,
         r.put_volume,
@@ -977,6 +981,7 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
               fontSize={tableFontSize}
               atmStrike={atmStrike}
               printAtmRangeOnly={true}
+              showPreviousCloseColumn={true}
             />
           </div>
 
@@ -986,6 +991,7 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
               rows={displayedRows}
               spotPrice={dataResult.spotPrice}
               metrics={dataResult.metrics}
+              showPreviousCloseColumn={true}
             />
           </div>
         </>

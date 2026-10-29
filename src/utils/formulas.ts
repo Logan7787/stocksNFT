@@ -52,6 +52,7 @@ export function processRawOptionRow(raw: RawOptionData, prevRow?: ProcessedOptio
     call_premium: callPremium,
     call_avg: avgPrice,
     call_close: round2(raw.call_close),
+    call_prev_close: raw.call_prev_close !== undefined ? round2(raw.call_prev_close) : round2(raw.call_close),
     call_ltp: (raw.call_ltp !== undefined && raw.call_ltp > 0) ? round2(raw.call_ltp) : round2(raw.call_close),
     call_low: round2(raw.call_low),
     call_high: round2(raw.call_high),
@@ -60,6 +61,7 @@ export function processRawOptionRow(raw: RawOptionData, prevRow?: ProcessedOptio
     // PUT Section
     put_ltp: (raw.put_ltp !== undefined && raw.put_ltp > 0) ? round2(raw.put_ltp) : round2(raw.put_close),
     put_close: round2(raw.put_close),
+    put_prev_close: raw.put_prev_close !== undefined ? round2(raw.put_prev_close) : round2(raw.put_close),
     put_avg: avgPrice,
     put_premium: putPremium,
     put_volume: Math.round(raw.put_volume),

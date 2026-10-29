@@ -5,6 +5,7 @@ interface OptionChainMobileTableProps {
   rows: ProcessedOptionRow[];
   spotPrice: number;
   metrics: MarketMetrics;
+  showPreviousCloseColumn?: boolean;
 }
 
 type MobileTab = 'CALLS' | 'PUTS' | 'COMBINED' | 'METRICS';
@@ -13,6 +14,7 @@ export const OptionChainMobileTable: React.FC<OptionChainMobileTableProps> = ({
   rows,
   spotPrice,
   metrics,
+  showPreviousCloseColumn = false,
 }) => {
   const [activeTab, setActiveTab] = useState<MobileTab>('COMBINED');
 
@@ -72,6 +74,9 @@ export const OptionChainMobileTable: React.FC<OptionChainMobileTableProps> = ({
                   STRIKE
                 </th>
                 <th className="py-2.5 px-2 text-center text-emerald-800 dark:text-emerald-400 font-bold">SIGNAL</th>
+                {showPreviousCloseColumn && (
+                  <th className="py-2.5 px-3 text-right bg-slate-200/90 text-slate-900 font-bold dark:bg-slate-800 dark:text-slate-200" title="Previous Day Close (T-1 Settlement Close)">PREV CLOSE</th>
+                )}
                 <th className="py-2.5 px-3 text-right bg-purple-100/90 text-purple-950 font-bold dark:bg-purple-950/70 dark:text-purple-300">CLOSE</th>
                 <th className="py-2.5 px-3 text-right bg-cyan-100/90 text-cyan-950 font-black dark:bg-cyan-950/70 dark:text-cyan-300">LTP</th>
                 <th className="py-2.5 px-3 text-right bg-emerald-100/90 text-emerald-950 font-bold dark:bg-emerald-950/70 dark:text-emerald-300">AVG</th>
@@ -100,6 +105,11 @@ export const OptionChainMobileTable: React.FC<OptionChainMobileTableProps> = ({
                       <span className="text-slate-400 text-[10px]">-</span>
                     )}
                   </td>
+                  {showPreviousCloseColumn && (
+                    <td className="py-2 px-3 text-right text-slate-600 dark:text-slate-400 font-medium">
+                      {(row.call_prev_close !== undefined ? row.call_prev_close : row.call_close).toFixed(2)}
+                    </td>
+                  )}
                   <td className="py-2 px-3 text-right text-slate-900 dark:text-white font-bold">{row.call_close.toFixed(2)}</td>
                   <td className="py-2 px-3 text-right text-cyan-900 dark:text-cyan-300 font-black">{((row.call_ltp && row.call_ltp > 0) ? row.call_ltp : row.call_close).toFixed(2)}</td>
                   <td
@@ -143,6 +153,9 @@ export const OptionChainMobileTable: React.FC<OptionChainMobileTableProps> = ({
                 <th className="py-2.5 px-2 text-center text-rose-800 dark:text-rose-400 font-bold">SIGNAL</th>
                 <th className="py-2.5 px-3 text-right bg-cyan-100/90 text-cyan-950 font-black dark:bg-cyan-950/70 dark:text-cyan-300">LTP</th>
                 <th className="py-2.5 px-3 text-right bg-purple-100/90 text-purple-950 font-bold dark:bg-purple-950/70 dark:text-purple-300">CLOSE</th>
+                {showPreviousCloseColumn && (
+                  <th className="py-2.5 px-3 text-right bg-slate-200/90 text-slate-900 font-bold dark:bg-slate-800 dark:text-slate-200" title="Previous Day Close (T-1 Settlement Close)">PREV CLOSE</th>
+                )}
                 <th className="py-2.5 px-3 text-right bg-emerald-100/90 text-emerald-950 font-bold dark:bg-emerald-950/70 dark:text-emerald-300">AVG</th>
                 <th className="py-2.5 px-3 text-right bg-sky-100/90 text-sky-950 font-bold dark:bg-sky-950/70 dark:text-sky-300">PREMIUM</th>
                 <th className="py-2.5 px-3 text-right bg-amber-100/90 text-amber-950 font-bold dark:bg-amber-950/70 dark:text-amber-300">VOLUME</th>
@@ -171,6 +184,11 @@ export const OptionChainMobileTable: React.FC<OptionChainMobileTableProps> = ({
                   </td>
                   <td className="py-2 px-3 text-right text-cyan-900 dark:text-cyan-300 font-black">{((row.put_ltp && row.put_ltp > 0) ? row.put_ltp : row.put_close).toFixed(2)}</td>
                   <td className="py-2 px-3 text-right text-slate-900 dark:text-white font-bold">{row.put_close.toFixed(2)}</td>
+                  {showPreviousCloseColumn && (
+                    <td className="py-2 px-3 text-right text-slate-600 dark:text-slate-400 font-medium">
+                      {(row.put_prev_close !== undefined ? row.put_prev_close : row.put_close).toFixed(2)}
+                    </td>
+                  )}
                   <td
                     className={`py-2 px-3 text-right ${
                       row.isMinAvg ? 'bg-[#86efac] text-slate-950 font-bold' : 'text-emerald-700 dark:text-emerald-400'
@@ -209,6 +227,9 @@ export const OptionChainMobileTable: React.FC<OptionChainMobileTableProps> = ({
                 <th className="py-2 px-2 text-right text-yellow-700 dark:text-yellow-300">CE VOL</th>
                 <th className="py-2 px-2 text-right text-sky-700 dark:text-sky-300">CE PREM</th>
                 <th className="py-2 px-2 text-right text-emerald-700 dark:text-emerald-300">AVG</th>
+                {showPreviousCloseColumn && (
+                  <th className="py-2 px-2 text-right text-slate-600 dark:text-slate-400">CE PREV</th>
+                )}
                 <th className="py-2 px-2 text-right text-slate-900 dark:text-white">CE CLOSE</th>
                 <th className="py-2 px-2 text-right text-cyan-700 dark:text-cyan-300 font-bold">CE LTP</th>
                 <th className="py-2 px-3 text-center bg-slate-200 dark:bg-slate-950 text-amber-900 dark:text-amber-400 sticky left-0 z-20 border-x border-slate-300 dark:border-slate-700 font-black">
@@ -219,6 +240,9 @@ export const OptionChainMobileTable: React.FC<OptionChainMobileTableProps> = ({
                 </th>
                 <th className="py-2 px-2 text-left text-cyan-700 dark:text-cyan-300 font-bold">PE LTP</th>
                 <th className="py-2 px-2 text-left text-slate-900 dark:text-white">PE CLOSE</th>
+                {showPreviousCloseColumn && (
+                  <th className="py-2 px-2 text-left text-slate-600 dark:text-slate-400">PE PREV</th>
+                )}
                 <th className="py-2 px-2 text-left text-emerald-700 dark:text-emerald-300">AVG</th>
                 <th className="py-2 px-2 text-left text-sky-700 dark:text-sky-300">PE PREM</th>
                 <th className="py-2 px-2 text-left text-yellow-700 dark:text-yellow-300">PE VOL</th>
@@ -248,6 +272,11 @@ export const OptionChainMobileTable: React.FC<OptionChainMobileTableProps> = ({
                   >
                     {row.call_avg.toFixed(2)}
                   </td>
+                  {showPreviousCloseColumn && (
+                    <td className="py-1.5 px-2 text-right text-slate-500 dark:text-slate-400 font-medium">
+                      {(row.call_prev_close !== undefined ? row.call_prev_close : row.call_close).toFixed(2)}
+                    </td>
+                  )}
                   <td className="py-1.5 px-2 text-right text-slate-900 dark:text-white font-bold">{row.call_close.toFixed(2)}</td>
                   <td className="py-1.5 px-2 text-right text-cyan-900 dark:text-cyan-300 font-bold">{((row.call_ltp && row.call_ltp > 0) ? row.call_ltp : row.call_close).toFixed(2)}</td>
 
@@ -281,6 +310,11 @@ export const OptionChainMobileTable: React.FC<OptionChainMobileTableProps> = ({
 
                   <td className="py-1.5 px-2 text-left text-cyan-900 dark:text-cyan-300 font-bold">{((row.put_ltp && row.put_ltp > 0) ? row.put_ltp : row.put_close).toFixed(2)}</td>
                   <td className="py-1.5 px-2 text-left text-slate-900 dark:text-white font-bold">{row.put_close.toFixed(2)}</td>
+                  {showPreviousCloseColumn && (
+                    <td className="py-1.5 px-2 text-left text-slate-500 dark:text-slate-400 font-medium">
+                      {(row.put_prev_close !== undefined ? row.put_prev_close : row.put_close).toFixed(2)}
+                    </td>
+                  )}
                   <td
                     className={`py-1.5 px-2 text-left ${
                       row.isMinAvg ? 'bg-[#86efac] text-slate-950 font-bold' : 'text-emerald-700 dark:text-emerald-400'
