@@ -26,6 +26,7 @@ import {
   UploadCloud
 } from 'lucide-react';
 import { ImportNseReportModal } from '../modals/ImportNseReportModal';
+import { NseDataRetrieveModal } from '../modals/NseDataRetrieveModal';
 import { 
   getMarketCloseStatusInfo, 
   getPreviousCloseOptionChain, 
@@ -63,12 +64,14 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
 }) => {
   // Mode: Auto (detects IST market hours) vs Simulation
   const [forcedMode, setForcedMode] = useState<ForcedMarketMode>('auto');
+  const [sessionView, setSessionView] = useState<'previous_day' | 'today_close'>('previous_day');
   const [customDate, setCustomDate] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [dataResult, setDataResult] = useState<PreviousCloseChainResult | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState<boolean>(false);
+  const [isNseRetrieveOpen, setIsNseRetrieveOpen] = useState<boolean>(false);
   const [tradeSettings] = useState<TradeSettings>(getStoredTradeSettings());
 
   // Font size state for table & print visibility
@@ -93,8 +96,8 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
 
   // Determine current market condition & target date
   const statusInfo: MarketCloseStatusInfo = useMemo(() => {
-    return getMarketCloseStatusInfo(forcedMode, customDate || undefined);
-  }, [forcedMode, customDate]);
+    return getMarketCloseStatusInfo(forcedMode, customDate || undefined, sessionView);
+  }, [forcedMode, customDate, sessionView]);
 
   // Auto-Sync Status & manual sync state
   const [syncStatus, setSyncStatus] = useState<AutoSyncStatus>(autoSyncService.getStatus());
@@ -109,8 +112,8 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
 
   const loadData = useCallback((forceRefresh = false) => {
     const isToday = statusInfo.effectiveCloseDate === formatDateYMD(getISTNow());
-    const effectiveSpot = isToday ? (referenceSpotPrice || 22687.65) : 22811.35;
-    const modeKey = `${statusInfo.effectiveCloseDate}_${forcedMode}_${customDate}`;
+    const effectiveSpot = isToday ? (referenceSpotPrice || 22698.85) : 22749.75;
+    const modeKey = `${statusInfo.effectiveCloseDate}_${forcedMode}_${customDate}_${sessionView}`;
 
     if (forceRefresh) {
       loadedKeyRef.current = modeKey;
@@ -142,7 +145,8 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
   }, [
     statusInfo.effectiveCloseDate, 
     forcedMode, 
-    customDate, 
+    customDate,
+    sessionView,
     referenceSpotPrice, 
     currentRows, 
     spotChange, 
@@ -171,7 +175,7 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
   // Manual Trigger for Instant Background Sync from NSE
   const handleManualSync = async () => {
     setIsManualSyncing(true);
-    showToast('Syncing option chain matching official NSE settlement data...', 'info');
+    showToast(`Syncing official option chain settlement data for ${statusInfo.effectiveCloseDate}...`, 'info');
     try {
       const res = await autoSyncService.performSync(statusInfo.effectiveCloseDate, 'manual');
       if (res.success) {
@@ -351,26 +355,40 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
           {/* Right Action Controls: Auto-Sync + Sync Now + Font Size + Save DB + Print + Export CSV */}
           <div className="flex items-center gap-2 print:hidden flex-wrap">
             {/* Background Auto-Sync Status Badge */}
-            <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-xs font-mono text-emerald-600 dark:text-emerald-400">
+            <div className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-mono border transition-all ${
+              syncStatus.status === 'syncing'
+                ? 'bg-cyan-500/10 border-cyan-500/40 text-cyan-600 dark:text-cyan-400'
+                : syncStatus.status === 'error'
+                ? 'bg-rose-500/10 border-rose-500/40 text-rose-600 dark:text-rose-400'
+                : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
+            }`}>
               <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                  syncStatus.status === 'syncing' ? 'bg-cyan-400' :
+                  syncStatus.status === 'error' ? 'bg-rose-400' : 'bg-emerald-400'
+                }`}></span>
+                <span className={`relative inline-flex rounded-full h-2 w-2 ${
+                  syncStatus.status === 'syncing' ? 'bg-cyan-500' :
+                  syncStatus.status === 'error' ? 'bg-rose-500' : 'bg-emerald-500'
+                }`}></span>
               </span>
-              <span className="font-bold">Auto-Sync Active</span>
-              <span className="text-[10px] text-slate-500 dark:text-slate-400 hidden xl:inline">
-                ({syncStatus.nextScheduledCheck || '15:30 & 20:30 IST'})
+              <span className="font-bold">
+                {syncStatus.status === 'syncing' ? 'Auto-Syncing...' : 'Auto-Sync Active'}
+              </span>
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 hidden xl:inline" title={syncStatus.message}>
+                ({syncStatus.nextScheduledCheck || '15:30 Close & 20:30 Settlement'})
               </span>
             </div>
 
-            {/* Sync from NSE Now button */}
+            {/* Retrieve from NSE Button with dialogue box */}
             <button
-              onClick={handleManualSync}
-              disabled={isManualSyncing || loading}
-              className="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-black text-xs rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer transition-all disabled:opacity-50"
-              title="Force sync now matching official NSE data"
+              onClick={() => setIsNseRetrieveOpen(true)}
+              disabled={loading}
+              className="px-3 py-1.5 bg-linear-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black text-xs rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer transition-all disabled:opacity-50 active:scale-95"
+              title="Retrieve official NSE live or settlement option chain data in a preview dialogue box"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${isManualSyncing ? 'animate-spin' : ''}`} />
-              <span>{isManualSyncing ? 'Syncing...' : 'Sync from NSE Now'}</span>
+              <Download className="w-3.5 h-3.5 stroke-[2.5]" />
+              <span>Retrieve from NSE</span>
             </button>
 
             {/* Import / Paste NSE Data button */}
@@ -483,45 +501,80 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
           </div>
         </div>
 
-        {/* Second Line: Condition Selector, Date Picker, Simulation Modes */}
+        {/* Second Line: Session View Selector, Condition Selector, Date Picker */}
         <div className="pt-2 border-t border-slate-200 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-3 text-xs font-mono print:hidden">
-          {/* Live vs Closed Simulation Mode Pills */}
-          <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900/90 border border-slate-300 dark:border-slate-800 p-1 rounded-xl">
-            <span className="text-[10px] text-slate-500 dark:text-slate-400 px-2 uppercase font-bold flex items-center gap-1">
-              <SlidersHorizontal className="w-3 h-3" />
-              Condition Mode:
-            </span>
-            <button
-              onClick={() => { setForcedMode('auto'); setCustomDate(''); }}
-              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                forcedMode === 'auto' && !customDate
-                  ? 'bg-cyan-500 text-black shadow-xs font-black'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white'
-              }`}
-            >
-              Auto (Live Clock)
-            </button>
-            <button
-              onClick={() => { setForcedMode('live'); setCustomDate(''); }}
-              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
-                forcedMode === 'live'
-                  ? 'bg-emerald-500 text-black shadow-xs font-black'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white'
-              }`}
-            >
-              <Radio className="w-3 h-3 text-emerald-950" />
-              Test: Market Open
-            </button>
-            <button
-              onClick={() => { setForcedMode('closed'); setCustomDate(''); }}
-              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                forcedMode === 'closed'
-                  ? 'bg-amber-500 text-black shadow-xs font-black'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white'
-              }`}
-            >
-              Test: Market Closed
-            </button>
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* View Session Selector: Previous Day Close vs Today's Close */}
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-900/90 border border-slate-300 dark:border-slate-800 p-1 rounded-xl">
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 px-2 uppercase font-bold flex items-center gap-1">
+                <History className="w-3 h-3 text-cyan-500" />
+                Session View:
+              </span>
+              <button
+                onClick={() => { setSessionView('previous_day'); setCustomDate(''); }}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  sessionView === 'previous_day' && !customDate
+                    ? 'bg-cyan-500 text-black shadow-xs font-black'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white'
+                }`}
+                title={`Display previous completed session close (${statusInfo.previousTradingDay})`}
+              >
+                <span>Previous Day Close ({statusInfo.previousTradingDay})</span>
+              </button>
+              {statusInfo.canViewTodayClose && (
+                <button
+                  onClick={() => { setSessionView('today_close'); setCustomDate(''); }}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    sessionView === 'today_close' && !customDate
+                      ? 'bg-amber-500 text-black shadow-xs font-black'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white'
+                  }`}
+                  title={`Display today's final 15:30 IST market close (${statusInfo.todayDate})`}
+                >
+                  <Clock className="w-3.5 h-3.5 text-black" />
+                  <span>Today's Close ({statusInfo.todayDate})</span>
+                </button>
+              )}
+            </div>
+
+            {/* Live vs Closed Simulation Mode Pills */}
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-900/90 border border-slate-300 dark:border-slate-800 p-1 rounded-xl">
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 px-2 uppercase font-bold flex items-center gap-1">
+                <SlidersHorizontal className="w-3 h-3" />
+                Condition:
+              </span>
+              <button
+                onClick={() => { setForcedMode('auto'); setCustomDate(''); }}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  forcedMode === 'auto' && !customDate
+                    ? 'bg-cyan-500 text-black shadow-xs font-black'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white'
+                }`}
+              >
+                Auto (Live Clock)
+              </button>
+              <button
+                onClick={() => { setForcedMode('live'); setCustomDate(''); }}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                  forcedMode === 'live'
+                    ? 'bg-emerald-500 text-black shadow-xs font-black'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white'
+                }`}
+              >
+                <Radio className="w-3 h-3 text-emerald-950" />
+                Test: Market Open
+              </button>
+              <button
+                onClick={() => { setForcedMode('closed'); setCustomDate(''); }}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  forcedMode === 'closed'
+                    ? 'bg-amber-500 text-black shadow-xs font-black'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white'
+                }`}
+              >
+                Test: Market Closed
+              </button>
+            </div>
           </div>
 
           {/* Date Picker & Source Badge */}
@@ -951,6 +1004,19 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
           showToast(msg, 'success');
           loadData(true);
         }}
+      />
+
+      {/* Retrieve from NSE Interactive Dialogue Box */}
+      <NseDataRetrieveModal
+        isOpen={isNseRetrieveOpen}
+        onClose={() => setIsNseRetrieveOpen(false)}
+        onApplyToClosePage={(_res) => {
+          loadData(true);
+        }}
+        onApplyToLiveChain={(_res) => {
+          loadData(true);
+        }}
+        onToast={showToast}
       />
     </div>
   );

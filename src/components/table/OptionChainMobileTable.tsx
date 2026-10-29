@@ -101,7 +101,7 @@ export const OptionChainMobileTable: React.FC<OptionChainMobileTableProps> = ({
                     )}
                   </td>
                   <td className="py-2 px-3 text-right text-slate-900 dark:text-white font-bold">{row.call_close.toFixed(2)}</td>
-                  <td className="py-2 px-3 text-right text-cyan-900 dark:text-cyan-300 font-black">{(row.call_ltp ?? row.call_close).toFixed(2)}</td>
+                  <td className="py-2 px-3 text-right text-cyan-900 dark:text-cyan-300 font-black">{((row.call_ltp && row.call_ltp > 0) ? row.call_ltp : row.call_close).toFixed(2)}</td>
                   <td
                     className={`py-2 px-3 text-right ${
                       row.isMinAvg ? 'bg-[#86efac] text-slate-950 font-bold' : 'text-emerald-700 dark:text-emerald-400'
@@ -169,7 +169,7 @@ export const OptionChainMobileTable: React.FC<OptionChainMobileTableProps> = ({
                       <span className="text-slate-400 text-[10px]">-</span>
                     )}
                   </td>
-                  <td className="py-2 px-3 text-right text-cyan-900 dark:text-cyan-300 font-black">{(row.put_ltp ?? row.put_close).toFixed(2)}</td>
+                  <td className="py-2 px-3 text-right text-cyan-900 dark:text-cyan-300 font-black">{((row.put_ltp && row.put_ltp > 0) ? row.put_ltp : row.put_close).toFixed(2)}</td>
                   <td className="py-2 px-3 text-right text-slate-900 dark:text-white font-bold">{row.put_close.toFixed(2)}</td>
                   <td
                     className={`py-2 px-3 text-right ${
@@ -249,7 +249,7 @@ export const OptionChainMobileTable: React.FC<OptionChainMobileTableProps> = ({
                     {row.call_avg.toFixed(2)}
                   </td>
                   <td className="py-1.5 px-2 text-right text-slate-900 dark:text-white font-bold">{row.call_close.toFixed(2)}</td>
-                  <td className="py-1.5 px-2 text-right text-cyan-900 dark:text-cyan-300 font-bold">{(row.call_ltp ?? row.call_close).toFixed(2)}</td>
+                  <td className="py-1.5 px-2 text-right text-cyan-900 dark:text-cyan-300 font-bold">{((row.call_ltp && row.call_ltp > 0) ? row.call_ltp : row.call_close).toFixed(2)}</td>
 
                   {/* Sticky Center Strike */}
                   <td
@@ -279,7 +279,7 @@ export const OptionChainMobileTable: React.FC<OptionChainMobileTableProps> = ({
                     </div>
                   </td>
 
-                  <td className="py-1.5 px-2 text-left text-cyan-900 dark:text-cyan-300 font-bold">{(row.put_ltp ?? row.put_close).toFixed(2)}</td>
+                  <td className="py-1.5 px-2 text-left text-cyan-900 dark:text-cyan-300 font-bold">{((row.put_ltp && row.put_ltp > 0) ? row.put_ltp : row.put_close).toFixed(2)}</td>
                   <td className="py-1.5 px-2 text-left text-slate-900 dark:text-white font-bold">{row.put_close.toFixed(2)}</td>
                   <td
                     className={`py-1.5 px-2 text-left ${

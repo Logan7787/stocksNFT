@@ -6,6 +6,7 @@ import { OptionChainMobileTable } from '../table/OptionChainMobileTable';
 import { FormulasModal } from '../modals/FormulasModal';
 import { SettingsModal } from '../modals/SettingsModal';
 import { SnapshotManagerModal } from '../modals/SnapshotManagerModal';
+import { NseDataRetrieveModal } from '../modals/NseDataRetrieveModal';
 import { ActiveTradeSetupCard } from './ActiveTradeSetupCard';
 import { TradeSettingsCard } from './TradeSettingsCard';
 import { NiftyOptionsAnalysisPage } from '../niftyAnalysis/NiftyOptionsAnalysisPage';
@@ -81,6 +82,8 @@ export const OptionChainDashboard: React.FC = () => {
   const [isFormulasOpen, setIsFormulasOpen] = useState<boolean>(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [isSnapshotsOpen, setIsSnapshotsOpen] = useState<boolean>(false);
+  const [isNseRetrieveOpen, setIsNseRetrieveOpen] = useState<boolean>(false);
+  const [strikeFilter, setStrikeFilter] = useState<'all' | 'atm500'>('atm500');
   const [isMobileCompact, setIsMobileCompact] = useState<boolean>(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
 
@@ -149,6 +152,15 @@ export const OptionChainDashboard: React.FC = () => {
     return evaluateAllTradeSignals(rows, spotPrice, tradeSettings);
   }, [rows, spotPrice, tradeSettings]);
 
+  // Screen filter state: All strikes vs ATM ± 500 strikes
+  const displayedRowsWithSignals = useMemo(() => {
+    if (strikeFilter === 'atm500') {
+      const atm = metrics.atmStrike || (spotPrice > 0 ? Math.round(spotPrice / 50) * 50 : 22700);
+      return rowsWithSignals.filter(r => Math.abs(r.strike - atm) <= 500);
+    }
+    return rowsWithSignals;
+  }, [rowsWithSignals, strikeFilter, metrics.atmStrike, spotPrice]);
+
   // Subscribe to Broker Status updates
   useEffect(() => {
     const unsub = niftyMarketService.subscribeBrokerStatus((st) => {
@@ -193,8 +205,20 @@ export const OptionChainDashboard: React.FC = () => {
       setMetrics(data.metrics);
     });
 
+    const handleCloseSyncEvent = () => {
+      const liveRows = niftyMarketService.getProcessedRows();
+      if (liveRows && liveRows.length > 0) {
+        setRows(liveRows);
+        setSpotPrice(niftyMarketService.getSpotPrice());
+        setSpotChange(niftyMarketService.getSpotChange());
+        setSpotChangePercent(niftyMarketService.getSpotChangePercent());
+      }
+    };
+    window.addEventListener('nifty-market-close-synced', handleCloseSyncEvent);
+
     return () => {
       unsubscribe();
+      window.removeEventListener('nifty-market-close-synced', handleCloseSyncEvent);
     };
   }, [selectedSlot, isStreaming]);
 
@@ -399,6 +423,7 @@ export const OptionChainDashboard: React.FC = () => {
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenFormulas={() => setIsFormulasOpen(true)}
         onOpenSnapshotsManager={() => setIsSnapshotsOpen(true)}
+        onOpenNseRetrieveModal={() => setIsNseRetrieveOpen(true)}
         connectionMode={connectionMode}
         historicalSnapshots={snapshots}
         isMobileCompact={isMobileCompact}
@@ -471,14 +496,48 @@ export const OptionChainDashboard: React.FC = () => {
               onUpdateSettings={handleUpdateTradeSettings}
             />
 
+            {/* Strike Filter Range Selector */}
+            <div className="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-slate-900/80 p-2.5 rounded-xl border border-slate-300 dark:border-slate-800 text-xs font-mono">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-slate-700 dark:text-slate-300">Strikes:</span>
+                <button
+                  onClick={() => setStrikeFilter('atm500')}
+                  className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                    strikeFilter === 'atm500'
+                      ? 'bg-cyan-500 text-black shadow-xs'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  ATM ±500 ({displayedRowsWithSignals.length} Active Strikes)
+                </button>
+                <button
+                  onClick={() => setStrikeFilter('all')}
+                  className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                    strikeFilter === 'all'
+                      ? 'bg-cyan-500 text-black shadow-xs'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  All ({rowsWithSignals.length} Strikes)
+                </button>
+              </div>
+
+              <button
+                onClick={() => setIsNseRetrieveOpen(true)}
+                className="px-2.5 py-1 bg-cyan-100 text-cyan-800 dark:bg-cyan-500/20 dark:text-cyan-300 rounded-lg font-bold hover:bg-cyan-200 dark:hover:bg-cyan-500/30 transition-all cursor-pointer flex items-center gap-1 border border-cyan-300 dark:border-cyan-500/30"
+              >
+                <span>View / Verify Data from NSE</span>
+              </button>
+            </div>
+
             {/* Desktop View (default on lg+) */}
             <div className="hidden lg:block">
-              <OptionChainDesktopTable rows={rowsWithSignals} spotPrice={spotPrice} />
+              <OptionChainDesktopTable rows={displayedRowsWithSignals} spotPrice={spotPrice} />
             </div>
 
             {/* Mobile / Tablet Responsive View */}
             <div className="lg:hidden">
-              <OptionChainMobileTable rows={rowsWithSignals} spotPrice={spotPrice} metrics={metrics} />
+              <OptionChainMobileTable rows={displayedRowsWithSignals} spotPrice={spotPrice} metrics={metrics} />
             </div>
           </main>
         </>
@@ -529,6 +588,22 @@ export const OptionChainDashboard: React.FC = () => {
         onLoadSnapshot={handleLoadSnapshotById}
         onExportCsv={handleExportCsv}
         activeSlot={selectedSlot}
+      />
+
+      <NseDataRetrieveModal
+        isOpen={isNseRetrieveOpen}
+        onClose={() => setIsNseRetrieveOpen(false)}
+        onApplyToLiveChain={(res) => {
+          setSpotPrice(res.spotPrice);
+          setSpotChange(res.spotChange);
+          setSpotChangePercent(res.spotChangePercent);
+          setRows(res.processedRows);
+          setMetrics(res.metrics);
+        }}
+        onApplyToClosePage={(_res) => {
+          handleNavigate('/previous-close');
+        }}
+        onToast={showToast}
       />
     </div>
   );

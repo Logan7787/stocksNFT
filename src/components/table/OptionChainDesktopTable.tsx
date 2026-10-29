@@ -142,9 +142,9 @@ const OptionRowItem = memo(({
             ? 'bg-cyan-50/80 dark:bg-cyan-950/25 text-cyan-950 dark:text-cyan-200 font-extrabold'
             : 'text-cyan-900 dark:text-cyan-300 font-bold'
         }`}
-        title={`Call LTP (Last Traded Price): ${(row.call_ltp ?? row.call_close).toFixed(2)}`}
+        title={`Call LTP (Last Traded Price): ${((row.call_ltp && row.call_ltp > 0) ? row.call_ltp : row.call_close).toFixed(2)}`}
       >
-        <span>{(row.call_ltp ?? row.call_close).toFixed(2)}</span>
+        <span>{((row.call_ltp && row.call_ltp > 0) ? row.call_ltp : row.call_close).toFixed(2)}</span>
       </td>
 
       {/* ============================================================== */}
@@ -231,9 +231,9 @@ const OptionRowItem = memo(({
             ? 'bg-cyan-50/80 dark:bg-cyan-950/25 text-cyan-950 dark:text-cyan-200 font-extrabold'
             : 'text-cyan-900 dark:text-cyan-300 font-bold'
         }`}
-        title={`Put LTP (Last Traded Price): ${(row.put_ltp ?? row.put_close).toFixed(2)}`}
+        title={`Put LTP (Last Traded Price): ${((row.put_ltp && row.put_ltp > 0) ? row.put_ltp : row.put_close).toFixed(2)}`}
       >
-        <span>{(row.put_ltp ?? row.put_close).toFixed(2)}</span>
+        <span>{((row.put_ltp && row.put_ltp > 0) ? row.put_ltp : row.put_close).toFixed(2)}</span>
       </td>
 
       {/* 2. PUT CLOSE */}

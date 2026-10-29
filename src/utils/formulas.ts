@@ -52,13 +52,13 @@ export function processRawOptionRow(raw: RawOptionData, prevRow?: ProcessedOptio
     call_premium: callPremium,
     call_avg: avgPrice,
     call_close: round2(raw.call_close),
-    call_ltp: raw.call_ltp !== undefined ? round2(raw.call_ltp) : round2(raw.call_close),
+    call_ltp: (raw.call_ltp !== undefined && raw.call_ltp > 0) ? round2(raw.call_ltp) : round2(raw.call_close),
     call_low: round2(raw.call_low),
     call_high: round2(raw.call_high),
     call_change: raw.call_change ? round2(raw.call_change) : 0,
 
     // PUT Section
-    put_ltp: raw.put_ltp !== undefined ? round2(raw.put_ltp) : round2(raw.put_close),
+    put_ltp: (raw.put_ltp !== undefined && raw.put_ltp > 0) ? round2(raw.put_ltp) : round2(raw.put_close),
     put_close: round2(raw.put_close),
     put_avg: avgPrice,
     put_premium: putPremium,

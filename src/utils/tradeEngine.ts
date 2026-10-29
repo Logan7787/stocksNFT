@@ -190,15 +190,21 @@ export function evaluateAllTradeSignals(
     const isNearestItmCE = eligible.nearestItmCeStrike !== null && row.strike === eligible.nearestItmCeStrike;
     const isNearestItmPE = eligible.nearestItmPeStrike !== null && row.strike === eligible.nearestItmPeStrike;
 
-    // CE Breakout evaluation
+    // CE Breakout evaluation:
+    // A breakout signal strictly requires:
+    // 1. Condition met: Close > AVG & Close > Premium
+    // 2. Active traded volume: Must have volume > 0 (prevents false signals on untraded deep ITM strikes)
+    // 3. Active Tradeable Band: Within ±250 pts (±5 strikes) of ATM or nearest ITM
     const ceRole: 'ATM' | 'NEAREST_ITM' | 'OTHER' = isATM ? 'ATM' : isNearestItmCE ? 'NEAREST_ITM' : 'OTHER';
     const ceSetup = calculateTradeSetup(row, 'BUY_CE', settings, ceRole);
-    const ceSignal = ceSetup.conditionMet;
+    const isCeEligible = (isATM || isNearestItmCE || Math.abs(row.strike - eligible.atmStrike) <= 250);
+    const ceSignal = ceSetup.conditionMet && row.call_volume > 0 && isCeEligible;
 
     // PE Breakout evaluation
     const peRole: 'ATM' | 'NEAREST_ITM' | 'OTHER' = isATM ? 'ATM' : isNearestItmPE ? 'NEAREST_ITM' : 'OTHER';
     const peSetup = calculateTradeSetup(row, 'BUY_PE', settings, peRole);
-    const peSignal = peSetup.conditionMet;
+    const isPeEligible = (isATM || isNearestItmPE || Math.abs(row.strike - eligible.atmStrike) <= 250);
+    const peSignal = peSetup.conditionMet && row.put_volume > 0 && isPeEligible;
 
     // Active setups must be on ATM or nearest ITM strike as per specification:
     // "Trigger: If call_close > call_avg AND call_close > call_premium on the ATM or nearest ITM strike."

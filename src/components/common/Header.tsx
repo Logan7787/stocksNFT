@@ -17,7 +17,8 @@ import {
   History,
   Sun,
   Moon,
-  Zap
+  Zap,
+  Download
 } from 'lucide-react';
 import { HOURLY_SLOTS } from '../../services/snapshotService';
 import type { MarketSnapshotRecord, ConnectionMode } from '../../types/optionChain';
@@ -37,6 +38,7 @@ interface HeaderProps {
   onOpenSettings: () => void;
   onOpenFormulas: () => void;
   onOpenSnapshotsManager: () => void;
+  onOpenNseRetrieveModal?: () => void;
   connectionMode: ConnectionMode;
   historicalSnapshots: MarketSnapshotRecord[];
   isMobileCompact: boolean;
@@ -60,6 +62,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenSettings,
   onOpenFormulas,
   onOpenSnapshotsManager,
+  onOpenNseRetrieveModal,
   connectionMode,
   historicalSnapshots,
   isMobileCompact: _isMobileCompact,
@@ -265,6 +268,18 @@ export const Header: React.FC<HeaderProps> = ({
             >
               {isStreaming ? <Pause className="w-4 h-4 text-slate-700 dark:text-slate-300" /> : <Play className="w-4 h-4 text-amber-600 dark:text-amber-400" />}
               <span className="hidden lg:inline">{isStreaming ? 'Pause' : 'Resume'}</span>
+            </button>
+          )}
+
+          {/* Retrieve from NSE Button */}
+          {onOpenNseRetrieveModal && (
+            <button
+              onClick={onOpenNseRetrieveModal}
+              title="Retrieve official NSE live/settlement option chain data in a dialogue box"
+              className="px-2.5 sm:px-3 py-2 bg-linear-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-bold text-xs rounded-xl shadow-md shadow-cyan-500/20 flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer"
+            >
+              <Download className="w-3.5 h-3.5 stroke-[2.5]" />
+              <span className="hidden md:inline">Retrieve from NSE</span>
             </button>
           )}
 

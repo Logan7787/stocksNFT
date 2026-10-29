@@ -15,7 +15,14 @@ import {
   round2 
 } from '../utils/formulas';
 import { fetchNseLiveOptionChain, parseNseDerivativesReport } from './nseService';
-import { RAW_MARKET_CLOSE_2026_10_26, RAW_MARKET_CLOSE_2026_10_23 } from './previousCloseService';
+import { 
+  RAW_MARKET_CLOSE_2026_10_28,
+  RAW_MARKET_CLOSE_2026_10_27,
+  RAW_MARKET_CLOSE_2026_10_26, 
+  RAW_MARKET_CLOSE_2026_10_23,
+  getPreviousTradingDay 
+} from './previousCloseService';
+import { angelOneService } from './angelOneService';
 
 export interface AutoSyncStatus {
   enabled: boolean;
@@ -132,9 +139,9 @@ class AutoSyncService {
     if (totalMinutes < 15 * 60 + 30) {
       this.status.nextScheduledCheck = `Today at 15:30 IST (Market Close)`;
     } else if (totalMinutes < 20 * 60 + 30) {
-      this.status.nextScheduledCheck = `Today at 20:30 IST (NSE Final Settlement)`;
+      this.status.nextScheduledCheck = `15:30 Close Synced • 20:30 IST Final Settlement`;
     } else {
-      this.status.nextScheduledCheck = `Next Trading Day at 15:30 IST`;
+      this.status.nextScheduledCheck = `20:30 Settlement Synced • Next Trading Day at 15:30 IST`;
     }
 
     if (isWeekend) {
@@ -149,6 +156,13 @@ class AutoSyncService {
 
     const hasSyncedToday = this.status.lastSyncDate === todayStr;
     const hasSyncedSettlement = this.status.lastSyncDate === `${todayStr}_settled`;
+
+    // Ensure previous trading day is cached
+    const prevDate = getPreviousTradingDay(ist);
+    const prevCacheKey = `nifty_close_cache_${prevDate}`;
+    if (typeof localStorage !== 'undefined' && !localStorage.getItem(prevCacheKey)) {
+      this.performSync(prevDate, 'manual').catch((e) => console.warn('Pre-cache prev close notice:', e));
+    }
 
     if (isPastSettlementTime && !hasSyncedSettlement) {
       console.log(`[AutoSync] Triggering 20:30 IST NSE Evening Settlement Sync for ${todayStr}...`);
@@ -187,7 +201,21 @@ class AutoSyncService {
       let finalRows: ProcessedOptionRow[] = [];
 
       // 0. Check if target date matches official verified report
-      if (effectiveDate === '2026-10-26') {
+      if (effectiveDate === '2026-10-28') {
+        closingSpot = 22698.85;
+        spotChange = -50.90;
+        spotChangePct = -0.22;
+        const processed = RAW_MARKET_CLOSE_2026_10_28.map((r) => processRawOptionRow(r));
+        const { highlightedRows } = applyConditionalHighlights(processed, closingSpot);
+        finalRows = highlightedRows;
+      } else if (effectiveDate === '2026-10-27') {
+        closingSpot = 22749.75;
+        spotChange = -18.90;
+        spotChangePct = -0.08;
+        const processed = RAW_MARKET_CLOSE_2026_10_27.map((r) => processRawOptionRow(r));
+        const { highlightedRows } = applyConditionalHighlights(processed, closingSpot);
+        finalRows = highlightedRows;
+      } else if (effectiveDate === '2026-10-26') {
         closingSpot = 22768.65;
         spotChange = 168.65;
         spotChangePct = 0.75;
@@ -221,10 +249,34 @@ class AutoSyncService {
         }
       }
 
-      // 2. Try pulling from live connected broker feed if active
+      // 2. Try pulling from live connected broker feed if active (Angel One / Upstox)
       if (finalRows.length === 0) {
         const brokerConfig = niftyMarketService.getBrokerConfig();
-        if (brokerConfig.enabled && brokerConfig.apiKey) {
+        if (brokerConfig.provider === 'angelone') {
+          try {
+            const apiKey = (brokerConfig.angelApiKey || brokerConfig.apiKey || '').trim();
+            const jwt = (brokerConfig.angelJwtToken || angelOneService.getStoredTokens().jwtToken || '').trim();
+            if (apiKey || jwt) {
+              const angelRes = await angelOneService.getNiftySpotQuote(apiKey, jwt);
+              if (angelRes.success && angelRes.spotPrice) {
+                closingSpot = angelRes.spotPrice;
+                const prevClose = angelRes.previousClose || 22749.75;
+                spotChange = angelRes.spotChange ?? round2(closingSpot - prevClose);
+                spotChangePct = angelRes.spotChangePercent ?? round2((spotChange / prevClose) * 100);
+                if (angelRes.previousClose) {
+                  niftyMarketService.setPreviousClose(angelRes.previousClose);
+                }
+                const liveRows = niftyMarketService.getProcessedRows();
+                if (liveRows && liveRows.length > 0) {
+                  finalRows = liveRows;
+                  console.log(`[AutoSync] Synced official Spot ₹${closingSpot} & PrevClose from Angel One`);
+                }
+              }
+            }
+          } catch (angelErr) {
+            console.warn('[AutoSync] Angel One sync notice:', angelErr);
+          }
+        } else if (brokerConfig.enabled && brokerConfig.apiKey) {
           try {
             const brokerUrl = niftyMarketService.resolveBrokerUrl(brokerConfig);
             const response = await fetch(brokerUrl, {
@@ -309,7 +361,7 @@ class AutoSyncService {
       // 5. Save to Permanent Database Snapshot
       await saveCloseSnapshotRecord(effectiveDate, closingSpot, finalRows);
 
-      // 4. Update localStorage Cache for Instant Loading
+      // 5. Update localStorage Cache for Instant Loading
       const cacheKey = `nifty_close_cache_${effectiveDate}`;
       try {
         localStorage.setItem(cacheKey, JSON.stringify({
@@ -322,6 +374,24 @@ class AutoSyncService {
         }));
       } catch (cacheErr) {
         console.warn('Failed to cache synced close:', cacheErr);
+      }
+
+      // 6. Update niftyMarketService so Live Option Chain immediately syncs with official closing data
+      if (finalRows.length > 0) {
+        const rawFromFinal: RawOptionData[] = finalRows.map((r) => ({
+          strike: r.strike,
+          call_low: r.call_low,
+          call_high: r.call_high,
+          call_close: r.call_close,
+          call_ltp: (r.call_ltp && r.call_ltp > 0) ? r.call_ltp : r.call_close,
+          call_volume: r.call_volume,
+          put_low: r.put_low,
+          put_high: r.put_high,
+          put_close: r.put_close,
+          put_ltp: (r.put_ltp && r.put_ltp > 0) ? r.put_ltp : r.put_close,
+          put_volume: r.put_volume,
+        }));
+        niftyMarketService.applyRetrievedOptionChain(closingSpot, 22749.75, rawFromFinal);
       }
 
       // 5. Update Status

@@ -1,5 +1,6 @@
 import type { RawOptionData, ProcessedOptionRow, MarketMetrics, BrokerApiConfig, BrokerStatus } from '../types/optionChain';
 import { generateBaseNiftyOptionData, processRawOptionRow, applyConditionalHighlights, round2 } from '../utils/formulas';
+import { RAW_MARKET_CLOSE_2026_10_28 } from '../data/verifiedMarketData';
 import { angelOneService } from './angelOneService';
 
 export type TickListener = (data: {
@@ -63,9 +64,9 @@ export function generateFallbackExpiryDates(symbol: string = 'NIFTY'): string[] 
 }
 
 class NiftyMarketDataService {
-  private spotPrice: number = 22446.65;
-  private previousClose: number = 22687.65;
-  private openSpotPrice: number = 22580.00;
+  private spotPrice: number = 22698.85;
+  private previousClose: number = 22749.75;
+  private openSpotPrice: number = 22720.00;
   private rawData: RawOptionData[] = [];
   private processedRows: ProcessedOptionRow[] = [];
   private listeners: Set<TickListener> = new Set();
@@ -110,7 +111,12 @@ class NiftyMarketDataService {
   }
 
   private initData() {
-    this.rawData = generateBaseNiftyOptionData(this.spotPrice);
+    // Use official verified 28-10-2026 dataset if spot matches or default
+    if (Math.abs(this.spotPrice - 22698.85) < 150) {
+      this.rawData = [...RAW_MARKET_CLOSE_2026_10_28];
+    } else {
+      this.rawData = generateBaseNiftyOptionData(this.spotPrice);
+    }
     const initialProcessed = this.rawData.map(r => processRawOptionRow(r));
     const { highlightedRows } = applyConditionalHighlights(initialProcessed, this.spotPrice);
     this.processedRows = highlightedRows;
@@ -359,9 +365,38 @@ class NiftyMarketDataService {
   }
 
   /**
+   * Apply retrieved official NSE Option Chain data to live feed
+   */
+  public applyRetrievedOptionChain(spot: number, prevClose: number, rows: RawOptionData[]): void {
+    if (spot > 0) {
+      this.spotPrice = round2(spot);
+      localStorage.setItem('nifty_calibrated_spot', String(this.spotPrice));
+    }
+    if (prevClose > 0) {
+      this.previousClose = round2(prevClose);
+      localStorage.setItem('nifty_previous_close', String(this.previousClose));
+    }
+    if (rows && rows.length > 0) {
+      this.rawData = [...rows];
+    }
+    this.recalculateAll();
+  }
+
+  /**
    * High-fidelity sub-second market simulator
    */
   private tickSimulation() {
+    // Only simulate live market ticks if market is currently open in IST!
+    const istNow = new Date(new Date().getTime() + (new Date().getTimezoneOffset() + 330) * 60000);
+    const day = istNow.getDay();
+    const totalMin = istNow.getHours() * 60 + istNow.getMinutes();
+    const isMarketHours = day >= 1 && day <= 5 && totalMin >= (9 * 60 + 15) && totalMin <= (15 * 60 + 30);
+
+    if (!isMarketHours) {
+      // Market is closed: do not drift prices or spot! Lock closing data.
+      return;
+    }
+
     // 1. Realistic spot delta (Brownian motion micro-shock)
     const spotDelta = (Math.random() - 0.49) * 2.8;
     this.spotPrice = round2(Math.max(20000, this.spotPrice + spotDelta));
