@@ -30,7 +30,10 @@ export function calculateAveragePrice(callClose: number, putClose: number): numb
 export function processRawOptionRow(raw: RawOptionData, prevRow?: ProcessedOptionRow): ProcessedOptionRow {
   const callPremium = calculateCallPremium(raw.call_low, raw.put_high);
   const putPremium = calculatePutPremium(raw.put_low, raw.call_high);
-  const avgPrice = calculateAveragePrice(raw.call_close, raw.put_close);
+  // Use settlement close if > 0, otherwise fallback to LTP so AVG is computed before settlement
+  const effectiveCallClose = (raw.call_close && raw.call_close > 0) ? raw.call_close : (raw.call_ltp || 0);
+  const effectivePutClose = (raw.put_close && raw.put_close > 0) ? raw.put_close : (raw.put_ltp || 0);
+  const avgPrice = calculateAveragePrice(effectiveCallClose, effectivePutClose);
 
   let callTickDirection: 'up' | 'down' | 'neutral' = 'neutral';
   if (prevRow) {
@@ -53,6 +56,7 @@ export function processRawOptionRow(raw: RawOptionData, prevRow?: ProcessedOptio
     call_avg: avgPrice,
     call_close: round2(raw.call_close),
     call_prev_close: raw.call_prev_close !== undefined ? round2(raw.call_prev_close) : round2(raw.call_close),
+    call_settlement_close: raw.call_settlement_close !== undefined ? round2(raw.call_settlement_close) : undefined,
     call_ltp: (raw.call_ltp !== undefined && raw.call_ltp > 0) ? round2(raw.call_ltp) : round2(raw.call_close),
     call_low: round2(raw.call_low),
     call_high: round2(raw.call_high),
@@ -62,6 +66,7 @@ export function processRawOptionRow(raw: RawOptionData, prevRow?: ProcessedOptio
     put_ltp: (raw.put_ltp !== undefined && raw.put_ltp > 0) ? round2(raw.put_ltp) : round2(raw.put_close),
     put_close: round2(raw.put_close),
     put_prev_close: raw.put_prev_close !== undefined ? round2(raw.put_prev_close) : round2(raw.put_close),
+    put_settlement_close: raw.put_settlement_close !== undefined ? round2(raw.put_settlement_close) : undefined,
     put_avg: avgPrice,
     put_premium: putPremium,
     put_volume: Math.round(raw.put_volume),
@@ -165,10 +170,12 @@ export function applyConditionalHighlights(
     const isTopCallVolume = row.call_volume >= top2CallVolThreshold && row.call_volume > 0;
     const isTopPutVolume = row.put_volume >= top2PutVolThreshold && row.put_volume > 0;
 
-    // CE Breakout: call_close > call_avg AND call_close > call_premium
-    const ceSignal = row.call_close > row.call_avg && row.call_close > row.call_premium;
-    // PE Breakout: put_close > put_avg AND put_close > put_premium
-    const peSignal = row.put_close > row.put_avg && row.put_close > row.put_premium;
+    // CE Breakout: call_close (or LTP) > call_avg AND > call_premium
+    const callCompareVal = (row.call_close && row.call_close > 0) ? row.call_close : (row.call_ltp || 0);
+    const ceSignal = callCompareVal > row.call_avg && callCompareVal > row.call_premium;
+    // PE Breakout: put_close (or LTP) > put_avg AND > put_premium
+    const putCompareVal = (row.put_close && row.put_close > 0) ? row.put_close : (row.put_ltp || 0);
+    const peSignal = putCompareVal > row.put_avg && putCompareVal > row.put_premium;
 
     return {
       ...row,
@@ -324,14 +331,29 @@ export function calculateBreakLevels(
     }
   }
 
-  // 2. Bound the search window strictly NEAR the base ATM strike (within ±200 pts, i.e., ±4 strikes)
-  // This prevents picking deep OTM strikes (e.g. 26950) where near-zero option prices produce tiny spreads.
-  const windowRange = 200;
-  const nearbyRows = rows.filter(r => Math.abs(r.strike - baseAtmStrike) <= windowRange);
+  // 2. Bound the search window strictly NEAR the base ATM strike (within ±50 pts, e.g. 22900, 22950, 23000)
+  // Evaluates ATM strike (e.g. 22936 -> 22950 ± 50 pts) to find the strike where |Call - Put| <= 25 pts
+  const windowRange = 50;
+  let nearbyRows = rows.filter(r => Math.abs(r.strike - baseAtmStrike) <= windowRange);
+  if (nearbyRows.length === 0) {
+    nearbyRows = rows.filter(r => Math.abs(r.strike - baseAtmStrike) <= 100);
+  }
   const candidates = nearbyRows.length > 0 ? nearbyRows : rows;
 
-  // Filter strikes where |call_close - put_close| <= 25 pts
-  const qualifying = candidates.filter(r => Math.abs(r.call_close - r.put_close) <= 25);
+  // Use settlement close if available (> 0), otherwise use closing LTP / close for post-market formula calculation
+  const getCallVal = (r: ProcessedOptionRow) => {
+    if (r.call_settlement_close && r.call_settlement_close > 0) return r.call_settlement_close;
+    if (r.call_ltp && r.call_ltp > 0) return r.call_ltp;
+    return r.call_close || 0;
+  };
+  const getPutVal = (r: ProcessedOptionRow) => {
+    if (r.put_settlement_close && r.put_settlement_close > 0) return r.put_settlement_close;
+    if (r.put_ltp && r.put_ltp > 0) return r.put_ltp;
+    return r.put_close || 0;
+  };
+
+  // Filter strikes where |call_price - put_price| <= 25 pts
+  const qualifying = candidates.filter(r => Math.abs(getCallVal(r) - getPutVal(r)) <= 25);
 
   let bestRow: ProcessedOptionRow;
   let minDiff: number;
@@ -339,21 +361,21 @@ export function calculateBreakLevels(
   if (qualifying.length > 0) {
     // Pick the qualifying strike with lowest spread; if tied, closest to base ATM
     qualifying.sort((a, b) => {
-      const diffA = Math.abs(a.call_close - a.put_close);
-      const diffB = Math.abs(b.call_close - b.put_close);
+      const diffA = Math.abs(getCallVal(a) - getPutVal(a));
+      const diffB = Math.abs(getCallVal(b) - getPutVal(b));
       if (Math.abs(diffA - diffB) > 0.001) {
         return diffA - diffB;
       }
       return Math.abs(a.strike - baseAtmStrike) - Math.abs(b.strike - baseAtmStrike);
     });
     bestRow = qualifying[0];
-    minDiff = Math.abs(bestRow.call_close - bestRow.put_close);
+    minDiff = Math.abs(getCallVal(bestRow) - getPutVal(bestRow));
   } else {
     // Fallback: If no strike has spread <= 25 pts, pick the nearby strike with the minimum spread
     bestRow = candidates[0];
-    minDiff = Math.abs(candidates[0].call_close - candidates[0].put_close);
+    minDiff = Math.abs(getCallVal(candidates[0]) - getPutVal(candidates[0]));
     for (const r of candidates) {
-      const diff = Math.abs(r.call_close - r.put_close);
+      const diff = Math.abs(getCallVal(r) - getPutVal(r));
       if (diff < minDiff) {
         minDiff = diff;
         bestRow = r;
@@ -362,8 +384,8 @@ export function calculateBreakLevels(
   }
 
   const formulaAtmStrike = bestRow.strike;
-  const atmCallClose = round2(bestRow.call_close);
-  const atmPutClose = round2(bestRow.put_close);
+  const atmCallClose = round2(getCallVal(bestRow));
+  const atmPutClose = round2(getPutVal(bestRow));
   const atmDiff = round2(minDiff);
 
   // Reference strikes: ATM + 100 and ATM - 100
@@ -376,25 +398,25 @@ export function calculateBreakLevels(
   // For Break Down:
   // Call Close at (ATM + 100) [OTM Call]
   // Put Close at (ATM - 100) [OTM Put]
-  const bdCallClose = plus100Row ? round2(plus100Row.call_close) : 0;
-  const bdPutClose = minus100Row ? round2(minus100Row.put_close) : 0;
+  const bdCallClose = plus100Row ? round2(getCallVal(plus100Row)) : 0;
+  const bdPutClose = minus100Row ? round2(getPutVal(minus100Row)) : 0;
   const breakDownValue = round2((bdCallClose + bdPutClose) / 2);
 
   // For Break Up:
   // Call Close at (ATM - 100) [ITM Call]
   // Put Close at (ATM + 100) [ITM Put]
-  const buCallClose = minus100Row ? round2(minus100Row.call_close) : 0;
-  const buPutClose = plus100Row ? round2(plus100Row.put_close) : 0;
+  const buCallClose = minus100Row ? round2(getCallVal(minus100Row)) : 0;
+  const buPutClose = plus100Row ? round2(getPutVal(plus100Row)) : 0;
   const breakUpValue = round2((buCallClose + buPutClose) / 2);
 
   // For Break Even:
   // Take Formula ATM Strike (bestRow).
   // 4 values: Call High, Call Low, Put High, Put Low.
   // Formula: (Max High among all 4 + Min Low among all 4) / 2
-  const callHigh = round2(bestRow.call_high);
-  const callLow = round2(bestRow.call_low);
-  const putHigh = round2(bestRow.put_high);
-  const putLow = round2(bestRow.put_low);
+  const callHigh = round2(bestRow.call_high || getCallVal(bestRow));
+  const callLow = round2(bestRow.call_low || getCallVal(bestRow));
+  const putHigh = round2(bestRow.put_high || getPutVal(bestRow));
+  const putLow = round2(bestRow.put_low || getPutVal(bestRow));
 
   const highestValue = Math.max(callHigh, callLow, putHigh, putLow);
   const lowestValue = Math.min(callHigh, callLow, putHigh, putLow);

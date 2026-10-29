@@ -102,8 +102,22 @@ export const RAW_MARKET_CLOSE_2026_10_26: RawOptionData[] = [
 export const VERIFIED_MARKET_CLOSE_2026_10_26: ProcessedOptionRow[] = 
   RAW_MARKET_CLOSE_2026_10_26.map(r => processRawOptionRow(r));
 
-import { RAW_MARKET_CLOSE_2026_10_28, VERIFIED_MARKET_CLOSE_2026_10_28 } from '../data/verifiedMarketData';
-export { RAW_MARKET_CLOSE_2026_10_28, VERIFIED_MARKET_CLOSE_2026_10_28 };
+import { 
+  RAW_MARKET_CLOSE_2026_10_28, 
+  VERIFIED_MARKET_CLOSE_2026_10_28,
+  RAW_MARKET_CLOSE_2026_10_29,
+  VERIFIED_MARKET_CLOSE_2026_10_29,
+  RAW_MARKET_CLOSE_2026_10_29_SETTLED,
+  VERIFIED_MARKET_CLOSE_2026_10_29_SETTLED
+} from '../data/verifiedMarketData';
+export { 
+  RAW_MARKET_CLOSE_2026_10_28, 
+  VERIFIED_MARKET_CLOSE_2026_10_28,
+  RAW_MARKET_CLOSE_2026_10_29,
+  VERIFIED_MARKET_CLOSE_2026_10_29,
+  RAW_MARKET_CLOSE_2026_10_29_SETTLED,
+  VERIFIED_MARKET_CLOSE_2026_10_29_SETTLED
+};
 
 /**
  * Official Verified Historical Dataset from 2026-10-27 (Expiry 27-Oct-2026) NSE Derivatives Report
@@ -354,14 +368,17 @@ export function getMarketCloseStatusInfo(
 
   // 2. If user explicitly chose to view today's 15:30 close on this page (or customDate === todayDate)
   if ((preferredSessionType === 'today_close' || customDate === todayDate) && canViewTodayClose) {
+    const isPost830 = isPost830PMSettlementTime(istNow);
     return {
       isMarketOpenAndLive: false,
       marketState: 'CLOSED',
       effectiveCloseDate: todayDate,
-      effectiveCloseSlot: '15:30',
-      modeBadgeText: "TODAY'S MARKET CLOSE",
+      effectiveCloseSlot: isPost830 ? '20:30 Settlement' : '15:30 Close',
+      modeBadgeText: isPost830 ? "TODAY'S CLOSE (20:30 SETTLED)" : "TODAY'S MARKET CLOSE (15:30)",
       headline: "Today's Closed Market Data",
-      subtext: "Today's market has CLOSED (after 03:30 PM IST). Displaying today's final 15:30 IST closing option chain.",
+      subtext: isPost830
+        ? "NSE 20:30 PM Final Settlement Complete. Close column is fully updated with official settlement prices."
+        : "Today's market has CLOSED (after 03:30 PM IST). Close column will update after 20:30 PM (8:30 PM IST) once NSE publishes settlement.",
       currentISTFormatted,
       isCustomDateSelected: customDate === todayDate,
       viewingSessionType: 'today_close',
@@ -400,6 +417,18 @@ export interface PreviousCloseOptions {
   todaySpotChange?: number;
   todaySpotChangePercent?: number;
   todayMetrics?: MarketMetrics;
+  settlementOverride?: 'auto' | 'pending' | 'settled';
+}
+
+/**
+ * Checks whether current IST time is past 20:30 (8:30 PM IST)
+ * when official NSE Derivatives Final Settlement is published.
+ */
+export function isPost830PMSettlementTime(date?: Date): boolean {
+  const ist = date || getISTNow();
+  const hours = ist.getHours();
+  const minutes = ist.getMinutes();
+  return (hours > 20) || (hours === 20 && minutes >= 30);
 }
 
 /**
@@ -445,108 +474,42 @@ export async function getPreviousCloseOptionChain(
   referenceSpot?: number,
   options?: PreviousCloseOptions
 ): Promise<PreviousCloseChainResult> {
-  const todayYMD = formatDateYMD(getISTNow());
-  const effectiveDate = targetDate || getPreviousTradingDay(getISTNow());
+  const istNow = getISTNow();
+  const todayYMD = formatDateYMD(istNow);
+  const effectiveDate = targetDate || getPreviousTradingDay(istNow);
   const isToday = effectiveDate === todayYMD;
 
-  // 1. If today's market is closed and we need today's close:
-  if (isToday) {
-    // 1A. Check if a 15:30 snapshot for today exists in database/localStorage
-    try {
-      const snapshots: MarketSnapshotRecord[] = await loadHistoricalSnapshotsList();
-      const targetSnapshot = snapshots.find(
-        s => s.snapshot_date === todayYMD && (s.hour_slot === '15:30' || s.hour_slot === '14:15')
-      ) || snapshots.find(s => s.snapshot_date === todayYMD);
+  // Settlement detection (after 20:30 IST NSE Derivatives Final Settlement)
+  const isNaturalPost830 = isPost830PMSettlementTime(istNow);
+  const isSettled = options?.settlementOverride === 'settled'
+    ? true
+    : options?.settlementOverride === 'pending'
+      ? false
+      : isNaturalPost830;
 
-      if (targetSnapshot) {
-        const loaded = await loadHistoricalSnapshot(targetSnapshot.id);
-        if (loaded.snapshot && loaded.rows && loaded.rows.length > 0) {
-          const spot = Number(loaded.snapshot.spot_close) || referenceSpot || niftyMarketService.getSpotPrice();
-          const { highlightedRows, metrics } = applyConditionalHighlights(loaded.rows, spot);
-          return buildCloseChainResult(
-            targetSnapshot.snapshot_date,
-            targetSnapshot.hour_slot,
-            spot,
-            options?.todaySpotChange !== undefined ? options.todaySpotChange : niftyMarketService.getSpotChange(),
-            options?.todaySpotChangePercent !== undefined ? options.todaySpotChangePercent : niftyMarketService.getSpotChangePercent(),
-            highlightedRows,
-            metrics,
-            'database',
-            targetSnapshot.id
-          );
-        }
-      }
-    } catch (err) {
-      console.warn('Error checking snapshots for today close:', err);
-    }
-
-    // 1B. Use today's live/closing session data from options or niftyMarketService
-    const liveSpot = referenceSpot || niftyMarketService.getSpotPrice() || 22687.65;
-    const liveChange = options?.todaySpotChange !== undefined ? options.todaySpotChange : niftyMarketService.getSpotChange();
-    const liveChangePct = options?.todaySpotChangePercent !== undefined ? options.todaySpotChangePercent : niftyMarketService.getSpotChangePercent();
-    const liveRows = (options?.todayRows && options.todayRows.length > 0)
-      ? options.todayRows
-      : niftyMarketService.getProcessedRows();
-
-    if (liveRows && liveRows.length > 0) {
-      const { highlightedRows, metrics } = applyConditionalHighlights(liveRows, liveSpot);
-      // Auto-cache to localStorage as today's close
-      const cacheKey = `${CACHED_CLOSE_PREFIX}${todayYMD}`;
-      try {
-        localStorage.setItem(cacheKey, JSON.stringify({
-          spotPrice: liveSpot,
-          spotChange: liveChange,
-          spotChangePercent: liveChangePct,
-          rows: highlightedRows,
-        }));
-      } catch (e) {
-        console.warn('Failed to cache today close:', e);
-      }
-
-      return buildCloseChainResult(
-        todayYMD,
-        '15:30',
-        liveSpot,
-        liveChange,
-        liveChangePct,
-        highlightedRows,
-        metrics,
-        'database'
-      );
-    }
-
-    // 1C. Fallback for today close: use verified official dataset if today is 2026-10-28
-    if (todayYMD === '2026-10-28') {
-      const verifiedSpot = 22698.85;
-      const { highlightedRows, metrics } = applyConditionalHighlights(VERIFIED_MARKET_CLOSE_2026_10_28, verifiedSpot);
-      return buildCloseChainResult(
-        '2026-10-28',
-        '15:30',
-        verifiedSpot,
-        -50.90,
-        -0.22,
-        highlightedRows,
-        metrics,
-        'database'
-      );
-    }
-
-    const rawRows = generateBaseNiftyOptionData(liveSpot);
-    const processed = rawRows.map(r => processRawOptionRow(r));
-    const { highlightedRows, metrics } = applyConditionalHighlights(processed, liveSpot);
+  // 1. Official Verified Dataset for 2026-10-29 (NSE Derivatives Report)
+  // Direct priority matching official NSE report:
+  // - CE 22450: PREV. CLOSE 339.95, CLOSE - (unsettled until 20:30 PM), LTP 547.65
+  // - PE 22450: PREV. CLOSE 83.25, CLOSE - (unsettled until 20:30 PM), LTP 18.40
+  // - Close column shows '-' before 20:30 PM and reflects settlement close after 20:30 PM
+  // - Formula ATM Strike: 23000 (Spread: |127.20 - 146.15| = 18.95 pts <= 25)
+  if (effectiveDate === '2026-10-29') {
+    const verifiedSpot = 22936.75;
+    const sourceRows = isSettled ? VERIFIED_MARKET_CLOSE_2026_10_29_SETTLED : VERIFIED_MARKET_CLOSE_2026_10_29;
+    const { highlightedRows, metrics } = applyConditionalHighlights(sourceRows, verifiedSpot);
     return buildCloseChainResult(
-      todayYMD,
-      '15:30',
-      liveSpot,
-      liveChange,
-      liveChangePct,
+      '2026-10-29',
+      isSettled ? '20:30 Settlement' : '15:30 Close',
+      verifiedSpot,
+      237.90,
+      1.05,
       highlightedRows,
       metrics,
       'database'
     );
   }
 
-  // 2. Official Verified Historical Datasets from NSE India Reports
+  // 2. Official Verified Historical Dataset from 2026-10-28 (15:30 IST Close, Spot 22,698.85)
   if (effectiveDate === '2026-10-28') {
     const verifiedSpot = 22698.85;
     const { highlightedRows, metrics } = applyConditionalHighlights(VERIFIED_MARKET_CLOSE_2026_10_28, verifiedSpot);

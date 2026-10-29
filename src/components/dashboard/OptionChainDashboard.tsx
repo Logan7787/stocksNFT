@@ -9,7 +9,6 @@ import { SnapshotManagerModal } from '../modals/SnapshotManagerModal';
 import { NseDataRetrieveModal } from '../modals/NseDataRetrieveModal';
 import { ActiveTradeSetupCard } from './ActiveTradeSetupCard';
 import { TradeSettingsCard } from './TradeSettingsCard';
-import { NiftyOptionsAnalysisPage } from '../niftyAnalysis/NiftyOptionsAnalysisPage';
 import { PreviousDayClosePage } from './PreviousDayClosePage';
 import { 
   niftyMarketService 
@@ -42,18 +41,18 @@ import { useMemo } from 'react';
 export const OptionChainDashboard: React.FC = () => {
   // Option Chain State
   const [rows, setRows] = useState<ProcessedOptionRow[]>([]);
-  const [spotPrice, setSpotPrice] = useState<number>(22620.45);
-  const [spotChange, setSpotChange] = useState<number>(40.45);
-  const [spotChangePercent, setSpotChangePercent] = useState<number>(0.18);
+  const [spotPrice, setSpotPrice] = useState<number>(22936.75);
+  const [spotChange, setSpotChange] = useState<number>(237.90);
+  const [spotChangePercent, setSpotChangePercent] = useState<number>(1.05);
   const [metrics, setMetrics] = useState<MarketMetrics>({
-    spotPrice: 22620.45,
-    spotChange: 40.45,
-    spotChangePercent: 0.18,
-    atmStrike: 22600,
+    spotPrice: 22936.75,
+    spotChange: 237.90,
+    spotChangePercent: 1.05,
+    atmStrike: 22950,
     totalCallVolume: 0,
     totalPutVolume: 0,
     pcrVolume: 1,
-    maxPainStrike: 22600,
+    maxPainStrike: 22800,
     minAvgValue: 0,
     minCallPremiumValue: 0,
     minPutPremiumValue: 0,
@@ -98,7 +97,7 @@ export const OptionChainDashboard: React.FC = () => {
   const [currentRoute, setCurrentRoute] = useState<string>(() => {
     const p = window.location.pathname;
     const h = window.location.hash.replace('#', '');
-    if (p === '/nifty-options' || h === '/nifty-options' || h === 'nifty-options') return '/nifty-options';
+    
     if (p === '/previous-close' || h === '/previous-close' || h === 'previous-close') return '/previous-close';
     return '/';
   });
@@ -107,9 +106,7 @@ export const OptionChainDashboard: React.FC = () => {
     const handlePopState = () => {
       const p = window.location.pathname;
       const h = window.location.hash.replace('#', '');
-      if (p === '/nifty-options' || h === '/nifty-options' || h === 'nifty-options') {
-        setCurrentRoute('/nifty-options');
-      } else if (p === '/previous-close' || h === '/previous-close' || h === 'previous-close') {
+      if (p === '/previous-close' || h === '/previous-close' || h === 'previous-close') {
         setCurrentRoute('/previous-close');
       } else {
         setCurrentRoute('/');
@@ -432,12 +429,7 @@ export const OptionChainDashboard: React.FC = () => {
         onNavigate={handleNavigate}
       />
 
-      {/* When on NIFTY Options Analysis page */}
-      {currentRoute === '/nifty-options' ? (
-        <main className="flex-1">
-          <NiftyOptionsAnalysisPage />
-        </main>
-      ) : currentRoute === '/previous-close' ? (
+      {currentRoute === '/previous-close' ? (
         <main className="flex-1">
           <PreviousDayClosePage
             onOpenSettings={() => setIsSettingsOpen(true)}

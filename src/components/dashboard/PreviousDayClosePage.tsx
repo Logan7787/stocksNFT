@@ -33,6 +33,7 @@ import {
   saveCloseSnapshotRecord,
   formatDateYMD,
   getISTNow,
+  isPost830PMSettlementTime,
   ForcedMarketMode,
   PreviousCloseChainResult,
   MarketCloseStatusInfo 
@@ -64,7 +65,12 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
 }) => {
   // Mode: Auto (detects IST market hours) vs Simulation
   const [forcedMode, setForcedMode] = useState<ForcedMarketMode>('auto');
-  const [sessionView, setSessionView] = useState<'previous_day' | 'today_close'>('previous_day');
+  const [sessionView, setSessionView] = useState<'previous_day' | 'today_close'>(() => {
+    const ist = getISTNow();
+    const isPostClose = (ist.getHours() > 15) || (ist.getHours() === 15 && ist.getMinutes() >= 30);
+    return isPostClose ? 'today_close' : 'previous_day';
+  });
+  const [settlementMode, setSettlementMode] = useState<'auto' | 'pending' | 'settled'>('auto');
   const [customDate, setCustomDate] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [dataResult, setDataResult] = useState<PreviousCloseChainResult | null>(null);
@@ -112,8 +118,8 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
 
   const loadData = useCallback((forceRefresh = false) => {
     const isToday = statusInfo.effectiveCloseDate === formatDateYMD(getISTNow());
-    const effectiveSpot = isToday ? (referenceSpotPrice || 22698.85) : 22749.75;
-    const modeKey = `${statusInfo.effectiveCloseDate}_${forcedMode}_${customDate}_${sessionView}`;
+    const effectiveSpot = isToday ? (referenceSpotPrice || 22936.75) : 22698.85;
+    const modeKey = `${statusInfo.effectiveCloseDate}_${forcedMode}_${customDate}_${sessionView}_${settlementMode}`;
 
     if (forceRefresh) {
       loadedKeyRef.current = modeKey;
@@ -133,6 +139,7 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
       todaySpotChange: spotChange,
       todaySpotChangePercent: spotChangePercent,
       todayMetrics: currentMetrics,
+      settlementOverride: settlementMode,
     })
       .then((res) => {
         setDataResult(res);
@@ -147,6 +154,7 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
     forcedMode, 
     customDate,
     sessionView,
+    settlementMode,
     referenceSpotPrice, 
     currentRows, 
     spotChange, 
@@ -577,6 +585,47 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
                 }`}
               >
                 Test: Market Closed
+              </button>
+            </div>
+
+            {/* 20:30 IST Settlement Toggle */}
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-900/90 border border-slate-300 dark:border-slate-800 p-1 rounded-xl">
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 px-2 uppercase font-bold flex items-center gap-1">
+                <Scale className="w-3 h-3 text-purple-500" />
+                Settlement (20:30 IST):
+              </span>
+              <button
+                onClick={() => setSettlementMode('auto')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  settlementMode === 'auto'
+                    ? 'bg-purple-500 text-slate-950 font-black shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white'
+                }`}
+                title={`Auto-detect based on current IST clock (${isPost830PMSettlementTime() ? 'Post-8:30 PM Settled' : 'Pre-Settlement until 20:30 IST'})`}
+              >
+                Auto {isPost830PMSettlementTime() ? '(Settled)' : '(Pending 20:30)'}
+              </button>
+              <button
+                onClick={() => setSettlementMode('pending')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  settlementMode === 'pending'
+                    ? 'bg-amber-400 text-slate-950 font-black shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white'
+                }`}
+                title="Simulate Before 20:30 PM (Close column shows '-')"
+              >
+                Pre-8:30 PM (Close: -)
+              </button>
+              <button
+                onClick={() => setSettlementMode('settled')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  settlementMode === 'settled'
+                    ? 'bg-emerald-500 text-slate-950 font-black shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white'
+                }`}
+                title="Simulate Post 8:30 PM Final NSE Settlement (Close column populated)"
+              >
+                Post-8:30 PM Settled
               </button>
             </div>
           </div>

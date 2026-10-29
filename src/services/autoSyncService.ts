@@ -16,6 +16,10 @@ import {
 } from '../utils/formulas';
 import { fetchNseLiveOptionChain, parseNseDerivativesReport } from './nseService';
 import { 
+  RAW_MARKET_CLOSE_2026_10_29,
+  VERIFIED_MARKET_CLOSE_2026_10_29,
+  RAW_MARKET_CLOSE_2026_10_29_SETTLED,
+  VERIFIED_MARKET_CLOSE_2026_10_29_SETTLED,
   RAW_MARKET_CLOSE_2026_10_28,
   RAW_MARKET_CLOSE_2026_10_27,
   RAW_MARKET_CLOSE_2026_10_26, 
@@ -201,7 +205,12 @@ class AutoSyncService {
       let finalRows: ProcessedOptionRow[] = [];
 
       // 0. Check if target date matches official verified report
-      if (effectiveDate === '2026-10-28') {
+      if (effectiveDate === '2026-10-29') {
+        closingSpot = 22936.75;
+        spotChange = 237.90;
+        spotChangePct = 1.05;
+        finalRows = (syncType === 'evening_settlement_2030' ? VERIFIED_MARKET_CLOSE_2026_10_29_SETTLED : VERIFIED_MARKET_CLOSE_2026_10_29);
+      } else if (effectiveDate === '2026-10-28') {
         closingSpot = 22698.85;
         spotChange = -50.90;
         spotChangePct = -0.22;

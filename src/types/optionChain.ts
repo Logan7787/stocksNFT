@@ -32,6 +32,7 @@ export interface ProcessedOptionRow {
   call_avg: number;     // (Call Close + Put Close) / 2
   call_close: number;
   call_prev_close?: number;
+  call_settlement_close?: number;
   call_ltp: number;
   call_low: number;
   call_high: number;
@@ -41,6 +42,7 @@ export interface ProcessedOptionRow {
   put_ltp: number;
   put_close: number;
   put_prev_close?: number;
+  put_settlement_close?: number;
   put_avg: number;      // (Call Close + Put Close) / 2
   put_premium: number;  // (Put Low + Call High) / 2
   put_volume: number;

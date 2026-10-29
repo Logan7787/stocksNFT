@@ -1,6 +1,6 @@
 import type { RawOptionData, ProcessedOptionRow, MarketMetrics, BrokerApiConfig, BrokerStatus } from '../types/optionChain';
 import { generateBaseNiftyOptionData, processRawOptionRow, applyConditionalHighlights, round2 } from '../utils/formulas';
-import { RAW_MARKET_CLOSE_2026_10_28 } from '../data/verifiedMarketData';
+import { RAW_MARKET_CLOSE_2026_10_28, RAW_MARKET_CLOSE_2026_10_29 } from '../data/verifiedMarketData';
 import { angelOneService } from './angelOneService';
 
 export type TickListener = (data: {
@@ -64,8 +64,8 @@ export function generateFallbackExpiryDates(symbol: string = 'NIFTY'): string[] 
 }
 
 class NiftyMarketDataService {
-  private spotPrice: number = 22698.85;
-  private previousClose: number = 22749.75;
+  private spotPrice: number = 22936.75;
+  private previousClose: number = 22698.85;
   private openSpotPrice: number = 22720.00;
   private rawData: RawOptionData[] = [];
   private processedRows: ProcessedOptionRow[] = [];
@@ -111,8 +111,10 @@ class NiftyMarketDataService {
   }
 
   private initData() {
-    // Use official verified 28-10-2026 dataset if spot matches or default
-    if (Math.abs(this.spotPrice - 22698.85) < 150) {
+    // Use official verified 29-10-2026 dataset if spot matches or default
+    if (Math.abs(this.spotPrice - 22936.75) < 150) {
+      this.rawData = [...RAW_MARKET_CLOSE_2026_10_29];
+    } else if (Math.abs(this.spotPrice - 22698.85) < 150) {
       this.rawData = [...RAW_MARKET_CLOSE_2026_10_28];
     } else {
       this.rawData = generateBaseNiftyOptionData(this.spotPrice);
@@ -633,7 +635,7 @@ class NiftyMarketDataService {
         let parsedErr: any = null;
         try {
           parsedErr = JSON.parse(errorText);
-        } catch {}
+        } catch { }
 
         if (response.status === 401) {
           this.updateBrokerStatus({

@@ -13,14 +13,14 @@ interface OptionChainDesktopTableProps {
 }
 
 // Memoized single row component to ensure zero-lag rendering
-const OptionRowItem = memo(({ 
-  row, 
-  spotPrice, 
+const OptionRowItem = memo(({
+  row,
+  spotPrice,
   fontSize = 'large',
   isPrintHidden = false,
   showPreviousCloseColumn = false,
-}: { 
-  row: ProcessedOptionRow; 
+}: {
+  row: ProcessedOptionRow;
   spotPrice: number;
   fontSize?: TableFontSize;
   isPrintHidden?: boolean;
@@ -61,13 +61,12 @@ const OptionRowItem = memo(({
 
       {/* 1. CALL VOLUME */}
       <td
-        className={`${sizeConfig.cell} text-right font-medium transition-all ${
-          row.isTopCallVolume
+        className={`${sizeConfig.cell} text-right font-medium transition-all ${row.isTopCallVolume
             ? 'bg-[#fde047] text-slate-950 font-black shadow-inner'
             : isCallITM
-            ? 'bg-emerald-50/80 dark:bg-emerald-950/20 text-slate-900 dark:text-slate-200'
-            : 'text-slate-700 dark:text-slate-300'
-        }`}
+              ? 'bg-emerald-50/80 dark:bg-emerald-950/20 text-slate-900 dark:text-slate-200'
+              : 'text-slate-700 dark:text-slate-300'
+          }`}
         title={`Call Volume: ${row.call_volume.toLocaleString('en-IN')} ${row.isTopCallVolume ? '(Top 2 Highest CE Volume)' : ''}`}
       >
         <span className="flex items-center justify-end gap-1">
@@ -82,13 +81,12 @@ const OptionRowItem = memo(({
 
       {/* 2. CALL PREMIUM: (Call Low + Put High) / 2 */}
       <td
-        className={`${sizeConfig.cell} text-right transition-all ${
-          row.isMinCallPremium
+        className={`${sizeConfig.cell} text-right transition-all ${row.isMinCallPremium
             ? 'bg-[#7dd3fc] text-slate-950 font-black shadow-inner ring-1 ring-sky-500'
             : isCallITM
-            ? 'bg-emerald-50/90 dark:bg-emerald-950/25 text-sky-700 dark:text-sky-300 font-semibold'
-            : 'text-sky-600 dark:text-sky-400 font-medium'
-        }`}
+              ? 'bg-emerald-50/90 dark:bg-emerald-950/25 text-sky-700 dark:text-sky-300 font-semibold'
+              : 'text-sky-600 dark:text-sky-400 font-medium'
+          }`}
         title={`Call Premium = (${row.call_low.toFixed(2)} + ${row.put_high.toFixed(2)}) / 2 = ${row.call_premium.toFixed(2)} ${row.isMinCallPremium ? '(Lowest CE Premium)' : ''}`}
       >
         <div className="flex items-center justify-end gap-1">
@@ -103,13 +101,12 @@ const OptionRowItem = memo(({
 
       {/* 3. CALL AVG: (Call Close + Put Close) / 2 */}
       <td
-        className={`${sizeConfig.cell} text-right transition-all ${
-          row.isMinAvg
+        className={`${sizeConfig.cell} text-right transition-all ${row.isMinAvg
             ? 'bg-[#86efac] text-slate-950 font-black shadow-inner ring-1 ring-emerald-500'
             : isCallITM
-            ? 'bg-emerald-50/80 dark:bg-emerald-950/20 text-emerald-800 dark:text-emerald-300 font-semibold'
-            : 'text-emerald-700 dark:text-emerald-400 font-medium'
-        }`}
+              ? 'bg-emerald-50/80 dark:bg-emerald-950/20 text-emerald-800 dark:text-emerald-300 font-semibold'
+              : 'text-emerald-700 dark:text-emerald-400 font-medium'
+          }`}
         title={`AVG Price = (${row.call_close.toFixed(2)} + ${row.put_close.toFixed(2)}) / 2 = ${row.call_avg.toFixed(2)} ${row.isMinAvg ? '(Lowest AVG across table)' : ''}`}
       >
         <div className="flex items-center justify-end gap-1">
@@ -125,11 +122,10 @@ const OptionRowItem = memo(({
       {/* 3B. CALL PREVIOUS CLOSE (Only for Previous Day Market Close Data view) */}
       {showPreviousCloseColumn && (
         <td
-          className={`${sizeConfig.cell} text-right font-semibold transition-colors ${
-            isCallITM
+          className={`${sizeConfig.cell} text-right font-semibold transition-colors ${isCallITM
               ? 'bg-slate-100/90 dark:bg-slate-900/50 text-slate-700 dark:text-slate-300'
               : 'text-slate-600 dark:text-slate-400'
-          }`}
+            }`}
           title={`Call Previous Day Close: ${(row.call_prev_close !== undefined ? row.call_prev_close : row.call_close).toFixed(2)}`}
         >
           <span>{(row.call_prev_close !== undefined ? row.call_prev_close : row.call_close).toFixed(2)}</span>
@@ -138,31 +134,33 @@ const OptionRowItem = memo(({
 
       {/* 4. CALL CLOSE (Official Settlement Close after 20:30 PM NSE) */}
       <td
-        className={`${sizeConfig.cell} text-right font-bold transition-colors ${
-          row.callTickDirection === 'up'
+        className={`${sizeConfig.cell} text-right font-bold transition-colors ${row.callTickDirection === 'up'
             ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/30 dark:text-emerald-300'
             : row.callTickDirection === 'down'
-            ? 'bg-rose-100 text-rose-800 dark:bg-rose-500/30 dark:text-rose-300'
-            : isCallITM
-            ? 'bg-emerald-100/70 dark:bg-emerald-950/30 text-emerald-950 dark:text-white font-extrabold'
-            : 'text-slate-900 dark:text-slate-100'
-        }`}
+              ? 'bg-rose-100 text-rose-800 dark:bg-rose-500/30 dark:text-rose-300'
+              : isCallITM
+                ? 'bg-emerald-100/70 dark:bg-emerald-950/30 text-emerald-950 dark:text-white font-extrabold'
+                : 'text-slate-900 dark:text-slate-100'
+          }`}
         title={
           showPreviousCloseColumn
-            ? `Call Official Settlement Close (Derived after 20:30 PM from NSE): ${row.call_close.toFixed(2)}`
+            ? `Call Official Settlement Close (Derived after 20:30 PM from NSE): ${(row.call_settlement_close && row.call_settlement_close > 0) ? row.call_settlement_close.toFixed(2) : 'Pending 20:30 PM Settlement'}`
             : `Call Close: ${row.call_close.toFixed(2)} | Low: ${row.call_low.toFixed(2)} | High: ${row.call_high.toFixed(2)}`
         }
       >
-        <span>{row.call_close.toFixed(2)}</span>
+        <span>
+          {showPreviousCloseColumn
+            ? (row.call_settlement_close && row.call_settlement_close > 0 ? row.call_settlement_close.toFixed(2) : '-')
+            : ((row.call_close && row.call_close > 0) ? row.call_close.toFixed(2) : ((row.call_ltp && row.call_ltp > 0) ? row.call_ltp.toFixed(2) : '-'))}
+        </span>
       </td>
 
       {/* 5. CALL LTP */}
       <td
-        className={`${sizeConfig.cell} text-right font-black transition-colors ${
-          isCallITM
+        className={`${sizeConfig.cell} text-right font-black transition-colors ${isCallITM
             ? 'bg-cyan-50/80 dark:bg-cyan-950/25 text-cyan-950 dark:text-cyan-200 font-extrabold'
             : 'text-cyan-900 dark:text-cyan-300 font-bold'
-        }`}
+          }`}
         title={`Call LTP (Last Traded Price): ${((row.call_ltp && row.call_ltp > 0) ? row.call_ltp : row.call_close).toFixed(2)}`}
       >
         <span>{((row.call_ltp && row.call_ltp > 0) ? row.call_ltp : row.call_close).toFixed(2)}</span>
@@ -172,17 +170,16 @@ const OptionRowItem = memo(({
       {/* CENTER SECTION: STRIKE PRICE (Orange ATM Highlight)            */}
       {/* ============================================================== */}
       <td
-        className={`${sizeConfig.cell} text-center font-black transition-all border-x-2 border-slate-300 dark:border-slate-700/80 ${
-          row.isATM
+        className={`${sizeConfig.cell} text-center font-black transition-all border-x-2 border-slate-300 dark:border-slate-700/80 ${row.isATM
             ? 'bg-[#f97316] text-white shadow-lg shadow-orange-500/40 scale-105 z-10 ring-2 ring-orange-400'
             : row.isFormulaAtm
-            ? 'bg-amber-400 dark:bg-amber-500 text-slate-950 shadow-md ring-2 ring-amber-400 font-black'
-            : row.breakLevelRole === 'ATM_MINUS_100'
-            ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 ring-1 ring-emerald-500/60'
-            : row.breakLevelRole === 'ATM_PLUS_100'
-            ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 ring-1 ring-rose-500/60'
-            : 'bg-slate-100 dark:bg-slate-900/95 text-slate-900 dark:text-slate-200'
-        }`}
+              ? 'bg-amber-400 dark:bg-amber-500 text-slate-950 shadow-md ring-2 ring-amber-400 font-black'
+              : row.breakLevelRole === 'ATM_MINUS_100'
+                ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 ring-1 ring-emerald-500/60'
+                : row.breakLevelRole === 'ATM_PLUS_100'
+                  ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 ring-1 ring-rose-500/60'
+                  : 'bg-slate-100 dark:bg-slate-900/95 text-slate-900 dark:text-slate-200'
+          }`}
       >
         <div className="flex flex-col items-center justify-center gap-0.5">
           <div className="flex items-center justify-center gap-1.5">
@@ -216,10 +213,10 @@ const OptionRowItem = memo(({
           row.ceSignal && row.peSignal
             ? 'Dual Breakout: Both CE and PE breakout conditions triggered!'
             : row.ceSignal
-            ? `Bullish Breakout: Call Close (${row.call_close.toFixed(2)}) > AVG (${row.call_avg.toFixed(2)}) & > Premium (${row.call_premium.toFixed(2)})`
-            : row.peSignal
-            ? `Bearish Breakout: Put Close (${row.put_close.toFixed(2)}) > AVG (${row.put_avg.toFixed(2)}) & > Premium (${row.put_premium.toFixed(2)})`
-            : 'No signal: Waiting for breakout condition (Close > AVG & Close > Premium)'
+              ? `Bullish Breakout: Call Close (${row.call_close.toFixed(2)}) > AVG (${row.call_avg.toFixed(2)}) & > Premium (${row.call_premium.toFixed(2)})`
+              : row.peSignal
+                ? `Bearish Breakout: Put Close (${row.put_close.toFixed(2)}) > AVG (${row.put_avg.toFixed(2)}) & > Premium (${row.put_premium.toFixed(2)})`
+                : 'No signal: Waiting for breakout condition (Close > AVG & Close > Premium)'
         }
       >
         <div className="flex items-center justify-center gap-1.5 flex-wrap">
@@ -247,11 +244,10 @@ const OptionRowItem = memo(({
 
       {/* 1. PUT LTP */}
       <td
-        className={`${sizeConfig.cell} text-left font-black transition-colors ${
-          isPutITM
+        className={`${sizeConfig.cell} text-left font-black transition-colors ${isPutITM
             ? 'bg-cyan-50/80 dark:bg-cyan-950/25 text-cyan-950 dark:text-cyan-200 font-extrabold'
             : 'text-cyan-900 dark:text-cyan-300 font-bold'
-        }`}
+          }`}
         title={`Put LTP (Last Traded Price): ${((row.put_ltp && row.put_ltp > 0) ? row.put_ltp : row.put_close).toFixed(2)}`}
       >
         <span>{((row.put_ltp && row.put_ltp > 0) ? row.put_ltp : row.put_close).toFixed(2)}</span>
@@ -259,32 +255,34 @@ const OptionRowItem = memo(({
 
       {/* 2. PUT CLOSE (Official Settlement Close after 20:30 PM NSE) */}
       <td
-        className={`${sizeConfig.cell} text-left font-bold transition-colors ${
-          row.putTickDirection === 'up'
+        className={`${sizeConfig.cell} text-left font-bold transition-colors ${row.putTickDirection === 'up'
             ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/30 dark:text-emerald-300'
             : row.putTickDirection === 'down'
-            ? 'bg-rose-100 text-rose-800 dark:bg-rose-500/30 dark:text-rose-300'
-            : isPutITM
-            ? 'bg-rose-100/70 dark:bg-rose-950/30 text-rose-950 dark:text-white font-extrabold'
-            : 'text-slate-900 dark:text-slate-100'
-        }`}
+              ? 'bg-rose-100 text-rose-800 dark:bg-rose-500/30 dark:text-rose-300'
+              : isPutITM
+                ? 'bg-rose-100/70 dark:bg-rose-950/30 text-rose-950 dark:text-white font-extrabold'
+                : 'text-slate-900 dark:text-slate-100'
+          }`}
         title={
           showPreviousCloseColumn
-            ? `Put Official Settlement Close (Derived after 20:30 PM from NSE): ${row.put_close.toFixed(2)}`
+            ? `Put Official Settlement Close (Derived after 20:30 PM from NSE): ${(row.put_settlement_close && row.put_settlement_close > 0) ? row.put_settlement_close.toFixed(2) : 'Pending 20:30 PM Settlement'}`
             : `Put Close: ${row.put_close.toFixed(2)} | Low: ${row.put_low.toFixed(2)} | High: ${row.put_high.toFixed(2)}`
         }
       >
-        <span>{row.put_close.toFixed(2)}</span>
+        <span>
+          {showPreviousCloseColumn
+            ? (row.put_settlement_close && row.put_settlement_close > 0 ? row.put_settlement_close.toFixed(2) : '-')
+            : ((row.put_close && row.put_close > 0) ? row.put_close.toFixed(2) : ((row.put_ltp && row.put_ltp > 0) ? row.put_ltp.toFixed(2) : '-'))}
+        </span>
       </td>
 
       {/* 2B. PUT PREVIOUS CLOSE (Only for Previous Day Market Close Data view) */}
       {showPreviousCloseColumn && (
         <td
-          className={`${sizeConfig.cell} text-left font-semibold transition-colors ${
-            isPutITM
+          className={`${sizeConfig.cell} text-left font-semibold transition-colors ${isPutITM
               ? 'bg-slate-100/90 dark:bg-slate-900/50 text-slate-700 dark:text-slate-300'
               : 'text-slate-600 dark:text-slate-400'
-          }`}
+            }`}
           title={`Put Previous Day Close: ${(row.put_prev_close !== undefined ? row.put_prev_close : row.put_close).toFixed(2)}`}
         >
           <span>{(row.put_prev_close !== undefined ? row.put_prev_close : row.put_close).toFixed(2)}</span>
@@ -293,13 +291,12 @@ const OptionRowItem = memo(({
 
       {/* 6. PUT AVG: (Call Close + Put Close) / 2 */}
       <td
-        className={`${sizeConfig.cell} text-left transition-all ${
-          row.isMinAvg
+        className={`${sizeConfig.cell} text-left transition-all ${row.isMinAvg
             ? 'bg-[#86efac] text-slate-950 font-black shadow-inner ring-1 ring-emerald-500'
             : isPutITM
-            ? 'bg-rose-50/80 dark:bg-rose-950/20 text-emerald-800 dark:text-emerald-300 font-semibold'
-            : 'text-emerald-700 dark:text-emerald-400 font-medium'
-        }`}
+              ? 'bg-rose-50/80 dark:bg-rose-950/20 text-emerald-800 dark:text-emerald-300 font-semibold'
+              : 'text-emerald-700 dark:text-emerald-400 font-medium'
+          }`}
         title={`AVG Price = (${row.call_close.toFixed(2)} + ${row.put_close.toFixed(2)}) / 2 = ${row.put_avg.toFixed(2)} ${row.isMinAvg ? '(Lowest AVG across table)' : ''}`}
       >
         <div className="flex items-center justify-start gap-1">
@@ -314,13 +311,12 @@ const OptionRowItem = memo(({
 
       {/* 7. PUT PREMIUM: (Put Low + Call High) / 2 */}
       <td
-        className={`${sizeConfig.cell} text-left transition-all ${
-          row.isMinPutPremium
+        className={`${sizeConfig.cell} text-left transition-all ${row.isMinPutPremium
             ? 'bg-[#7dd3fc] text-slate-950 font-black shadow-inner ring-1 ring-sky-500'
             : isPutITM
-            ? 'bg-rose-50/90 dark:bg-rose-950/25 text-sky-700 dark:text-sky-300 font-semibold'
-            : 'text-sky-600 dark:text-sky-400 font-medium'
-        }`}
+              ? 'bg-rose-50/90 dark:bg-rose-950/25 text-sky-700 dark:text-sky-300 font-semibold'
+              : 'text-sky-600 dark:text-sky-400 font-medium'
+          }`}
         title={`Put Premium = (${row.put_low.toFixed(2)} + ${row.call_high.toFixed(2)}) / 2 = ${row.put_premium.toFixed(2)} ${row.isMinPutPremium ? '(Lowest PE Premium)' : ''}`}
       >
         <div className="flex items-center justify-start gap-1">
@@ -335,13 +331,12 @@ const OptionRowItem = memo(({
 
       {/* 8. PUT VOLUME */}
       <td
-        className={`${sizeConfig.cell} text-left font-medium transition-all ${
-          row.isTopPutVolume
+        className={`${sizeConfig.cell} text-left font-medium transition-all ${row.isTopPutVolume
             ? 'bg-[#fde047] text-slate-950 font-black shadow-inner'
             : isPutITM
-            ? 'bg-rose-50/80 dark:bg-rose-950/20 text-slate-900 dark:text-slate-200'
-            : 'text-slate-700 dark:text-slate-300'
-        }`}
+              ? 'bg-rose-50/80 dark:bg-rose-950/20 text-slate-900 dark:text-slate-200'
+              : 'text-slate-700 dark:text-slate-300'
+          }`}
         title={`Put Volume: ${row.put_volume.toLocaleString('en-IN')} ${row.isTopPutVolume ? '(Top 2 Highest PE Volume)' : ''}`}
       >
         <span className="flex items-center justify-start gap-1">
@@ -359,9 +354,9 @@ const OptionRowItem = memo(({
 
 OptionRowItem.displayName = 'OptionRowItem';
 
-export const OptionChainDesktopTable: React.FC<OptionChainDesktopTableProps> = ({ 
-  rows, 
-  spotPrice, 
+export const OptionChainDesktopTable: React.FC<OptionChainDesktopTableProps> = ({
+  rows,
+  spotPrice,
   fontSize = 'large',
   atmStrike,
   printAtmRangeOnly = true,

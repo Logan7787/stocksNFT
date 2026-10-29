@@ -110,7 +110,11 @@ export const OptionChainMobileTable: React.FC<OptionChainMobileTableProps> = ({
                       {(row.call_prev_close !== undefined ? row.call_prev_close : row.call_close).toFixed(2)}
                     </td>
                   )}
-                  <td className="py-2 px-3 text-right text-slate-900 dark:text-white font-bold">{row.call_close.toFixed(2)}</td>
+                  <td className="py-2 px-3 text-right text-slate-900 dark:text-white font-bold">
+                    {showPreviousCloseColumn
+                      ? (row.call_settlement_close && row.call_settlement_close > 0 ? row.call_settlement_close.toFixed(2) : '-')
+                      : ((row.call_close && row.call_close > 0) ? row.call_close.toFixed(2) : ((row.call_ltp && row.call_ltp > 0) ? row.call_ltp.toFixed(2) : '-'))}
+                  </td>
                   <td className="py-2 px-3 text-right text-cyan-900 dark:text-cyan-300 font-black">{((row.call_ltp && row.call_ltp > 0) ? row.call_ltp : row.call_close).toFixed(2)}</td>
                   <td
                     className={`py-2 px-3 text-right ${
@@ -183,7 +187,11 @@ export const OptionChainMobileTable: React.FC<OptionChainMobileTableProps> = ({
                     )}
                   </td>
                   <td className="py-2 px-3 text-right text-cyan-900 dark:text-cyan-300 font-black">{((row.put_ltp && row.put_ltp > 0) ? row.put_ltp : row.put_close).toFixed(2)}</td>
-                  <td className="py-2 px-3 text-right text-slate-900 dark:text-white font-bold">{row.put_close.toFixed(2)}</td>
+                  <td className="py-2 px-3 text-right text-slate-900 dark:text-white font-bold">
+                    {showPreviousCloseColumn
+                      ? (row.put_settlement_close && row.put_settlement_close > 0 ? row.put_settlement_close.toFixed(2) : '-')
+                      : ((row.put_close && row.put_close > 0) ? row.put_close.toFixed(2) : ((row.put_ltp && row.put_ltp > 0) ? row.put_ltp.toFixed(2) : '-'))}
+                  </td>
                   {showPreviousCloseColumn && (
                     <td className="py-2 px-3 text-right text-slate-600 dark:text-slate-400 font-medium">
                       {(row.put_prev_close !== undefined ? row.put_prev_close : row.put_close).toFixed(2)}
@@ -277,7 +285,11 @@ export const OptionChainMobileTable: React.FC<OptionChainMobileTableProps> = ({
                       {(row.call_prev_close !== undefined ? row.call_prev_close : row.call_close).toFixed(2)}
                     </td>
                   )}
-                  <td className="py-1.5 px-2 text-right text-slate-900 dark:text-white font-bold">{row.call_close.toFixed(2)}</td>
+                  <td className="py-1.5 px-2 text-right text-slate-900 dark:text-white font-bold">
+                    {showPreviousCloseColumn
+                      ? (row.call_settlement_close && row.call_settlement_close > 0 ? row.call_settlement_close.toFixed(2) : '-')
+                      : ((row.call_close && row.call_close > 0) ? row.call_close.toFixed(2) : ((row.call_ltp && row.call_ltp > 0) ? row.call_ltp.toFixed(2) : '-'))}
+                  </td>
                   <td className="py-1.5 px-2 text-right text-cyan-900 dark:text-cyan-300 font-bold">{((row.call_ltp && row.call_ltp > 0) ? row.call_ltp : row.call_close).toFixed(2)}</td>
 
                   {/* Sticky Center Strike */}
@@ -309,7 +321,11 @@ export const OptionChainMobileTable: React.FC<OptionChainMobileTableProps> = ({
                   </td>
 
                   <td className="py-1.5 px-2 text-left text-cyan-900 dark:text-cyan-300 font-bold">{((row.put_ltp && row.put_ltp > 0) ? row.put_ltp : row.put_close).toFixed(2)}</td>
-                  <td className="py-1.5 px-2 text-left text-slate-900 dark:text-white font-bold">{row.put_close.toFixed(2)}</td>
+                  <td className="py-1.5 px-2 text-left text-slate-900 dark:text-white font-bold">
+                    {showPreviousCloseColumn
+                      ? (row.put_settlement_close && row.put_settlement_close > 0 ? row.put_settlement_close.toFixed(2) : '-')
+                      : ((row.put_close && row.put_close > 0) ? row.put_close.toFixed(2) : ((row.put_ltp && row.put_ltp > 0) ? row.put_ltp.toFixed(2) : '-'))}
+                  </td>
                   {showPreviousCloseColumn && (
                     <td className="py-1.5 px-2 text-left text-slate-500 dark:text-slate-400 font-medium">
                       {(row.put_prev_close !== undefined ? row.put_prev_close : row.put_close).toFixed(2)}
