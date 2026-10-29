@@ -6,6 +6,7 @@ interface OptionChainMobileTableProps {
   spotPrice: number;
   metrics: MarketMetrics;
   showPreviousCloseColumn?: boolean;
+  showHighLowColumns?: boolean;
 }
 
 type MobileTab = 'CALLS' | 'PUTS' | 'COMBINED' | 'METRICS';
@@ -15,6 +16,7 @@ export const OptionChainMobileTable: React.FC<OptionChainMobileTableProps> = ({
   spotPrice,
   metrics,
   showPreviousCloseColumn = false,
+  showHighLowColumns = false,
 }) => {
   const [activeTab, setActiveTab] = useState<MobileTab>('COMBINED');
 
@@ -74,6 +76,12 @@ export const OptionChainMobileTable: React.FC<OptionChainMobileTableProps> = ({
                   STRIKE
                 </th>
                 <th className="py-2.5 px-2 text-center text-emerald-800 dark:text-emerald-400 font-bold">SIGNAL</th>
+                {showHighLowColumns && (
+                  <>
+                    <th className="py-2.5 px-3 text-right bg-emerald-100/90 text-emerald-950 font-bold dark:bg-emerald-950/70 dark:text-emerald-300">HIGH</th>
+                    <th className="py-2.5 px-3 text-right bg-rose-100/90 text-rose-950 font-bold dark:bg-rose-950/70 dark:text-rose-300">LOW</th>
+                  </>
+                )}
                 {showPreviousCloseColumn && (
                   <th className="py-2.5 px-3 text-right bg-slate-200/90 text-slate-900 font-bold dark:bg-slate-800 dark:text-slate-200" title="Previous Day Close (T-1 Settlement Close)">PREV CLOSE</th>
                 )}
@@ -105,6 +113,12 @@ export const OptionChainMobileTable: React.FC<OptionChainMobileTableProps> = ({
                       <span className="text-slate-400 text-[10px]">-</span>
                     )}
                   </td>
+                  {showHighLowColumns && (
+                    <>
+                      <td className="py-2 px-3 text-right text-emerald-700 dark:text-emerald-400 font-semibold">{row.call_high.toFixed(2)}</td>
+                      <td className="py-2 px-3 text-right text-rose-700 dark:text-rose-400 font-semibold">{row.call_low.toFixed(2)}</td>
+                    </>
+                  )}
                   {showPreviousCloseColumn && (
                     <td className="py-2 px-3 text-right text-slate-600 dark:text-slate-400 font-medium">
                       {(row.call_prev_close !== undefined ? row.call_prev_close : row.call_close).toFixed(2)}
@@ -162,6 +176,12 @@ export const OptionChainMobileTable: React.FC<OptionChainMobileTableProps> = ({
                 )}
                 <th className="py-2.5 px-3 text-right bg-emerald-100/90 text-emerald-950 font-bold dark:bg-emerald-950/70 dark:text-emerald-300">AVG</th>
                 <th className="py-2.5 px-3 text-right bg-sky-100/90 text-sky-950 font-bold dark:bg-sky-950/70 dark:text-sky-300">PREMIUM</th>
+                {showHighLowColumns && (
+                  <>
+                    <th className="py-2.5 px-3 text-right bg-rose-100/90 text-rose-950 font-bold dark:bg-rose-950/70 dark:text-rose-300">LOW</th>
+                    <th className="py-2.5 px-3 text-right bg-emerald-100/90 text-emerald-950 font-bold dark:bg-emerald-950/70 dark:text-emerald-300">HIGH</th>
+                  </>
+                )}
                 <th className="py-2.5 px-3 text-right bg-amber-100/90 text-amber-950 font-bold dark:bg-amber-950/70 dark:text-amber-300">VOLUME</th>
               </tr>
             </thead>
@@ -211,6 +231,12 @@ export const OptionChainMobileTable: React.FC<OptionChainMobileTableProps> = ({
                   >
                     {row.put_premium.toFixed(2)}
                   </td>
+                  {showHighLowColumns && (
+                    <>
+                      <td className="py-2 px-3 text-right text-rose-700 dark:text-rose-400 font-semibold">{row.put_low.toFixed(2)}</td>
+                      <td className="py-2 px-3 text-right text-emerald-700 dark:text-emerald-400 font-semibold">{row.put_high.toFixed(2)}</td>
+                    </>
+                  )}
                   <td
                     className={`py-2 px-3 text-right ${
                       row.isTopPutVolume ? 'bg-[#fde047] text-slate-950 font-bold' : 'text-slate-700 dark:text-slate-300'
@@ -233,6 +259,12 @@ export const OptionChainMobileTable: React.FC<OptionChainMobileTableProps> = ({
             <thead>
               <tr className="bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800 text-[11px]">
                 <th className="py-2 px-2 text-right text-yellow-700 dark:text-yellow-300">CE VOL</th>
+                {showHighLowColumns && (
+                  <>
+                    <th className="py-2 px-2 text-right text-emerald-700 dark:text-emerald-300">CE HIGH</th>
+                    <th className="py-2 px-2 text-right text-rose-700 dark:text-rose-300">CE LOW</th>
+                  </>
+                )}
                 <th className="py-2 px-2 text-right text-sky-700 dark:text-sky-300">CE PREM</th>
                 <th className="py-2 px-2 text-right text-emerald-700 dark:text-emerald-300">AVG</th>
                 {showPreviousCloseColumn && (
@@ -253,6 +285,12 @@ export const OptionChainMobileTable: React.FC<OptionChainMobileTableProps> = ({
                 )}
                 <th className="py-2 px-2 text-left text-emerald-700 dark:text-emerald-300">AVG</th>
                 <th className="py-2 px-2 text-left text-sky-700 dark:text-sky-300">PE PREM</th>
+                {showHighLowColumns && (
+                  <>
+                    <th className="py-2 px-2 text-left text-rose-700 dark:text-rose-300">PE LOW</th>
+                    <th className="py-2 px-2 text-left text-emerald-700 dark:text-emerald-300">PE HIGH</th>
+                  </>
+                )}
                 <th className="py-2 px-2 text-left text-yellow-700 dark:text-yellow-300">PE VOL</th>
               </tr>
             </thead>
@@ -266,6 +304,12 @@ export const OptionChainMobileTable: React.FC<OptionChainMobileTableProps> = ({
                   >
                     {row.call_volume.toLocaleString('en-IN')}
                   </td>
+                  {showHighLowColumns && (
+                    <>
+                      <td className="py-1.5 px-2 text-right text-emerald-700 dark:text-emerald-400 font-semibold">{row.call_high.toFixed(2)}</td>
+                      <td className="py-1.5 px-2 text-right text-rose-700 dark:text-rose-400 font-semibold">{row.call_low.toFixed(2)}</td>
+                    </>
+                  )}
                   <td
                     className={`py-1.5 px-2 text-right ${
                       row.isMinCallPremium ? 'bg-[#7dd3fc] text-slate-950 font-bold' : 'text-sky-700 dark:text-sky-400'
@@ -345,6 +389,12 @@ export const OptionChainMobileTable: React.FC<OptionChainMobileTableProps> = ({
                   >
                     {row.put_premium.toFixed(2)}
                   </td>
+                  {showHighLowColumns && (
+                    <>
+                      <td className="py-1.5 px-2 text-left text-rose-700 dark:text-rose-400 font-semibold">{row.put_low.toFixed(2)}</td>
+                      <td className="py-1.5 px-2 text-left text-emerald-700 dark:text-emerald-400 font-semibold">{row.put_high.toFixed(2)}</td>
+                    </>
+                  )}
                   <td
                     className={`py-1.5 px-2 text-left ${
                       row.isTopPutVolume ? 'bg-[#fde047] text-slate-950 font-bold' : 'text-slate-700 dark:text-slate-300'

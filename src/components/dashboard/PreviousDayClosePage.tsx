@@ -80,6 +80,20 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
   const [isNseRetrieveOpen, setIsNseRetrieveOpen] = useState<boolean>(false);
   const [tradeSettings] = useState<TradeSettings>(getStoredTradeSettings());
 
+  // High & Low columns toggle (default: true for previous market close data)
+  const [showHighLowCols, setShowHighLowCols] = useState<boolean>(() => {
+    const saved = localStorage.getItem('nifty_prev_close_show_high_low');
+    return saved !== null ? saved === 'true' : true;
+  });
+
+  const handleToggleHighLowCols = () => {
+    setShowHighLowCols(prev => {
+      const next = !prev;
+      localStorage.setItem('nifty_prev_close_show_high_low', String(next));
+      return next;
+    });
+  };
+
   // Font size state for table & print visibility
   const [tableFontSize, setTableFontSize] = useState<TableFontSize>(() => {
     const saved = localStorage.getItem('nifty_prev_close_font_size');
@@ -480,6 +494,24 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
                 title={`Filter screen view to ATM ±500 (${atmStrike - 500} to ${atmStrike + 500})`}
               >
                 ATM ±500
+              </button>
+            </div>
+
+            {/* High & Low Columns Toggle */}
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-900/90 border border-slate-300 dark:border-slate-800 p-1 rounded-xl">
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 px-1.5 uppercase font-bold flex items-center gap-1">
+                High/Low:
+              </span>
+              <button
+                onClick={handleToggleHighLowCols}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  showHighLowCols
+                    ? 'bg-amber-400 text-slate-950 font-black shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white'
+                }`}
+                title="Toggle High and Low price columns in the table"
+              >
+                {showHighLowCols ? 'Visible' : 'Hidden'}
               </button>
             </div>
 
@@ -1031,6 +1063,7 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
               atmStrike={atmStrike}
               printAtmRangeOnly={true}
               showPreviousCloseColumn={true}
+              showHighLowColumns={showHighLowCols}
             />
           </div>
 
@@ -1041,6 +1074,7 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
               spotPrice={dataResult.spotPrice}
               metrics={dataResult.metrics}
               showPreviousCloseColumn={true}
+              showHighLowColumns={showHighLowCols}
             />
           </div>
         </>

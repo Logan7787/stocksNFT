@@ -30,9 +30,13 @@ export function calculateAveragePrice(callClose: number, putClose: number): numb
 export function processRawOptionRow(raw: RawOptionData, prevRow?: ProcessedOptionRow): ProcessedOptionRow {
   const callPremium = calculateCallPremium(raw.call_low, raw.put_high);
   const putPremium = calculatePutPremium(raw.put_low, raw.call_high);
-  // Use settlement close if > 0, otherwise fallback to LTP so AVG is computed before settlement
-  const effectiveCallClose = (raw.call_close && raw.call_close > 0) ? raw.call_close : (raw.call_ltp || 0);
-  const effectivePutClose = (raw.put_close && raw.put_close > 0) ? raw.put_close : (raw.put_ltp || 0);
+  // Use settlement close if > 0, otherwise fallback to call_close or LTP so AVG is computed accurately
+  const effectiveCallClose = (raw.call_settlement_close && raw.call_settlement_close > 0)
+    ? raw.call_settlement_close
+    : ((raw.call_close && raw.call_close > 0) ? raw.call_close : (raw.call_ltp || 0));
+  const effectivePutClose = (raw.put_settlement_close && raw.put_settlement_close > 0)
+    ? raw.put_settlement_close
+    : ((raw.put_close && raw.put_close > 0) ? raw.put_close : (raw.put_ltp || 0));
   const avgPrice = calculateAveragePrice(effectiveCallClose, effectivePutClose);
 
   let callTickDirection: 'up' | 'down' | 'neutral' = 'neutral';

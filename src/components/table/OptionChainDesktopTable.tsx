@@ -10,6 +10,7 @@ interface OptionChainDesktopTableProps {
   atmStrike?: number;
   printAtmRangeOnly?: boolean;
   showPreviousCloseColumn?: boolean;
+  showHighLowColumns?: boolean;
 }
 
 // Memoized single row component to ensure zero-lag rendering
@@ -19,12 +20,14 @@ const OptionRowItem = memo(({
   fontSize = 'large',
   isPrintHidden = false,
   showPreviousCloseColumn = false,
+  showHighLowColumns = false,
 }: {
   row: ProcessedOptionRow;
   spotPrice: number;
   fontSize?: TableFontSize;
   isPrintHidden?: boolean;
   showPreviousCloseColumn?: boolean;
+  showHighLowColumns?: boolean;
 }) => {
   const isCallITM = row.strike < spotPrice;
   const isPutITM = row.strike > spotPrice;
@@ -78,6 +81,34 @@ const OptionRowItem = memo(({
           <span>{row.call_volume.toLocaleString('en-IN')}</span>
         </span>
       </td>
+
+      {/* 1B. CALL HIGH (When showHighLowColumns is enabled) */}
+      {showHighLowColumns && (
+        <td
+          className={`${sizeConfig.cell} text-right font-semibold transition-colors ${
+            isCallITM
+              ? 'bg-emerald-50/70 dark:bg-emerald-950/20 text-emerald-900 dark:text-emerald-300'
+              : 'text-emerald-700 dark:text-emerald-400'
+          }`}
+          title={`Call Day High: ${row.call_high.toFixed(2)}`}
+        >
+          <span>{row.call_high.toFixed(2)}</span>
+        </td>
+      )}
+
+      {/* 1C. CALL LOW (When showHighLowColumns is enabled) */}
+      {showHighLowColumns && (
+        <td
+          className={`${sizeConfig.cell} text-right font-semibold transition-colors ${
+            isCallITM
+              ? 'bg-rose-50/70 dark:bg-rose-950/20 text-rose-900 dark:text-rose-300'
+              : 'text-rose-700 dark:text-rose-400'
+          }`}
+          title={`Call Day Low: ${row.call_low.toFixed(2)}`}
+        >
+          <span>{row.call_low.toFixed(2)}</span>
+        </td>
+      )}
 
       {/* 2. CALL PREMIUM: (Call Low + Put High) / 2 */}
       <td
@@ -329,6 +360,34 @@ const OptionRowItem = memo(({
         </div>
       </td>
 
+      {/* 7B. PUT LOW (When showHighLowColumns is enabled) */}
+      {showHighLowColumns && (
+        <td
+          className={`${sizeConfig.cell} text-left font-semibold transition-colors ${
+            isPutITM
+              ? 'bg-rose-50/70 dark:bg-rose-950/20 text-rose-900 dark:text-rose-300'
+              : 'text-rose-700 dark:text-rose-400'
+          }`}
+          title={`Put Day Low: ${row.put_low.toFixed(2)}`}
+        >
+          <span>{row.put_low.toFixed(2)}</span>
+        </td>
+      )}
+
+      {/* 7C. PUT HIGH (When showHighLowColumns is enabled) */}
+      {showHighLowColumns && (
+        <td
+          className={`${sizeConfig.cell} text-left font-semibold transition-colors ${
+            isPutITM
+              ? 'bg-emerald-50/70 dark:bg-emerald-950/20 text-emerald-900 dark:text-emerald-300'
+              : 'text-emerald-700 dark:text-emerald-400'
+          }`}
+          title={`Put Day High: ${row.put_high.toFixed(2)}`}
+        >
+          <span>{row.put_high.toFixed(2)}</span>
+        </td>
+      )}
+
       {/* 8. PUT VOLUME */}
       <td
         className={`${sizeConfig.cell} text-left font-medium transition-all ${row.isTopPutVolume
@@ -361,6 +420,7 @@ export const OptionChainDesktopTable: React.FC<OptionChainDesktopTableProps> = (
   atmStrike,
   printAtmRangeOnly = true,
   showPreviousCloseColumn = false,
+  showHighLowColumns = false,
 }) => {
   const effectiveAtm = atmStrike ?? rows.find((r) => r.isATM)?.strike ?? (spotPrice ? Math.round(spotPrice / 50) * 50 : undefined);
   const headerSizes = {
@@ -377,6 +437,9 @@ export const OptionChainDesktopTable: React.FC<OptionChainDesktopTableProps> = (
       col: 'py-3 px-4 text-[15px] font-extrabold',
     },
   }[fontSize];
+
+  const sideColSpan = 5 + (showPreviousCloseColumn ? 1 : 0) + (showHighLowColumns ? 2 : 0);
+
   return (
     <div className="w-full overflow-x-auto shadow-2xl rounded-b-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#080b12] transition-colors">
       <table className="w-full text-left border-collapse select-text min-w-4xl">
@@ -384,7 +447,7 @@ export const OptionChainDesktopTable: React.FC<OptionChainDesktopTableProps> = (
         <thead>
           {/* Top Super Header: CALLS (CE) | STRIKE | ACTION | PUTS (PE) */}
           <tr className="border-b border-slate-300 dark:border-slate-700 uppercase tracking-wider">
-            <th colSpan={showPreviousCloseColumn ? 6 : 5} className={`${headerSizes.super} text-center text-cyan-800 dark:text-cyan-400 bg-cyan-100/70 dark:bg-cyan-950/40 border-r border-slate-300 dark:border-slate-700/80`}>
+            <th colSpan={sideColSpan} className={`${headerSizes.super} text-center text-cyan-800 dark:text-cyan-400 bg-cyan-100/70 dark:bg-cyan-950/40 border-r border-slate-300 dark:border-slate-700/80`}>
               CALLS (CE)
             </th>
             <th className={`${headerSizes.super} text-center text-amber-800 dark:text-amber-400 bg-amber-100/70 dark:bg-amber-950/40 border-r border-slate-300 dark:border-slate-700/80`}>
@@ -393,7 +456,7 @@ export const OptionChainDesktopTable: React.FC<OptionChainDesktopTableProps> = (
             <th className={`${headerSizes.super} text-center text-emerald-800 dark:text-emerald-400 bg-emerald-100/70 dark:bg-emerald-950/40 border-r border-slate-300 dark:border-slate-700/80`}>
               ACTION SIGNALS
             </th>
-            <th colSpan={showPreviousCloseColumn ? 6 : 5} className={`${headerSizes.super} text-center text-rose-800 dark:text-rose-400 bg-rose-100/70 dark:bg-rose-950/40`}>
+            <th colSpan={sideColSpan} className={`${headerSizes.super} text-center text-rose-800 dark:text-rose-400 bg-rose-100/70 dark:bg-rose-950/40`}>
               PUTS (PE)
             </th>
           </tr>
@@ -404,6 +467,16 @@ export const OptionChainDesktopTable: React.FC<OptionChainDesktopTableProps> = (
             <th className={`${headerSizes.col} text-right bg-amber-100/90 text-amber-950 font-bold dark:bg-amber-950/70 dark:text-amber-300 border-r border-slate-300/80 dark:border-slate-800`}>
               VOLUME
             </th>
+            {showHighLowColumns && (
+              <>
+                <th className={`${headerSizes.col} text-right bg-emerald-100/90 text-emerald-950 font-bold dark:bg-emerald-950/70 dark:text-emerald-300 border-r border-slate-300/80 dark:border-slate-800`} title="Call Day High Price">
+                  HIGH
+                </th>
+                <th className={`${headerSizes.col} text-right bg-rose-100/90 text-rose-950 font-bold dark:bg-rose-950/70 dark:text-rose-300 border-r border-slate-300/80 dark:border-slate-800`} title="Call Day Low Price">
+                  LOW
+                </th>
+              </>
+            )}
             <th className={`${headerSizes.col} text-right bg-sky-100/90 text-sky-950 font-bold dark:bg-sky-950/70 dark:text-sky-300 border-r border-slate-300/80 dark:border-slate-800`}>
               PREMIUM
             </th>
@@ -450,6 +523,16 @@ export const OptionChainDesktopTable: React.FC<OptionChainDesktopTableProps> = (
             <th className={`${headerSizes.col} text-left bg-sky-100/90 text-sky-950 font-bold dark:bg-sky-950/70 dark:text-sky-300 border-r border-slate-300/80 dark:border-slate-800`}>
               PREMIUM
             </th>
+            {showHighLowColumns && (
+              <>
+                <th className={`${headerSizes.col} text-left bg-rose-100/90 text-rose-950 font-bold dark:bg-rose-950/70 dark:text-rose-300 border-r border-slate-300/80 dark:border-slate-800`} title="Put Day Low Price">
+                  LOW
+                </th>
+                <th className={`${headerSizes.col} text-left bg-emerald-100/90 text-emerald-950 font-bold dark:bg-emerald-950/70 dark:text-emerald-300 border-r border-slate-300/80 dark:border-slate-800`} title="Put Day High Price">
+                  HIGH
+                </th>
+              </>
+            )}
             <th className={`${headerSizes.col} text-left bg-amber-100/90 text-amber-950 font-bold dark:bg-amber-950/70 dark:text-amber-300`}>
               VOLUME
             </th>
@@ -472,6 +555,7 @@ export const OptionChainDesktopTable: React.FC<OptionChainDesktopTableProps> = (
                 fontSize={fontSize}
                 isPrintHidden={isOutsidePrintRange}
                 showPreviousCloseColumn={showPreviousCloseColumn}
+                showHighLowColumns={showHighLowColumns}
               />
             );
           })}
