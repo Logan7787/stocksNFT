@@ -1,7 +1,7 @@
 import type { RawOptionData, ProcessedOptionRow, BreakLevelsInfo, MarketMetrics } from '../types/optionChain';
 import { round2, processRawOptionRow, applyConditionalHighlights, calculateBreakLevels } from '../utils/formulas';
-import { RAW_MARKET_CLOSE_2026_10_28, RAW_MARKET_CLOSE_2026_10_29 } from '../data/verifiedMarketData';
-import { getISTNow, formatDateYMD } from './previousCloseService';
+import { RAW_MARKET_CLOSE_2026_10_28, RAW_MARKET_CLOSE_2026_10_29, RAW_MARKET_CLOSE_2026_10_29_SETTLED } from '../data/verifiedMarketData';
+import { getISTNow, formatDateYMD, isPost830PMSettlementTime } from './previousCloseService';
 
 export interface ParsedNseReportResult {
   success: boolean;
@@ -436,7 +436,10 @@ export async function retrieveNseOptionDataWithSummary(symbol: string = 'NIFTY')
   const prevClose = is29Oct ? 22698.85 : 22749.75;
   const spotChange = is29Oct ? 237.90 : -50.90;
   const spotChangePercent = is29Oct ? 1.05 : -0.22;
-  const rawRows = is29Oct ? [...RAW_MARKET_CLOSE_2026_10_29] : [...RAW_MARKET_CLOSE_2026_10_28];
+  const isSettled = isPost830PMSettlementTime(istNow) || !isMarketHours;
+  const rawRows = is29Oct
+    ? (isSettled ? [...RAW_MARKET_CLOSE_2026_10_29_SETTLED] : [...RAW_MARKET_CLOSE_2026_10_29])
+    : [...RAW_MARKET_CLOSE_2026_10_28];
   const processed = rawRows.map(r => processRawOptionRow(r));
   const { highlightedRows, metrics } = applyConditionalHighlights(processed, spot);
   const breakLevels = calculateBreakLevels(highlightedRows, spot);

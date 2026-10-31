@@ -10,6 +10,7 @@ import { NseDataRetrieveModal } from '../modals/NseDataRetrieveModal';
 import { ActiveTradeSetupCard } from './ActiveTradeSetupCard';
 import { TradeSettingsCard } from './TradeSettingsCard';
 import { PreviousDayClosePage } from './PreviousDayClosePage';
+import { MyTradeDashboard } from '../myTrade/MyTradeDashboard';
 import { 
   niftyMarketService 
 } from '../../services/niftyApi';
@@ -93,12 +94,12 @@ export const OptionChainDashboard: React.FC = () => {
   // Trade Engine State (Strict Risk Management: Max SL Points & Risk-to-Reward Ratio)
   const [tradeSettings, setTradeSettings] = useState<TradeSettings>(getStoredTradeSettings());
 
-  // Active Navigation Module Route ('/' vs '/nifty-options' vs '/previous-close')
+  // Active Navigation Module Route ('/' vs '/previous-close' vs '/my-trade')
   const [currentRoute, setCurrentRoute] = useState<string>(() => {
     const p = window.location.pathname;
     const h = window.location.hash.replace('#', '');
-    
     if (p === '/previous-close' || h === '/previous-close' || h === 'previous-close') return '/previous-close';
+    if (p === '/my-trade' || h === '/my-trade' || h === 'my-trade') return '/my-trade';
     return '/';
   });
 
@@ -108,6 +109,8 @@ export const OptionChainDashboard: React.FC = () => {
       const h = window.location.hash.replace('#', '');
       if (p === '/previous-close' || h === '/previous-close' || h === 'previous-close') {
         setCurrentRoute('/previous-close');
+      } else if (p === '/my-trade' || h === '/my-trade' || h === 'my-trade') {
+        setCurrentRoute('/my-trade');
       } else {
         setCurrentRoute('/');
       }
@@ -429,7 +432,11 @@ export const OptionChainDashboard: React.FC = () => {
         onNavigate={handleNavigate}
       />
 
-      {currentRoute === '/previous-close' ? (
+      {currentRoute === '/my-trade' ? (
+        <main className="flex-1">
+          <MyTradeDashboard onNavigate={handleNavigate} />
+        </main>
+      ) : currentRoute === '/previous-close' ? (
         <main className="flex-1">
           <PreviousDayClosePage
             onOpenSettings={() => setIsSettingsOpen(true)}

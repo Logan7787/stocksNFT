@@ -162,7 +162,7 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             onClick={() => handleNavigate('/')}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-              currentRoute === '/' || !currentRoute.includes('previous-close')
+              currentRoute === '/' || (!currentRoute.includes('previous-close') && !currentRoute.includes('my-trade'))
                 ? 'bg-cyan-500 text-black shadow-md shadow-cyan-500/20'
                 : 'text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800/60'
             }`}
@@ -181,6 +181,18 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <History className="w-3.5 h-3.5" />
             <span>Previous Day Market Close Data</span>
+          </button>
+          <button
+            onClick={() => handleNavigate('/my-trade')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+              currentRoute === '/my-trade'
+                ? 'bg-cyan-500 text-black shadow-md shadow-cyan-500/20 font-black'
+                : 'text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800/60'
+            }`}
+            title="My Trade - NSE Stock Strategy & 20:30 Settlement Engine"
+          >
+            <Zap className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+            <span>My Trade</span>
           </button>
         </div>
 
