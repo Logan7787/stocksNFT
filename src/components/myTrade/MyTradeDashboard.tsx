@@ -547,7 +547,7 @@ export const MyTradeDashboard: React.FC<MyTradeDashboardProps> = ({ onNavigate }
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-5 pt-4 border-t border-slate-200 dark:border-slate-800">
               <div className="space-y-2">
-                <h4 className="font-black text-slate-900 dark:text-white text-xs uppercase text-cyan-500">
+                <h4 className="font-black text-xs uppercase text-cyan-600 dark:text-cyan-400">
                   1. Before 20:30 PM IST (Unsettled Phase)
                 </h4>
                 <p className="text-slate-600 dark:text-slate-400 text-[11px] leading-relaxed">
@@ -556,7 +556,7 @@ export const MyTradeDashboard: React.FC<MyTradeDashboardProps> = ({ onNavigate }
               </div>
 
               <div className="space-y-2">
-                <h4 className="font-black text-slate-900 dark:text-white text-xs uppercase text-emerald-500">
+                <h4 className="font-black text-xs uppercase text-emerald-600 dark:text-emerald-400">
                   2. After 20:30 PM IST (Official Settlement Phase)
                 </h4>
                 <p className="text-slate-600 dark:text-slate-400 text-[11px] leading-relaxed">
