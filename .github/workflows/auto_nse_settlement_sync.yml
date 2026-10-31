@@ -1,0 +1,59 @@
+name: NSE Daily 20:30 PM Settlement Auto-Sync
+
+on:
+  schedule:
+    # 15:30 UTC = 21:00 PM IST (Mon-Fri) - Runs automatically 30 mins after official 20:30 PM settlement
+    - cron: '30 15 * * 1-5'
+    # 16:15 UTC = 21:45 PM IST (Mon-Fri) - Secondary retry in case NSE Bhavcopy is slightly delayed
+    - cron: '15 16 * * 1-5'
+  workflow_dispatch: # Allows one-click manual trigger from GitHub Actions tab anytime
+
+permissions:
+  contents: write
+
+jobs:
+  sync-settlement:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+
+      - name: Fetch and Process NSE Official Settlement Bhavcopy
+        run: |
+          python scripts/sync_nse_settlement.py
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Node Dependencies
+        run: npm ci
+
+      - name: Verify Build
+        run: npm run build
+
+      - name: Commit and Push Updated Settlement to Main
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add public/data/
+          if git diff --staged --quiet; then
+            echo "No new settlement changes to commit."
+          else
+            git commit -m "Auto-sync NSE 20:30 PM settlement [skip ci]"
+            git push origin main
+          fi
+
