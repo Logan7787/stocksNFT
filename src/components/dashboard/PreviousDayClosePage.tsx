@@ -132,7 +132,9 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
 
   const loadData = useCallback((forceRefresh = false) => {
     const isToday = statusInfo.effectiveCloseDate === formatDateYMD(getISTNow());
-    const effectiveSpot = isToday ? (referenceSpotPrice || 22936.75) : 22698.85;
+    const effectiveSpot = (statusInfo.effectiveCloseDate === '2026-10-30' || statusInfo.effectiveCloseDate === '2026-10-31')
+      ? 23053.10
+      : (statusInfo.effectiveCloseDate === '2026-10-29' ? 22936.75 : (referenceSpotPrice || 23053.10));
     const modeKey = `${statusInfo.effectiveCloseDate}_${forcedMode}_${customDate}_${sessionView}_${settlementMode}`;
 
     if (forceRefresh) {
@@ -222,7 +224,7 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
   }, [dataResult, tradeSettings]);
 
   // Screen filter state: All strikes vs ATM ± 500 strikes
-  const [strikeFilter, setStrikeFilter] = useState<'all' | 'atm500'>('all');
+  const [strikeFilter, setStrikeFilter] = useState<'all' | 'atm500'>('atm500');
 
   const atmStrike = dataResult?.metrics.atmStrike ?? (dataResult ? Math.round(dataResult.spotPrice / 50) * 50 : 22750);
 

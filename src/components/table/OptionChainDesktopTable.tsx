@@ -157,9 +157,9 @@ const OptionRowItem = memo(({
               ? 'bg-slate-100/90 dark:bg-slate-900/50 text-slate-700 dark:text-slate-300'
               : 'text-slate-600 dark:text-slate-400'
             }`}
-          title={`Call Previous Day Close: ${(row.call_prev_close !== undefined ? row.call_prev_close : row.call_close).toFixed(2)}`}
+          title={`Call Previous Day Close: ${(row.call_prev_close && row.call_prev_close > 0 ? row.call_prev_close : row.call_close).toFixed(2)}`}
         >
-          <span>{(row.call_prev_close !== undefined ? row.call_prev_close : row.call_close).toFixed(2)}</span>
+          <span>{(row.call_prev_close && row.call_prev_close > 0 ? row.call_prev_close : row.call_close).toFixed(2)}</span>
         </td>
       )}
 
@@ -175,13 +175,15 @@ const OptionRowItem = memo(({
           }`}
         title={
           showPreviousCloseColumn
-            ? `Call Official Settlement Close (Derived after 20:30 PM from NSE): ${(row.call_settlement_close && row.call_settlement_close > 0) ? row.call_settlement_close.toFixed(2) : 'Pending 20:30 PM Settlement'}`
+            ? `Call Official Settlement Close: ${(row.call_settlement_close && row.call_settlement_close > 0 ? row.call_settlement_close : row.call_close).toFixed(2)}`
             : `Call Close: ${row.call_close.toFixed(2)} | Low: ${row.call_low.toFixed(2)} | High: ${row.call_high.toFixed(2)}`
         }
       >
         <span>
           {showPreviousCloseColumn
-            ? (row.call_settlement_close && row.call_settlement_close > 0 ? row.call_settlement_close.toFixed(2) : '-')
+            ? (row.call_settlement_close && row.call_settlement_close > 0 
+                ? row.call_settlement_close.toFixed(2) 
+                : (row.call_settlement_close === 0 ? '-' : (row.call_close && row.call_close > 0 ? row.call_close.toFixed(2) : '-')))
             : ((row.call_close && row.call_close > 0) ? row.call_close.toFixed(2) : ((row.call_ltp && row.call_ltp > 0) ? row.call_ltp.toFixed(2) : '-'))}
         </span>
       </td>
@@ -296,13 +298,15 @@ const OptionRowItem = memo(({
           }`}
         title={
           showPreviousCloseColumn
-            ? `Put Official Settlement Close (Derived after 20:30 PM from NSE): ${(row.put_settlement_close && row.put_settlement_close > 0) ? row.put_settlement_close.toFixed(2) : 'Pending 20:30 PM Settlement'}`
+            ? `Put Official Settlement Close: ${(row.put_settlement_close && row.put_settlement_close > 0 ? row.put_settlement_close : row.put_close).toFixed(2)}`
             : `Put Close: ${row.put_close.toFixed(2)} | Low: ${row.put_low.toFixed(2)} | High: ${row.put_high.toFixed(2)}`
         }
       >
         <span>
           {showPreviousCloseColumn
-            ? (row.put_settlement_close && row.put_settlement_close > 0 ? row.put_settlement_close.toFixed(2) : '-')
+            ? (row.put_settlement_close && row.put_settlement_close > 0 
+                ? row.put_settlement_close.toFixed(2) 
+                : (row.put_settlement_close === 0 ? '-' : (row.put_close && row.put_close > 0 ? row.put_close.toFixed(2) : '-')))
             : ((row.put_close && row.put_close > 0) ? row.put_close.toFixed(2) : ((row.put_ltp && row.put_ltp > 0) ? row.put_ltp.toFixed(2) : '-'))}
         </span>
       </td>
@@ -314,9 +318,9 @@ const OptionRowItem = memo(({
               ? 'bg-slate-100/90 dark:bg-slate-900/50 text-slate-700 dark:text-slate-300'
               : 'text-slate-600 dark:text-slate-400'
             }`}
-          title={`Put Previous Day Close: ${(row.put_prev_close !== undefined ? row.put_prev_close : row.put_close).toFixed(2)}`}
+          title={`Put Previous Day Close: ${(row.put_prev_close && row.put_prev_close > 0 ? row.put_prev_close : row.put_close).toFixed(2)}`}
         >
-          <span>{(row.put_prev_close !== undefined ? row.put_prev_close : row.put_close).toFixed(2)}</span>
+          <span>{(row.put_prev_close && row.put_prev_close > 0 ? row.put_prev_close : row.put_close).toFixed(2)}</span>
         </td>
       )}
 

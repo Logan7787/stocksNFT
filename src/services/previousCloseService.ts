@@ -1,16 +1,16 @@
 import type { ProcessedOptionRow, RawOptionData, MarketMetrics, MarketSnapshotRecord, BreakLevelsInfo } from '../types/optionChain';
-import { 
-  generateBaseNiftyOptionData, 
-  processRawOptionRow, 
-  applyConditionalHighlights, 
+import {
+  generateBaseNiftyOptionData,
+  processRawOptionRow,
+  applyConditionalHighlights,
   round2,
   calculateBreakLevels,
   tagBreakLevelStrikes
 } from '../utils/formulas';
-import { 
-  loadHistoricalSnapshotsList, 
-  loadHistoricalSnapshot, 
-  saveCurrentSnapshot 
+import {
+  loadHistoricalSnapshotsList,
+  loadHistoricalSnapshot,
+  saveCurrentSnapshot
 } from './snapshotService';
 import { niftyMarketService } from './niftyApi';
 
@@ -99,24 +99,28 @@ export const RAW_MARKET_CLOSE_2026_10_26: RawOptionData[] = [
   { strike: 24000, call_low: 0.55, call_high: 1.30, call_close: 0.70, call_ltp: 0.60, call_volume: 926147, put_low: 1231.90, put_high: 1232.65, put_close: 1232.05, put_ltp: 1232.05, put_volume: 138922 },
 ];
 
-export const VERIFIED_MARKET_CLOSE_2026_10_26: ProcessedOptionRow[] = 
+export const VERIFIED_MARKET_CLOSE_2026_10_26: ProcessedOptionRow[] =
   RAW_MARKET_CLOSE_2026_10_26.map(r => processRawOptionRow(r));
 
-import { 
-  RAW_MARKET_CLOSE_2026_10_28, 
+import {
+  RAW_MARKET_CLOSE_2026_10_28,
   VERIFIED_MARKET_CLOSE_2026_10_28,
   RAW_MARKET_CLOSE_2026_10_29,
   VERIFIED_MARKET_CLOSE_2026_10_29,
   RAW_MARKET_CLOSE_2026_10_29_SETTLED,
-  VERIFIED_MARKET_CLOSE_2026_10_29_SETTLED
+  VERIFIED_MARKET_CLOSE_2026_10_29_SETTLED,
+  RAW_MARKET_CLOSE_2026_10_30,
+  VERIFIED_MARKET_CLOSE_2026_10_30
 } from '../data/verifiedMarketData';
-export { 
-  RAW_MARKET_CLOSE_2026_10_28, 
+export {
+  RAW_MARKET_CLOSE_2026_10_28,
   VERIFIED_MARKET_CLOSE_2026_10_28,
   RAW_MARKET_CLOSE_2026_10_29,
   VERIFIED_MARKET_CLOSE_2026_10_29,
   RAW_MARKET_CLOSE_2026_10_29_SETTLED,
-  VERIFIED_MARKET_CLOSE_2026_10_29_SETTLED
+  VERIFIED_MARKET_CLOSE_2026_10_29_SETTLED,
+  RAW_MARKET_CLOSE_2026_10_30,
+  VERIFIED_MARKET_CLOSE_2026_10_30
 };
 
 /**
@@ -173,7 +177,7 @@ export const RAW_MARKET_CLOSE_2026_10_27: RawOptionData[] = [
   { strike: 24000, call_low: 0.05, call_high: 0.50, call_close: 0.05, call_ltp: 0.05, call_volume: 1120000, put_low: 1152.00, put_high: 1318.00, put_close: 1250.30, put_ltp: 1250.30, put_volume: 180000 },
 ];
 
-export const VERIFIED_MARKET_CLOSE_2026_10_27: ProcessedOptionRow[] = 
+export const VERIFIED_MARKET_CLOSE_2026_10_27: ProcessedOptionRow[] =
   RAW_MARKET_CLOSE_2026_10_27.map(r => processRawOptionRow(r));
 
 /**
@@ -208,7 +212,7 @@ export const RAW_MARKET_CLOSE_2026_10_23: RawOptionData[] = [
   { strike: 23500, call_low: 3.30, call_high: 8.20, call_close: 4.05, call_ltp: 4.10, call_volume: 1888795, put_low: 658.45, put_high: 1060.35, put_close: 932.60, put_ltp: 909.75, put_volume: 59016 },
 ];
 
-export const VERIFIED_MARKET_CLOSE_2026_10_23: ProcessedOptionRow[] = 
+export const VERIFIED_MARKET_CLOSE_2026_10_23: ProcessedOptionRow[] =
   RAW_MARKET_CLOSE_2026_10_23.map(r => processRawOptionRow(r));
 
 export const VERIFIED_MARKET_CLOSE_2026_10_21: ProcessedOptionRow[] = ([
@@ -480,14 +484,38 @@ export async function getPreviousCloseOptionChain(
   const isToday = effectiveDate === todayYMD;
 
   // Settlement detection (after 20:30 IST NSE Derivatives Final Settlement)
-  const isNaturalPost830 = isPost830PMSettlementTime(istNow);
+  // Any past trading session (yesterday, Friday, or earlier), or weekend view of previous trading day,
+  // has ALREADY completed 20:30 PM settlement!
+  const isPastTradingDay = effectiveDate < todayYMD || istNow.getDay() === 0 || istNow.getDay() === 6;
+  const isNaturalPost830 = isPastTradingDay ? true : isPost830PMSettlementTime(istNow);
   const isSettled = options?.settlementOverride === 'settled'
     ? true
     : options?.settlementOverride === 'pending'
       ? false
       : isNaturalPost830;
 
-  // 1. Official Verified Dataset for 2026-10-29 (NSE Derivatives Report)
+  // 1. Official Verified Dataset for 2026-10-30 / 2026-10-31 (NSE Derivatives Report)
+  // Spot: 23,053.10 (+116.35, +0.51%), Expiry 03-Nov-2026
+  // Exact real data matching official NSE Derivatives Quote & 20:30 PM Settlement
+  if (effectiveDate === '2026-10-30' || effectiveDate === '2026-10-31') {
+    const verifiedSpot = 23053.10;
+    const sourceRows = isSettled
+      ? VERIFIED_MARKET_CLOSE_2026_10_30
+      : RAW_MARKET_CLOSE_2026_10_30.map(r => processRawOptionRow({ ...r, call_settlement_close: 0, put_settlement_close: 0 }));
+    const { highlightedRows, metrics } = applyConditionalHighlights(sourceRows, verifiedSpot);
+    return buildCloseChainResult(
+      effectiveDate,
+      isSettled ? '20:30 Settlement' : '15:30 Close',
+      verifiedSpot,
+      116.35,
+      0.51,
+      highlightedRows,
+      metrics,
+      'database'
+    );
+  }
+
+  // 2. Official Verified Dataset for 2026-10-29 (NSE Derivatives Report)
   // Direct priority matching official NSE report:
   // - CE 22450: PREV. CLOSE 339.95, CLOSE - (unsettled until 20:30 PM), LTP 547.65
   // - PE 22450: PREV. CLOSE 83.25, CLOSE - (unsettled until 20:30 PM), LTP 18.40

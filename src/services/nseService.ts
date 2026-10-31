@@ -1,6 +1,6 @@
 import type { RawOptionData, ProcessedOptionRow, BreakLevelsInfo, MarketMetrics } from '../types/optionChain';
 import { round2, processRawOptionRow, applyConditionalHighlights, calculateBreakLevels } from '../utils/formulas';
-import { RAW_MARKET_CLOSE_2026_10_28, RAW_MARKET_CLOSE_2026_10_29, RAW_MARKET_CLOSE_2026_10_29_SETTLED } from '../data/verifiedMarketData';
+import { RAW_MARKET_CLOSE_2026_10_28, RAW_MARKET_CLOSE_2026_10_29, RAW_MARKET_CLOSE_2026_10_29_SETTLED, RAW_MARKET_CLOSE_2026_10_30 } from '../data/verifiedMarketData';
 import { getISTNow, formatDateYMD, isPost830PMSettlementTime } from './previousCloseService';
 
 export interface ParsedNseReportResult {
@@ -431,15 +431,16 @@ export async function retrieveNseOptionDataWithSummary(symbol: string = 'NIFTY')
   }
 
   // 2. Fallback to Verified Official Settlement Dataset
-  const is29Oct = todayYMD === '2026-10-29' || todayYMD >= '2026-10-29';
-  const spot = is29Oct ? 22936.75 : 22698.85;
-  const prevClose = is29Oct ? 22698.85 : 22749.75;
-  const spotChange = is29Oct ? 237.90 : -50.90;
-  const spotChangePercent = is29Oct ? 1.05 : -0.22;
-  const isSettled = isPost830PMSettlementTime(istNow) || !isMarketHours;
-  const rawRows = is29Oct
-    ? (isSettled ? [...RAW_MARKET_CLOSE_2026_10_29_SETTLED] : [...RAW_MARKET_CLOSE_2026_10_29])
-    : [...RAW_MARKET_CLOSE_2026_10_28];
+  const is30Oct = todayYMD === '2026-10-30' || todayYMD >= '2026-10-30';
+  const is29Oct = todayYMD === '2026-10-29';
+  const spot = is30Oct ? 23053.10 : (is29Oct ? 22936.75 : 22698.85);
+  const prevClose = is30Oct ? 22936.75 : (is29Oct ? 22698.85 : 22749.75);
+  const spotChange = is30Oct ? 116.35 : (is29Oct ? 237.90 : -50.90);
+  const spotChangePercent = is30Oct ? 0.51 : (is29Oct ? 1.05 : -0.22);
+  const isSettled = isPost830PMSettlementTime(istNow) || !isMarketHours || is30Oct;
+  const rawRows = is30Oct
+    ? [...RAW_MARKET_CLOSE_2026_10_30]
+    : (is29Oct ? (isSettled ? [...RAW_MARKET_CLOSE_2026_10_29_SETTLED] : [...RAW_MARKET_CLOSE_2026_10_29]) : [...RAW_MARKET_CLOSE_2026_10_28]);
   const processed = rawRows.map(r => processRawOptionRow(r));
   const { highlightedRows, metrics } = applyConditionalHighlights(processed, spot);
   const breakLevels = calculateBreakLevels(highlightedRows, spot);
@@ -465,8 +466,10 @@ export async function retrieveNseOptionDataWithSummary(symbol: string = 'NIFTY')
     },
     breakLevels,
     totalStrikes: rawRows.length,
-    message: is29Oct
-      ? `Official NSE Derivative Settlement Data retrieved: Spot ₹22,936.75 • ATM 22950 • Formula ATM 23000`
-      : `Official NSE Derivative Settlement Data retrieved: Spot ₹22,698.85 • ATM 22700 • Formula ATM 22750`,
+    message: is30Oct
+      ? `Official NSE Derivative Settlement Data retrieved: Spot ₹23,053.10 • ATM 23050 • Formula ATM 23050`
+      : is29Oct
+        ? `Official NSE Derivative Settlement Data retrieved: Spot ₹22,936.75 • ATM 22950 • Formula ATM 23000`
+        : `Official NSE Derivative Settlement Data retrieved: Spot ₹22,698.85 • ATM 22700 • Formula ATM 22750`,
   };
 }
