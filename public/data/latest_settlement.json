@@ -2,6 +2,9 @@
   "date": "2026-11-04",
   "expiryDate": "2026-11-09",
   "spotPrice": 23960.6,
+  "spotChange": 149.75,
+  "spotChangePercent": 0.63,
+  "previousClose": 23810.85,
   "atmStrike": 23950,
   "formulaAtmStrike": 23950,
   "minAvg": 162.75,
@@ -3205,9 +3208,5 @@
       "isMinPutPremium": false
     }
   ],
-  "timestamp": "2026-11-04T21:38:32.246033",
-  "spotChange": 149.75,
-  "spotChangePercent": 0.63,
-  "previousClose": 23810.85,
-  "underlying": "NSE NIFTY 50 INDEX"
+  "timestamp": "2026-11-04T21:23:11.509850"
 }
