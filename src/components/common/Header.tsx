@@ -44,6 +44,7 @@ interface HeaderProps {
   isMobileCompact: boolean;
   onToggleMobileCompact: () => void;
   currentRoute?: string;
+  expiryDate?: string;
   onNavigate?: (route: string) => void;
 }
 
@@ -68,6 +69,7 @@ export const Header: React.FC<HeaderProps> = ({
   isMobileCompact: _isMobileCompact,
   onToggleMobileCompact,
   currentRoute = '/',
+  expiryDate = '09-Nov-2026',
   onNavigate,
 }) => {
   const { user, logout } = useAuth();
@@ -98,7 +100,7 @@ export const Header: React.FC<HeaderProps> = ({
             NSE NIFTY 50 INDEX
           </span>
           <span className="text-slate-400 dark:text-slate-600">|</span>
-          <span className="text-slate-800 dark:text-slate-300 font-semibold">EXPIRY: CURRENT WEEKLY (TUESDAY)</span>
+          <span className="text-slate-800 dark:text-slate-300 font-semibold">EXPIRY: CURRENT WEEKLY ({expiryDate.toUpperCase()})</span>
           <span className="text-slate-400 dark:text-slate-600 hidden sm:inline">|</span>
           <span className="text-slate-800 dark:text-slate-300 font-semibold hidden sm:inline">LOT SIZE: 65</span>
         </div>

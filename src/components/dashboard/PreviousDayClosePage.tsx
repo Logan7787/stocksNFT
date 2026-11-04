@@ -132,9 +132,11 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
 
   const loadData = useCallback((forceRefresh = false) => {
     const isToday = statusInfo.effectiveCloseDate === formatDateYMD(getISTNow());
-    const effectiveSpot = (statusInfo.effectiveCloseDate === '2026-10-30' || statusInfo.effectiveCloseDate === '2026-10-31')
-      ? 23053.10
-      : (statusInfo.effectiveCloseDate === '2026-10-29' ? 22936.75 : (referenceSpotPrice || 23053.10));
+    const effectiveSpot = (statusInfo.effectiveCloseDate === '2026-11-04' || statusInfo.effectiveCloseDate >= '2026-11-01')
+      ? 23960.60
+      : (statusInfo.effectiveCloseDate === '2026-10-30' || statusInfo.effectiveCloseDate === '2026-10-31')
+        ? 23053.10
+        : (statusInfo.effectiveCloseDate === '2026-10-29' ? 22936.75 : (referenceSpotPrice || 23960.60));
     const modeKey = `${statusInfo.effectiveCloseDate}_${forcedMode}_${customDate}_${sessionView}_${settlementMode}`;
 
     if (forceRefresh) {

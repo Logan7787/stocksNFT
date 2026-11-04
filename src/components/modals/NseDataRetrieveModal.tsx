@@ -72,7 +72,7 @@ export const NseDataRetrieveModal: React.FC<NseDataRetrieveModalProps> = ({
   const displayedRows = useMemo(() => {
     if (!dataResult) return [];
     let rows = dataResult.processedRows;
-    const atm = dataResult.metrics.atmStrike || 22700;
+    const atm = dataResult.metrics.atmStrike || 23950;
 
     if (strikeFilter === 'atm500') {
       rows = rows.filter(r => Math.abs(r.strike - atm) <= 500);
@@ -90,7 +90,7 @@ export const NseDataRetrieveModal: React.FC<NseDataRetrieveModalProps> = ({
 
   if (!isOpen) return null;
 
-  const spot = dataResult?.spotPrice ?? 22698.85;
+  const spot = dataResult?.spotPrice ?? 23960.60;
   const spotChange = dataResult?.spotChange ?? -50.90;
   const spotChangePercent = dataResult?.spotChangePercent ?? -0.22;
   const isPositive = spotChange >= 0;
@@ -342,7 +342,7 @@ export const NseDataRetrieveModal: React.FC<NseDataRetrieveModalProps> = ({
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-mono bg-slate-100 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-300 dark:border-slate-800">
                 <div>
                   <span className="text-slate-500 block text-[10px]">Spot ATM Strike:</span>
-                  <strong className="text-slate-900 dark:text-white text-sm">{metrics?.atmStrike ?? 22700}</strong>
+                  <strong className="text-slate-900 dark:text-white text-sm">{metrics?.atmStrike ?? 23950}</strong>
                 </div>
                 <div>
                   <span className="text-slate-500 block text-[10px]">Lowest AVG Value:</span>
@@ -572,7 +572,7 @@ export const NseDataRetrieveModal: React.FC<NseDataRetrieveModalProps> = ({
         {/* Modal Action Footer */}
         <div className="px-4 sm:px-6 py-3.5 bg-slate-100 dark:bg-[#0c101c] border-t border-slate-300 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 shrink-0">
           <div className="text-xs text-slate-600 dark:text-slate-400 font-mono">
-            Spot: <strong className="text-slate-900 dark:text-white">₹{spot.toFixed(2)}</strong> • ATM: <strong className="text-amber-500">{metrics?.atmStrike ?? 22700}</strong> • BU: <strong className="text-emerald-500">{buValue.toFixed(2)}</strong> • BD: <strong className="text-rose-500">{bdValue.toFixed(2)}</strong>
+            Spot: <strong className="text-slate-900 dark:text-white">₹{spot.toFixed(2)}</strong> • ATM: <strong className="text-amber-500">{metrics?.atmStrike ?? 23950}</strong> • BU: <strong className="text-emerald-500">{buValue.toFixed(2)}</strong> • BD: <strong className="text-rose-500">{bdValue.toFixed(2)}</strong>
           </div>
 
           <div className="flex items-center gap-2">

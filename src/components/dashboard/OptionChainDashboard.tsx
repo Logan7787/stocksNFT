@@ -42,14 +42,14 @@ import { useMemo } from 'react';
 export const OptionChainDashboard: React.FC = () => {
   // Option Chain State
   const [rows, setRows] = useState<ProcessedOptionRow[]>([]);
-  const [spotPrice, setSpotPrice] = useState<number>(23053.10);
-  const [spotChange, setSpotChange] = useState<number>(116.35);
-  const [spotChangePercent, setSpotChangePercent] = useState<number>(0.51);
+  const [spotPrice, setSpotPrice] = useState<number>(23960.60);
+  const [spotChange, setSpotChange] = useState<number>(149.75);
+  const [spotChangePercent, setSpotChangePercent] = useState<number>(0.63);
   const [metrics, setMetrics] = useState<MarketMetrics>({
-    spotPrice: 23053.10,
-    spotChange: 116.35,
-    spotChangePercent: 0.51,
-    atmStrike: 23050,
+    spotPrice: 23960.60,
+    spotChange: 149.75,
+    spotChangePercent: 0.63,
+    atmStrike: 23950,
     totalCallVolume: 0,
     totalPutVolume: 0,
     pcrVolume: 1,
