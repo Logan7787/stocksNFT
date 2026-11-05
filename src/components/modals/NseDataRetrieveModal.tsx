@@ -90,9 +90,9 @@ export const NseDataRetrieveModal: React.FC<NseDataRetrieveModalProps> = ({
 
   if (!isOpen) return null;
 
-  const spot = dataResult?.spotPrice ?? 23960.60;
-  const spotChange = dataResult?.spotChange ?? -50.90;
-  const spotChangePercent = dataResult?.spotChangePercent ?? -0.22;
+  const spot = dataResult?.spotPrice ?? 24536.60;
+  const spotChange = dataResult?.spotChange ?? 576.00;
+  const spotChangePercent = dataResult?.spotChangePercent ?? 2.40;
   const isPositive = spotChange >= 0;
   const breakLevels = dataResult?.breakLevels;
   const metrics = dataResult?.metrics;
