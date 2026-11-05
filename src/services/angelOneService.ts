@@ -78,6 +78,62 @@ export class AngelOneService {
   }
 
   /**
+   * Resilient request executor:
+   * 1. Attempts `/api/angelone${endpointPath}` (Vite dev proxy / Vercel rewrite)
+   * 2. Automatically falls back to direct `https://apiconnect.angelone.in${endpointPath}`
+   *    if the proxy returns HTML, 404/405, or network error (Angel One supports CORS natively)
+   */
+  private async executeAngelRequest(
+    endpointPath: string,
+    options: RequestInit
+  ): Promise<{ ok: boolean; status: number; json: any; rawText: string }> {
+    const urls = [
+      `/api/angelone${endpointPath}`,
+      `https://apiconnect.angelone.in${endpointPath}`,
+    ];
+
+    let lastError: any = null;
+    let lastStatus = 0;
+    let lastText = '';
+
+    for (const url of urls) {
+      try {
+        const response = await fetch(url, options);
+        lastStatus = response.status;
+        const text = await response.text();
+        lastText = text;
+
+        if (text && text.trim().startsWith('{')) {
+          try {
+            const parsed = JSON.parse(text);
+            return {
+              ok: response.ok,
+              status: response.status,
+              json: parsed,
+              rawText: text,
+            };
+          } catch {
+            // Invalid JSON, try fallback url
+          }
+        }
+      } catch (err) {
+        lastError = err;
+      }
+    }
+
+    if (lastError && !lastText) {
+      throw lastError;
+    }
+
+    return {
+      ok: false,
+      status: lastStatus,
+      json: null,
+      rawText: lastText,
+    };
+  }
+
+  /**
    * Log in to Angel One SmartAPI using client credentials:
    * Client Code, Password/MPIN, TOTP, and SmartAPI Key
    */
@@ -95,22 +151,23 @@ export class AngelOneService {
     }
 
     try {
-      const response = await fetch('/api/angelone/rest/auth/angelbroking/user/v1/loginByPassword', {
-        method: 'POST',
-        headers: {
-          ...DEFAULT_ANGEL_HEADERS,
-          'X-PrivateKey': apiKey.trim(),
-        },
-        body: JSON.stringify({
-          clientcode: clientCode.trim(),
-          password: pinOrPassword.trim(),
-          totp: totp.trim(),
-        }),
-      });
+      const { ok, status, json, rawText } = await this.executeAngelRequest(
+        '/rest/auth/angelbroking/user/v1/loginByPassword',
+        {
+          method: 'POST',
+          headers: {
+            ...DEFAULT_ANGEL_HEADERS,
+            'X-PrivateKey': apiKey.trim(),
+          },
+          body: JSON.stringify({
+            clientcode: clientCode.trim(),
+            password: pinOrPassword.trim(),
+            totp: totp.trim(),
+          }),
+        }
+      );
 
-      const json = await response.json();
-
-      if (response.ok && json.status && json.data) {
+      if (json && json.status && json.data) {
         const rawJwt = json.data.jwtToken || '';
         const token = rawJwt.startsWith('Bearer ') ? rawJwt : `Bearer ${rawJwt}`;
         const feed = json.data.feedToken || '';
@@ -126,7 +183,7 @@ export class AngelOneService {
           message: 'Angel One login successful! Active session token generated.',
         };
       } else {
-        const errorMsg = json.message || json.errorcode || response.statusText || 'Authentication failed';
+        const errorMsg = json?.message || json?.errorcode || (rawText ? rawText.slice(0, 140) : `HTTP ${status}`);
         return {
           success: false,
           message: `Angel One login failed: ${errorMsg}`,
@@ -135,7 +192,7 @@ export class AngelOneService {
     } catch (err: any) {
       return {
         success: false,
-        message: `Network error connecting to Angel One API: ${err.message || 'Please check connection / proxy'}`,
+        message: `Network error connecting to Angel One API: ${err.message || 'Please check connection / credentials'}`,
       };
     }
   }
@@ -157,21 +214,23 @@ export class AngelOneService {
     }
 
     try {
-      const response = await fetch('/api/angelone/rest/secure/angelbroking/market/v1/quote/', {
-        method: 'POST',
-        headers: {
-          ...DEFAULT_ANGEL_HEADERS,
-          'Authorization': authHeader.startsWith('Bearer ') ? authHeader : `Bearer ${authHeader}`,
-          'X-PrivateKey': apiKey.trim(),
-        },
-        body: JSON.stringify({
-          mode: 'FULL',
-          exchangeTokens,
-        }),
-      });
+      const { ok, status, json, rawText } = await this.executeAngelRequest(
+        '/rest/secure/angelbroking/market/v1/quote/',
+        {
+          method: 'POST',
+          headers: {
+            ...DEFAULT_ANGEL_HEADERS,
+            'Authorization': authHeader.startsWith('Bearer ') ? authHeader : `Bearer ${authHeader}`,
+            'X-PrivateKey': apiKey.trim(),
+          },
+          body: JSON.stringify({
+            mode: 'FULL',
+            exchangeTokens,
+          }),
+        }
+      );
 
-      const json = await response.json();
-      if (response.ok && json.status && json.data) {
+      if (json && json.status && json.data) {
         const fetched = json.data.fetched || [];
         return {
           success: true,
@@ -181,7 +240,7 @@ export class AngelOneService {
       } else {
         return {
           success: false,
-          message: json.message || `Angel One Quote error (${response.status})`,
+          message: json?.message || (rawText ? rawText.slice(0, 140) : `Angel One Quote error (${status})`),
         };
       }
     } catch (err: any) {

@@ -1,8 +1,16 @@
 {
   "rewrites": [
     {
+      "source": "/api/angelone/:path*",
+      "destination": "https://apiconnect.angelone.in/:path*"
+    },
+    {
       "source": "/api/upstox/:path*",
       "destination": "https://api.upstox.com/:path*"
+    },
+    {
+      "source": "/api/nse/:path*",
+      "destination": "https://www.nseindia.com/:path*"
     },
     {
       "source": "/(.*)",
