@@ -10,7 +10,6 @@ import { NseDataRetrieveModal } from '../modals/NseDataRetrieveModal';
 import { ActiveTradeSetupCard } from './ActiveTradeSetupCard';
 import { TradeSettingsCard } from './TradeSettingsCard';
 import { PreviousDayClosePage } from './PreviousDayClosePage';
-import { MyTradeDashboard } from '../myTrade/MyTradeDashboard';
 import { OptionPredictionPage } from '../prediction/OptionPredictionPage';
 import { createPaperTrade, getStoredPaperTrades, savePaperTrades } from '../../services/paperTradingService';
 import { 
@@ -96,13 +95,12 @@ export const OptionChainDashboard: React.FC = () => {
   // Trade Engine State (Strict Risk Management: Max SL Points & Risk-to-Reward Ratio)
   const [tradeSettings, setTradeSettings] = useState<TradeSettings>(getStoredTradeSettings());
 
-  // Active Navigation Module Route ('/' vs '/prediction' vs '/previous-close' vs '/my-trade')
+  // Active Navigation Module Route ('/' vs '/prediction' vs '/previous-close')
   const [currentRoute, setCurrentRoute] = useState<string>(() => {
     const p = window.location.pathname;
     const h = window.location.hash.replace('#', '');
     if (p === '/prediction' || h === '/prediction' || h === 'prediction') return '/prediction';
     if (p === '/previous-close' || h === '/previous-close' || h === 'previous-close') return '/previous-close';
-    if (p === '/my-trade' || h === '/my-trade' || h === 'my-trade') return '/my-trade';
     return '/';
   });
 
@@ -114,8 +112,6 @@ export const OptionChainDashboard: React.FC = () => {
         setCurrentRoute('/prediction');
       } else if (p === '/previous-close' || h === '/previous-close' || h === 'previous-close') {
         setCurrentRoute('/previous-close');
-      } else if (p === '/my-trade' || h === '/my-trade' || h === 'my-trade') {
-        setCurrentRoute('/my-trade');
       } else {
         setCurrentRoute('/');
       }
@@ -469,10 +465,6 @@ export const OptionChainDashboard: React.FC = () => {
             onTradeClick={handlePredictionTrade}
             onNavigateToChain={() => handleNavigate('/')}
           />
-        </main>
-      ) : currentRoute === '/my-trade' ? (
-        <main className="flex-1">
-          <MyTradeDashboard onNavigate={handleNavigate} />
         </main>
       ) : currentRoute === '/previous-close' ? (
         <main className="flex-1">
