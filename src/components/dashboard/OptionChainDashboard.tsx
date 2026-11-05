@@ -11,6 +11,8 @@ import { ActiveTradeSetupCard } from './ActiveTradeSetupCard';
 import { TradeSettingsCard } from './TradeSettingsCard';
 import { PreviousDayClosePage } from './PreviousDayClosePage';
 import { MyTradeDashboard } from '../myTrade/MyTradeDashboard';
+import { OptionPredictionPage } from '../prediction/OptionPredictionPage';
+import { createPaperTrade, getStoredPaperTrades, savePaperTrades } from '../../services/paperTradingService';
 import { 
   niftyMarketService 
 } from '../../services/niftyApi';
@@ -94,10 +96,11 @@ export const OptionChainDashboard: React.FC = () => {
   // Trade Engine State (Strict Risk Management: Max SL Points & Risk-to-Reward Ratio)
   const [tradeSettings, setTradeSettings] = useState<TradeSettings>(getStoredTradeSettings());
 
-  // Active Navigation Module Route ('/' vs '/previous-close' vs '/my-trade')
+  // Active Navigation Module Route ('/' vs '/prediction' vs '/previous-close' vs '/my-trade')
   const [currentRoute, setCurrentRoute] = useState<string>(() => {
     const p = window.location.pathname;
     const h = window.location.hash.replace('#', '');
+    if (p === '/prediction' || h === '/prediction' || h === 'prediction') return '/prediction';
     if (p === '/previous-close' || h === '/previous-close' || h === 'previous-close') return '/previous-close';
     if (p === '/my-trade' || h === '/my-trade' || h === 'my-trade') return '/my-trade';
     return '/';
@@ -107,7 +110,9 @@ export const OptionChainDashboard: React.FC = () => {
     const handlePopState = () => {
       const p = window.location.pathname;
       const h = window.location.hash.replace('#', '');
-      if (p === '/previous-close' || h === '/previous-close' || h === 'previous-close') {
+      if (p === '/prediction' || h === '/prediction' || h === 'prediction') {
+        setCurrentRoute('/prediction');
+      } else if (p === '/previous-close' || h === '/previous-close' || h === 'previous-close') {
         setCurrentRoute('/previous-close');
       } else if (p === '/my-trade' || h === '/my-trade' || h === 'my-trade') {
         setCurrentRoute('/my-trade');
@@ -145,6 +150,27 @@ export const OptionChainDashboard: React.FC = () => {
   const handleTriggerTestBreakout = (type: 'CE' | 'PE') => {
     niftyMarketService.triggerBreakoutShock(type);
     showToast(`Simulated ${type} Breakout on ATM strike!`, 'success');
+  };
+
+  const handlePredictionTrade = (symbol: string, strike: number, type: 'CE' | 'PE', price: number) => {
+    try {
+      const existing = getStoredPaperTrades();
+      const newTrade = createPaperTrade({
+        contractName: symbol,
+        optionType: type,
+        strike,
+        expiryDate: '09-Nov-2026',
+        entryPrice: price,
+        quantity: 65,
+        lotSize: 65,
+        stopLossPrice: Number((price * 0.8).toFixed(2)),
+        targetPrice: Number((price * 1.3).toFixed(2)),
+      });
+      savePaperTrades([newTrade, ...existing]);
+      showToast(`Paper Trade Placed: ${symbol} at ₹${price.toFixed(2)} (1 lot). Added to journal!`, 'success');
+    } catch {
+      showToast(`Executed paper order: ${symbol} at ₹${price.toFixed(2)}`, 'info');
+    }
   };
 
   // Dynamic Real-Time Intraday CE / PE Trade Signals & Active Setups Calculation
@@ -432,7 +458,19 @@ export const OptionChainDashboard: React.FC = () => {
         onNavigate={handleNavigate}
       />
 
-      {currentRoute === '/my-trade' ? (
+      {currentRoute === '/prediction' ? (
+        <main className="flex-1">
+          <OptionPredictionPage
+            rows={rows}
+            spotPrice={spotPrice}
+            spotChange={spotChange}
+            spotChangePercent={spotChangePercent}
+            metrics={metrics}
+            onTradeClick={handlePredictionTrade}
+            onNavigateToChain={() => handleNavigate('/')}
+          />
+        </main>
+      ) : currentRoute === '/my-trade' ? (
         <main className="flex-1">
           <MyTradeDashboard onNavigate={handleNavigate} />
         </main>

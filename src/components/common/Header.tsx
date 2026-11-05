@@ -18,7 +18,8 @@ import {
   Sun,
   Moon,
   Zap,
-  Download
+  Download,
+  Sparkles
 } from 'lucide-react';
 import { HOURLY_SLOTS } from '../../services/snapshotService';
 import type { MarketSnapshotRecord, ConnectionMode } from '../../types/optionChain';
@@ -164,13 +165,25 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             onClick={() => handleNavigate('/')}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-              currentRoute === '/' || (!currentRoute.includes('previous-close') && !currentRoute.includes('my-trade'))
+              currentRoute === '/' || (!currentRoute.includes('previous-close') && !currentRoute.includes('my-trade') && !currentRoute.includes('prediction'))
                 ? 'bg-cyan-500 text-black shadow-md shadow-cyan-500/20'
                 : 'text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800/60'
             }`}
           >
             <Layers className="w-3.5 h-3.5" />
             <span>Option Chain</span>
+          </button>
+          <button
+            onClick={() => handleNavigate('/prediction')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+              currentRoute === '/prediction'
+                ? 'bg-cyan-500 text-black shadow-md shadow-cyan-500/20 font-black'
+                : 'text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800/60'
+            }`}
+            title="NIFTY 50 Real-Time Option Predictions (AI Quant Engine)"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-cyan-400 fill-cyan-400" />
+            <span>Prediction</span>
           </button>
           <button
             onClick={() => handleNavigate('/previous-close')}
