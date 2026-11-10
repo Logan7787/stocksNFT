@@ -155,7 +155,7 @@ export const OptionChainDashboard: React.FC = () => {
         contractName: symbol,
         optionType: type,
         strike,
-        expiryDate: '09-Nov-2026',
+        expiryDate: '17-Nov-2026',
         entryPrice: price,
         quantity: 65,
         lotSize: 65,
@@ -451,6 +451,7 @@ export const OptionChainDashboard: React.FC = () => {
         isMobileCompact={isMobileCompact}
         onToggleMobileCompact={() => setIsMobileCompact(!isMobileCompact)}
         currentRoute={currentRoute}
+        expiryDate={brokerConfig.expiryDate || '17-Nov-2026'}
         onNavigate={handleNavigate}
       />
 

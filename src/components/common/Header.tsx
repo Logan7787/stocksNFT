@@ -69,7 +69,7 @@ export const Header: React.FC<HeaderProps> = ({
   isMobileCompact: _isMobileCompact,
   onToggleMobileCompact,
   currentRoute = '/',
-  expiryDate = '09-Nov-2026',
+  expiryDate = '17-Nov-2026',
   onNavigate,
 }) => {
   const { user, logout } = useAuth();

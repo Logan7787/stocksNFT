@@ -6,7 +6,8 @@ import {
   RAW_MARKET_CLOSE_2026_10_29_SETTLED, 
   RAW_MARKET_CLOSE_2026_10_30,
   RAW_MARKET_CLOSE_2026_11_04,
-  RAW_MARKET_CLOSE_2026_11_05 
+  RAW_MARKET_CLOSE_2026_11_05,
+  RAW_MARKET_CLOSE_2026_11_09 
 } from '../data/verifiedMarketData';
 import { getISTNow, formatDateYMD, isPost830PMSettlementTime } from './previousCloseService';
 
@@ -414,7 +415,7 @@ export async function retrieveNseOptionDataWithSummary(symbol: string = 'NIFTY')
         source: 'NSE India Official API',
         timestamp: `${todayYMD} ${timeFormatted}`,
         underlying: `NSE ${symbol} 50 INDEX`,
-        expiryDate: nseRes.selectedExpiry || 'Current Weekly (09-Nov-2026)',
+        expiryDate: nseRes.selectedExpiry || 'Current Weekly (17-Nov-2026)',
         spotPrice: spot,
         spotChange,
         spotChangePercent,
@@ -466,7 +467,7 @@ export async function retrieveNseOptionDataWithSummary(symbol: string = 'NIFTY')
             source: 'NSE Official Settlement (Bhavcopy)',
             timestamp: `${payload.date || todayYMD} 15:30:00 IST (Final Bhavcopy Close)`,
             underlying: payload.underlying || `NSE ${symbol} 50 INDEX`,
-            expiryDate: payload.expiryDate ? `Current Weekly (${payload.expiryDate})` : 'Current Weekly (09-Nov-2026)',
+            expiryDate: payload.expiryDate ? `Current Weekly (${payload.expiryDate})` : 'Current Weekly (17-Nov-2026)',
             spotPrice: spot,
             spotChange,
             spotChangePercent,
@@ -482,7 +483,7 @@ export async function retrieveNseOptionDataWithSummary(symbol: string = 'NIFTY')
             },
             breakLevels,
             totalStrikes: payload.rows.length,
-            message: `Official NSE Derivative Settlement Data retrieved: Spot ₹${spot.toLocaleString('en-IN', { minimumFractionDigits: 2 })} • ATM ${metrics.atmStrike} • Expiry ${payload.expiryDate || '09-Nov-2026'}`,
+            message: `Official NSE Derivative Settlement Data retrieved: Spot ₹${spot.toLocaleString('en-IN', { minimumFractionDigits: 2 })} • ATM ${metrics.atmStrike} • Expiry ${payload.expiryDate || '17-Nov-2026'}`,
           };
         }
       }
@@ -492,32 +493,37 @@ export async function retrieveNseOptionDataWithSummary(symbol: string = 'NIFTY')
   }
 
   // 3. Fallback to Verified Official Settlement Dataset
-  const isNov5 = todayYMD >= '2026-11-05';
-  const isNov4 = todayYMD === '2026-11-04' || (todayYMD >= '2026-11-01' && !isNov5);
+  const isNov9 = todayYMD >= '2026-11-09';
+  const isNov5 = !isNov9 && (todayYMD === '2026-11-05' || todayYMD >= '2026-11-05');
+  const isNov4 = !isNov9 && !isNov5 && (todayYMD === '2026-11-04' || todayYMD >= '2026-11-01');
   const is30Oct = todayYMD === '2026-10-30' || todayYMD === '2026-10-31';
   const is29Oct = todayYMD === '2026-10-29';
 
-  const spot = isNov5 ? 24536.60 : (isNov4 ? 23960.60 : (is30Oct ? 23053.10 : (is29Oct ? 22936.75 : 22698.85)));
-  const prevClose = isNov5 ? 23960.60 : (isNov4 ? 23810.85 : (is30Oct ? 22936.75 : (is29Oct ? 22698.85 : 22749.75)));
-  const spotChange = isNov5 ? 576.00 : (isNov4 ? 149.75 : (is30Oct ? 116.35 : (is29Oct ? 237.90 : -50.90)));
-  const spotChangePercent = isNov5 ? 2.40 : (isNov4 ? 0.63 : (is30Oct ? 0.51 : (is29Oct ? 1.05 : -0.22)));
-  const isSettled = isPost830PMSettlementTime(istNow) || !isMarketHours || isNov5 || isNov4 || is30Oct;
+  const spot = isNov9 ? 25044.65 : (isNov5 ? 24536.60 : (isNov4 ? 23960.60 : (is30Oct ? 23053.10 : (is29Oct ? 22936.75 : 22698.85))));
+  const prevClose = isNov9 ? 24986.40 : (isNov5 ? 23960.60 : (isNov4 ? 23810.85 : (is30Oct ? 22936.75 : (is29Oct ? 22698.85 : 22749.75))));
+  const spotChange = isNov9 ? 58.25 : (isNov5 ? 576.00 : (isNov4 ? 149.75 : (is30Oct ? 116.35 : (is29Oct ? 237.90 : -50.90))));
+  const spotChangePercent = isNov9 ? 0.23 : (isNov5 ? 2.40 : (isNov4 ? 0.63 : (is30Oct ? 0.51 : (is29Oct ? 1.05 : -0.22))));
+  const isSettled = isPost830PMSettlementTime(istNow) || !isMarketHours || isNov9 || isNov5 || isNov4 || is30Oct;
 
-  const rawRows = isNov5
-    ? [...RAW_MARKET_CLOSE_2026_11_05]
-    : (isNov4
-        ? [...RAW_MARKET_CLOSE_2026_11_04]
-        : (is30Oct
-            ? [...RAW_MARKET_CLOSE_2026_10_30]
-            : (is29Oct ? (isSettled ? [...RAW_MARKET_CLOSE_2026_10_29_SETTLED] : [...RAW_MARKET_CLOSE_2026_10_29]) : [...RAW_MARKET_CLOSE_2026_10_28])));
+  const rawRows = isNov9
+    ? [...RAW_MARKET_CLOSE_2026_11_09]
+    : (isNov5
+        ? [...RAW_MARKET_CLOSE_2026_11_05]
+        : (isNov4
+            ? [...RAW_MARKET_CLOSE_2026_11_04]
+            : (is30Oct
+                ? [...RAW_MARKET_CLOSE_2026_10_30]
+                : (is29Oct ? (isSettled ? [...RAW_MARKET_CLOSE_2026_10_29_SETTLED] : [...RAW_MARKET_CLOSE_2026_10_29]) : [...RAW_MARKET_CLOSE_2026_10_28]))));
 
   const processed = rawRows.map(r => processRawOptionRow(r));
   const { highlightedRows, metrics } = applyConditionalHighlights(processed, spot);
   const breakLevels = calculateBreakLevels(highlightedRows, spot);
 
-  const expiryDate = (isNov5 || isNov4)
-    ? 'Current Weekly (09-Nov-2026)'
-    : (is30Oct ? 'Current Weekly (03-Nov-2026)' : (is29Oct ? 'Current Weekly (03-Nov-2026)' : 'Current Weekly (28-Oct-2026)'));
+  const expiryDate = isNov9
+    ? 'Current Weekly (17-Nov-2026)'
+    : (isNov5 || isNov4)
+        ? 'Current Weekly (09-Nov-2026)'
+        : (is30Oct ? 'Current Weekly (03-Nov-2026)' : (is29Oct ? 'Current Weekly (03-Nov-2026)' : 'Current Weekly (28-Oct-2026)'));
 
   return {
     success: true,
