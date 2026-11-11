@@ -344,8 +344,21 @@ def main():
     processed_rows, atm_strike, formula_atm, min_avg = compute_institutional_formulas(raw_rows, spot_price)
     print(f"Processed {len(processed_rows)} strikes! Spot: {spot_price}, ATM: {atm_strike}, Formula ATM: {formula_atm}, Lowest AVG: {min_avg}")
 
-    # Spot change calculation
-    if spot_price == 25255.05 or abs(spot_price - 25255.05) < 5:
+    # Dynamic Spot change calculation from previous settlement
+    prev_close = 0.0
+    if os.path.exists('public/data/latest_settlement.json'):
+        try:
+            with open('public/data/latest_settlement.json', 'r', encoding='utf-8') as f:
+                prev_data = json.load(f)
+                if prev_data and prev_data.get('date') != date_str and prev_data.get('spotPrice'):
+                    prev_close = float(prev_data['spotPrice'])
+        except Exception as e:
+            print(f"Notice reading previous settlement file: {e}")
+
+    if prev_close > 0:
+        spot_change = round(spot_price - prev_close, 2)
+        spot_change_pct = round((spot_change / prev_close) * 100, 2)
+    elif spot_price == 25255.05 or abs(spot_price - 25255.05) < 5:
         prev_close = 25044.65
         spot_change = 210.40
         spot_change_pct = 0.84
