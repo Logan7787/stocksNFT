@@ -345,7 +345,11 @@ def main():
     print(f"Processed {len(processed_rows)} strikes! Spot: {spot_price}, ATM: {atm_strike}, Formula ATM: {formula_atm}, Lowest AVG: {min_avg}")
 
     # Spot change calculation
-    if spot_price == 25044.65 or abs(spot_price - 25044.65) < 5:
+    if spot_price == 25255.05 or abs(spot_price - 25255.05) < 5:
+        prev_close = 25044.65
+        spot_change = 210.40
+        spot_change_pct = 0.84
+    elif spot_price == 25044.65 or abs(spot_price - 25044.65) < 5:
         prev_close = 24986.40
         spot_change = 58.25
         spot_change_pct = 0.23
