@@ -440,9 +440,10 @@ export async function retrieveNseOptionDataWithSummary(symbol: string = 'NIFTY')
     console.warn('NSE live fetch fallback:', err);
   }
 
-  // 2. Attempt Loading Daily 20:30 PM Settlement JSON (Generated nightly by GitHub Actions Cloud Cron)
+  // 2. Attempt Loading Daily Settlement from Live Serverless API or Cached JSON
   try {
     const urls = [
+      `/api/settlement?date=${todayYMD}`,
       `/data/settlement_${todayYMD}.json`,
       `/data/latest_settlement.json`
     ];

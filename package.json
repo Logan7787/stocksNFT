@@ -13,6 +13,7 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.109.0",
     "@tanstack/react-query": "^5.104.1",
+    "adm-zip": "^0.6.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.50.0",
     "react": "^19.2.8",
@@ -21,6 +22,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",
+    "@types/adm-zip": "^0.6.0",
     "@types/node": "^24.19.1",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",

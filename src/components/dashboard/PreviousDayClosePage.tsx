@@ -1111,8 +1111,23 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
       <NseDataRetrieveModal
         isOpen={isNseRetrieveOpen}
         onClose={() => setIsNseRetrieveOpen(false)}
-        onApplyToClosePage={(_res) => {
-          loadData(true);
+        onApplyToClosePage={(res) => {
+          if (res && res.processedRows && res.processedRows.length > 0) {
+            setDataResult({
+              date: statusInfo.effectiveCloseDate,
+              slot: '20:30 Settlement (Live Retrieved)',
+              spotPrice: res.spotPrice,
+              spotChange: res.spotChange,
+              spotChangePercent: res.spotChangePercent,
+              rows: res.processedRows,
+              metrics: res.metrics,
+              source: 'database',
+              breakLevels: res.breakLevels,
+            });
+            showToast('Applied live NSE settlement directly to table', 'success');
+          } else {
+            loadData(true);
+          }
         }}
         onApplyToLiveChain={(_res) => {
           loadData(true);

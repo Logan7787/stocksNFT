@@ -13,7 +13,7 @@
       "destination": "https://www.nseindia.com/:path*"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
   ]

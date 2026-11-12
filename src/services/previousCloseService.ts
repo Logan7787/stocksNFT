@@ -514,9 +514,10 @@ export async function getPreviousCloseOptionChain(
       ? false
       : isNaturalPost830;
 
-  // 0. Automated 20:30 PM Settlement JSON (Generated nightly by GitHub Actions Cloud Cron)
+  // 0. Live Vercel Serverless Settlement API & Cached JSON Files
   try {
     const urls = [
+      `/api/settlement?date=${effectiveDate}`,
       `/data/settlement_${effectiveDate}.json`,
       `/data/latest_settlement.json`
     ];
