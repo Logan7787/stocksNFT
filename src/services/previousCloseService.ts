@@ -118,7 +118,9 @@ import {
   RAW_MARKET_CLOSE_2026_11_09,
   VERIFIED_MARKET_CLOSE_2026_11_09,
   RAW_MARKET_CLOSE_2026_11_11,
-  VERIFIED_MARKET_CLOSE_2026_11_11
+  VERIFIED_MARKET_CLOSE_2026_11_11,
+  RAW_MARKET_CLOSE_2026_11_12,
+  VERIFIED_MARKET_CLOSE_2026_11_12
 } from '../data/verifiedMarketData';
 export {
   RAW_MARKET_CLOSE_2026_10_28,
@@ -136,7 +138,9 @@ export {
   RAW_MARKET_CLOSE_2026_11_09,
   VERIFIED_MARKET_CLOSE_2026_11_09,
   RAW_MARKET_CLOSE_2026_11_11,
-  VERIFIED_MARKET_CLOSE_2026_11_11
+  VERIFIED_MARKET_CLOSE_2026_11_11,
+  RAW_MARKET_CLOSE_2026_11_12,
+  VERIFIED_MARKET_CLOSE_2026_11_12
 };
 
 /**
@@ -521,13 +525,13 @@ export async function getPreviousCloseOptionChain(
       if (res.ok) {
         const payload = await res.json();
         if (payload && (payload.date === effectiveDate || u.includes(effectiveDate) || u.includes('latest_settlement')) && Array.isArray(payload.rows) && payload.rows.length > 0) {
-          const spot = Number(payload.spotPrice) || referenceSpot || (effectiveDate >= '2026-11-11' ? 25255.05 : (effectiveDate >= '2026-11-09' ? 25044.65 : 24536.60));
+          const spot = Number(payload.spotPrice) || referenceSpot || (effectiveDate >= '2026-11-12' ? 25299.35 : (effectiveDate >= '2026-11-11' ? 25255.05 : (effectiveDate >= '2026-11-09' ? 25044.65 : 24536.60)));
           const spotChange = payload.spotChange !== undefined 
             ? Number(payload.spotChange) 
-            : (spot === 25255.05 ? 210.40 : (spot === 25044.65 ? 58.25 : (spot === 24536.60 ? 576.00 : (spot === 23960.60 ? 149.75 : (spot === 23053.10 ? 116.35 : 0)))));
+            : (spot === 25299.35 ? 44.30 : (spot === 25255.05 ? 210.40 : (spot === 25044.65 ? 58.25 : (spot === 24536.60 ? 576.00 : (spot === 23960.60 ? 149.75 : (spot === 23053.10 ? 116.35 : 0))))));
           const spotChangePercent = payload.spotChangePercent !== undefined 
             ? Number(payload.spotChangePercent) 
-            : (spot === 25255.05 ? 0.84 : (spot === 25044.65 ? 0.23 : (spot === 24536.60 ? 2.40 : (spot === 23960.60 ? 0.63 : (spot === 23053.10 ? 0.51 : 0)))));
+            : (spot === 25299.35 ? 0.18 : (spot === 25255.05 ? 0.84 : (spot === 25044.65 ? 0.23 : (spot === 24536.60 ? 2.40 : (spot === 23960.60 ? 0.63 : (spot === 23053.10 ? 0.51 : 0))))));
           const rowsToHighlight = payload.rows.map((r: any) => processRawOptionRow(r));
           const { highlightedRows, metrics } = applyConditionalHighlights(rowsToHighlight, spot);
           return buildCloseChainResult(
@@ -547,10 +551,30 @@ export async function getPreviousCloseOptionChain(
     // Continue with static fallback
   }
 
-  // 1. Official Verified Dataset for 2026-11-11+ (NSE Derivatives Settlement Report)
-  // Spot: 25,255.05 (+210.40, +0.84%), Prev Close: 25,044.65, Expiry: 17-Nov-2026
+  // 1. Official Verified Dataset for 2026-11-12+ (NSE Derivatives Settlement Report)
+  // Spot: 25,299.35 (+44.30, +0.18%), Prev Close: 25,255.05, Expiry: 17-Nov-2026
   // Exact real data matching official NSE Derivatives Quote & 20:30 PM Settlement
-  if (effectiveDate === '2026-11-11' || effectiveDate >= '2026-11-11') {
+  if (effectiveDate === '2026-11-12' || effectiveDate >= '2026-11-12') {
+    const verifiedSpot = 25299.35;
+    const sourceRows = isSettled
+      ? VERIFIED_MARKET_CLOSE_2026_11_12
+      : RAW_MARKET_CLOSE_2026_11_12.map(r => processRawOptionRow({ ...r, call_settlement_close: 0, put_settlement_close: 0 }));
+    const { highlightedRows, metrics } = applyConditionalHighlights(sourceRows, verifiedSpot);
+    return buildCloseChainResult(
+      effectiveDate,
+      isSettled ? '20:30 Settlement' : '15:30 Close',
+      verifiedSpot,
+      44.30,
+      0.18,
+      highlightedRows,
+      metrics,
+      'database'
+    );
+  }
+
+  // 2. Official Verified Dataset for 2026-11-11 (NSE Derivatives Settlement Report)
+  // Spot: 25,255.05 (+210.40, +0.84%), Prev Close: 25,044.65, Expiry: 17-Nov-2026
+  if (effectiveDate === '2026-11-11') {
     const verifiedSpot = 25255.05;
     const sourceRows = isSettled
       ? VERIFIED_MARKET_CLOSE_2026_11_11
