@@ -527,11 +527,11 @@ export async function getPreviousCloseOptionChain(
         const payload = await res.json();
         if (payload && (payload.date === effectiveDate || u.includes(effectiveDate) || u.includes('latest_settlement')) && Array.isArray(payload.rows) && payload.rows.length > 0) {
           const spot = Number(payload.spotPrice) || referenceSpot || (effectiveDate >= '2026-11-12' ? 25299.35 : (effectiveDate >= '2026-11-11' ? 25255.05 : (effectiveDate >= '2026-11-09' ? 25044.65 : 24536.60)));
-          const spotChange = payload.spotChange !== undefined 
-            ? Number(payload.spotChange) 
+          const spotChange = payload.spotChange !== undefined
+            ? Number(payload.spotChange)
             : (spot === 25299.35 ? 44.30 : (spot === 25255.05 ? 210.40 : (spot === 25044.65 ? 58.25 : (spot === 24536.60 ? 576.00 : (spot === 23960.60 ? 149.75 : (spot === 23053.10 ? 116.35 : 0))))));
-          const spotChangePercent = payload.spotChangePercent !== undefined 
-            ? Number(payload.spotChangePercent) 
+          const spotChangePercent = payload.spotChangePercent !== undefined
+            ? Number(payload.spotChangePercent)
             : (spot === 25299.35 ? 0.18 : (spot === 25255.05 ? 0.84 : (spot === 25044.65 ? 0.23 : (spot === 24536.60 ? 2.40 : (spot === 23960.60 ? 0.63 : (spot === 23053.10 ? 0.51 : 0))))));
           const rowsToHighlight = payload.rows.map((r: any) => processRawOptionRow(r));
           const { highlightedRows, metrics } = applyConditionalHighlights(rowsToHighlight, spot);

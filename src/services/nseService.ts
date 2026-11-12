@@ -1,9 +1,9 @@
 import type { RawOptionData, ProcessedOptionRow, BreakLevelsInfo, MarketMetrics } from '../types/optionChain';
 import { round2, processRawOptionRow, applyConditionalHighlights, calculateBreakLevels } from '../utils/formulas';
-import { 
-  RAW_MARKET_CLOSE_2026_10_28, 
-  RAW_MARKET_CLOSE_2026_10_29, 
-  RAW_MARKET_CLOSE_2026_10_29_SETTLED, 
+import {
+  RAW_MARKET_CLOSE_2026_10_28,
+  RAW_MARKET_CLOSE_2026_10_29,
+  RAW_MARKET_CLOSE_2026_10_29_SETTLED,
   RAW_MARKET_CLOSE_2026_10_30,
   RAW_MARKET_CLOSE_2026_11_04,
   RAW_MARKET_CLOSE_2026_11_05,
@@ -47,7 +47,7 @@ export function parseNseDerivativesReport(rawText: string, defaultDate: string =
   }
 
   const lines = rawText.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
-  
+
   interface ExtractedRow {
     expiry: string;
     type: 'CE' | 'PE';
@@ -97,12 +97,12 @@ export function parseNseDerivativesReport(rawText: string, defaultDate: string =
           const open = parseVal(rawTokens[0]);
           const high = parseVal(rawTokens[1]);
           const low = parseVal(rawTokens[2]);
-          
+
           // Check if index 3 is '-' or a valid close price
           const closeToken = rawTokens[3];
           const isCloseSettled = closeToken !== '-' && closeToken !== '—' && closeToken !== '–' && !isNaN(parseFloat(closeToken));
           const close = isCloseSettled ? parseFloat(closeToken) : 0;
-          
+
           let prevClose = 0;
           let ltp = 0;
           let change = 0;
@@ -454,11 +454,11 @@ export async function retrieveNseOptionDataWithSummary(symbol: string = 'NIFTY')
         if (payload && Array.isArray(payload.rows) && payload.rows.length > 0) {
           const spot = Number(payload.spotPrice) || 24536.60;
           const prevClose = Number(payload.previousClose) || 23960.60;
-          const spotChange = payload.spotChange !== undefined 
-            ? Number(payload.spotChange) 
+          const spotChange = payload.spotChange !== undefined
+            ? Number(payload.spotChange)
             : round2(spot - prevClose);
-          const spotChangePercent = payload.spotChangePercent !== undefined 
-            ? Number(payload.spotChangePercent) 
+          const spotChangePercent = payload.spotChangePercent !== undefined
+            ? Number(payload.spotChangePercent)
             : round2((spotChange / prevClose) * 100);
 
           const processed = payload.rows.map((r: any) => processRawOptionRow(r));
@@ -513,16 +513,16 @@ export async function retrieveNseOptionDataWithSummary(symbol: string = 'NIFTY')
   const rawRows = isNov12
     ? [...RAW_MARKET_CLOSE_2026_11_12]
     : (isNov11
-        ? [...RAW_MARKET_CLOSE_2026_11_11]
-        : (isNov9
-            ? [...RAW_MARKET_CLOSE_2026_11_09]
-            : (isNov5
-                ? [...RAW_MARKET_CLOSE_2026_11_05]
-                : (isNov4
-                    ? [...RAW_MARKET_CLOSE_2026_11_04]
-                    : (is30Oct
-                        ? [...RAW_MARKET_CLOSE_2026_10_30]
-                        : (is29Oct ? (isSettled ? [...RAW_MARKET_CLOSE_2026_10_29_SETTLED] : [...RAW_MARKET_CLOSE_2026_10_29]) : [...RAW_MARKET_CLOSE_2026_10_28]))))));
+      ? [...RAW_MARKET_CLOSE_2026_11_11]
+      : (isNov9
+        ? [...RAW_MARKET_CLOSE_2026_11_09]
+        : (isNov5
+          ? [...RAW_MARKET_CLOSE_2026_11_05]
+          : (isNov4
+            ? [...RAW_MARKET_CLOSE_2026_11_04]
+            : (is30Oct
+              ? [...RAW_MARKET_CLOSE_2026_10_30]
+              : (is29Oct ? (isSettled ? [...RAW_MARKET_CLOSE_2026_10_29_SETTLED] : [...RAW_MARKET_CLOSE_2026_10_29]) : [...RAW_MARKET_CLOSE_2026_10_28]))))));
 
   const processed = rawRows.map(r => processRawOptionRow(r));
   const { highlightedRows, metrics } = applyConditionalHighlights(processed, spot);
@@ -531,8 +531,8 @@ export async function retrieveNseOptionDataWithSummary(symbol: string = 'NIFTY')
   const expiryDate = (isNov12 || isNov11 || isNov9)
     ? 'Current Weekly (17-Nov-2026)'
     : (isNov5 || isNov4)
-        ? 'Current Weekly (09-Nov-2026)'
-        : (is30Oct ? 'Current Weekly (03-Nov-2026)' : (is29Oct ? 'Current Weekly (03-Nov-2026)' : 'Current Weekly (28-Oct-2026)'));
+      ? 'Current Weekly (09-Nov-2026)'
+      : (is30Oct ? 'Current Weekly (03-Nov-2026)' : (is29Oct ? 'Current Weekly (03-Nov-2026)' : 'Current Weekly (28-Oct-2026)'));
 
   return {
     success: true,
@@ -558,11 +558,11 @@ export async function retrieveNseOptionDataWithSummary(symbol: string = 'NIFTY')
     message: isNov5
       ? `Official NSE Derivative Settlement Data retrieved: Spot ₹24,536.60 • ATM 24550 • Formula ATM 24550`
       : (isNov4
-          ? `Official NSE Derivative Settlement Data retrieved: Spot ₹23,960.60 • ATM 23950 • Formula ATM 23950`
-          : (is30Oct
-              ? `Official NSE Derivative Settlement Data retrieved: Spot ₹23,053.10 • ATM 23050 • Formula ATM 23050`
-              : (is29Oct
-                  ? `Official NSE Derivative Settlement Data retrieved: Spot ₹22,936.75 • ATM 22950 • Formula ATM 23000`
-                  : `Official NSE Derivative Settlement Data retrieved: Spot ₹22,698.85 • ATM 22700 • Formula ATM 22700`))),
+        ? `Official NSE Derivative Settlement Data retrieved: Spot ₹23,960.60 • ATM 23950 • Formula ATM 23950`
+        : (is30Oct
+          ? `Official NSE Derivative Settlement Data retrieved: Spot ₹23,053.10 • ATM 23050 • Formula ATM 23050`
+          : (is29Oct
+            ? `Official NSE Derivative Settlement Data retrieved: Spot ₹22,936.75 • ATM 22950 • Formula ATM 23000`
+            : `Official NSE Derivative Settlement Data retrieved: Spot ₹22,698.85 • ATM 22700 • Formula ATM 22700`))),
   };
 }
