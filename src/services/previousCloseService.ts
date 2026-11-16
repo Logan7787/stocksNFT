@@ -521,9 +521,9 @@ export async function getPreviousCloseOptionChain(
   // 0. Live Vercel Serverless Settlement API & Cached JSON Files
   try {
     const urls = [
-      `/api/settlement?date=${effectiveDate}`,
       `/data/settlement_${effectiveDate}.json`,
-      `/data/latest_settlement.json`
+      `/data/latest_settlement.json`,
+      `/api/settlement?date=${effectiveDate}`
     ];
     for (const u of urls) {
       const res = await fetch(u);
