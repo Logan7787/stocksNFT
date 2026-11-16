@@ -719,7 +719,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   type="text"
                   value={broker.proxyUrl || ''}
                   onChange={(e) => setBroker({ ...broker, proxyUrl: e.target.value })}
-                  placeholder="Leave blank for automatic local Vite proxy (/api/upstox)"
+                  placeholder={broker.provider === 'angelone' ? "Leave blank for automatic proxy (/api/angelone)" : "Leave blank for automatic local Vite proxy (/api/upstox)"}
                   className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100"
                 />
                 {broker.proxyUrl && broker.proxyUrl.includes('pro.upstox.com') && (

@@ -87,9 +87,13 @@ export class AngelOneService {
     endpointPath: string,
     options: RequestInit
   ): Promise<{ ok: boolean; status: number; json: any; rawText: string }> {
+    const cleanPath = endpointPath.endsWith('/') && endpointPath.length > 1
+      ? endpointPath.slice(0, -1)
+      : endpointPath;
+
     const urls = [
-      `/api/angelone${endpointPath}`,
-      `https://apiconnect.angelone.in${endpointPath}`,
+      `/api/angelone${cleanPath}`,
+      `https://apiconnect.angelone.in${cleanPath}`,
     ];
 
     let lastError: any = null;
@@ -106,6 +110,10 @@ export class AngelOneService {
         if (text && text.trim().startsWith('{')) {
           try {
             const parsed = JSON.parse(text);
+            // If proxy returns a Vercel 404 router error, continue to direct fallback url
+            if (response.status === 404 || parsed?.error?.code === '404' || parsed?.error?.code === 404) {
+              continue;
+            }
             return {
               ok: response.ok,
               status: response.status,
@@ -215,7 +223,7 @@ export class AngelOneService {
 
     try {
       const { ok, status, json, rawText } = await this.executeAngelRequest(
-        '/rest/secure/angelbroking/market/v1/quote/',
+        '/rest/secure/angelbroking/market/v1/quote',
         {
           method: 'POST',
           headers: {
