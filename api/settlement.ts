@@ -5,6 +5,32 @@ import AdmZip from 'adm-zip';
 import type { RawOptionData, ProcessedOptionRow } from '../src/types/optionChain';
 import { processRawOptionRow, applyConditionalHighlights, calculateBreakLevels, round2 } from '../src/utils/formulas';
 
+function sendJson(res: any, status: number, data: any) {
+  if (typeof res.status === 'function') {
+    return res.status(status).json(data);
+  }
+  res.statusCode = status;
+  res.setHeader('Content-Type', 'application/json');
+  res.end(JSON.stringify(data));
+}
+
+function normalizeDateStr(dStr: string): string {
+  const d = dStr.trim();
+  if (d.length === 10 && d[4] === '-' && d[7] === '-') return d;
+  const months: Record<string, string> = {
+    jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06',
+    jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12'
+  };
+  const match = d.match(/^(\d{1,2})-([A-Za-z]{3})-(\d{4})$/);
+  if (match) {
+    const day = match[1].padStart(2, '0');
+    const mon = months[match[2].toLowerCase()] || '01';
+    const yr = match[3];
+    return `${yr}-${mon}-${day}`;
+  }
+  return d;
+}
+
 interface SettlementPayload {
   success: boolean;
   source: string;
@@ -162,16 +188,21 @@ export default async function handler(req: any, res: any) {
       }
 
       if (niftyOptions.length > 0) {
-        // Auto-select active weekly expiry
-        const sortedExpiries = Array.from(expiries).sort();
-        const upcoming = sortedExpiries.filter(e => e >= targetDate);
+        // Auto-select active weekly expiry (rollover to next weekly on expiry day post-settlement)
+        const expiryMap = new Map<string, string>();
+        for (const e of expiries) {
+          expiryMap.set(normalizeDateStr(e), e);
+        }
+        const sortedNorm = Array.from(expiryMap.keys()).sort();
+        const upcoming = sortedNorm.filter(e => e >= targetDate);
         let targetExpiry = '';
         if (upcoming.length > 1 && upcoming[0] === targetDate) {
-          targetExpiry = upcoming[1];
+          // On expiry day at settlement (20:30 IST), active contract rolls over to next weekly!
+          targetExpiry = expiryMap.get(upcoming[1]) || upcoming[1];
         } else if (upcoming.length > 0) {
-          targetExpiry = upcoming[0];
+          targetExpiry = expiryMap.get(upcoming[0]) || upcoming[0];
         } else {
-          targetExpiry = sortedExpiries[0] || '2026-11-17';
+          targetExpiry = (sortedNorm.length > 0 ? expiryMap.get(sortedNorm[0]) : undefined) || '2026-11-17';
         }
 
         // Build strike map
@@ -275,7 +306,7 @@ export default async function handler(req: any, res: any) {
         }
 
         res.setHeader('Cache-Control', 'public, s-maxage=1800, stale-while-revalidate=86400');
-        return res.status(200).json({
+        return sendJson(res, 200, {
           success: true,
           source: 'NSE Official Archives Bhavcopy (Live Serverless)',
           date: targetDate,
@@ -303,20 +334,20 @@ export default async function handler(req: any, res: any) {
     if (fs.existsSync(fallbackPath)) {
       const data = JSON.parse(fs.readFileSync(fallbackPath, 'utf8'));
       res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=86400');
-      return res.status(200).json({
+      return sendJson(res, 200, {
         ...data,
         success: true,
         source: 'Cached Settlement JSON (Static Fallback)',
       });
     }
 
-    return res.status(404).json({
+    return sendJson(res, 404, {
       success: false,
       message: `No settlement data available for ${targetDate} yet. NSE uploads daily settlement around 20:30 IST.`,
     });
   } catch (error: any) {
     console.error('Settlement handler error:', error);
-    return res.status(500).json({
+    return sendJson(res, 500, {
       success: false,
       message: error.message || 'Internal server error processing NSE settlement',
     });

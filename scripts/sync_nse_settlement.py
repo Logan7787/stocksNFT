@@ -121,11 +121,36 @@ def fetch_classic_fo_bhavcopy(date_str):
         print(f"Notice: Classic FO Bhavcopy download: {e}")
     return None
 
-def parse_option_chain_from_nse_api(api_result, target_expiry=None):
+def normalize_expiry_date(d_str):
+    d = d_str.strip()
+    if len(d) == 10 and d[4] == '-' and d[7] == '-':
+        return d
+    for fmt in ('%d-%b-%Y', '%d-%B-%Y', '%d/%m/%Y', '%Y%m%d'):
+        try:
+            return datetime.datetime.strptime(d, fmt).strftime('%Y-%m-%d')
+        except Exception:
+            pass
+    return d
+
+def parse_option_chain_from_nse_api(api_result, target_expiry=None, date_str=None):
     underlying = api_result['underlying']
     data_items = api_result['data']
-    expiries = api_result['expiryDates']
+    expiries = api_result.get('expiryDates', [])
+
+    if not target_expiry and date_str and expiries:
+        expiry_map = {normalize_expiry_date(e): e for e in expiries}
+        sorted_norm = sorted(list(expiry_map.keys()))
+        upcoming = [e for e in sorted_norm if e >= date_str]
+        if upcoming and upcoming[0] == date_str and len(upcoming) > 1:
+            # Expiry day at settlement: roll over to next weekly expiry!
+            target_expiry = expiry_map[upcoming[1]]
+        elif upcoming:
+            target_expiry = expiry_map[upcoming[0]]
+        else:
+            target_expiry = expiry_map[sorted_norm[0]]
+
     expiry = target_expiry if target_expiry else (expiries[0] if expiries else 'Current')
+    print(f"Selected Expiry (API): {expiry} from {len(expiries)} available expiry dates")
 
     strike_map = {}
     for item in data_items:
@@ -191,17 +216,18 @@ def parse_fo_bhavcopy_csv(csv_content, target_symbol='NIFTY', date_str=None):
     if not nifty_options:
         return 0, '', []
 
-    sorted_expiries = sorted(list(expiries))
+    expiry_map = {normalize_expiry_date(e): e for e in expiries}
+    sorted_norm = sorted(list(expiry_map.keys()))
     # Filter expiries that are upcoming relative to trading day
-    upcoming = [e for e in sorted_expiries if e >= date_str]
+    upcoming = [e for e in sorted_norm if e >= date_str]
     # If the earliest expiry is the trade date itself, at post-close (settlement), traders track the next weekly
     if upcoming and upcoming[0] == date_str and len(upcoming) > 1:
-        target_expiry = upcoming[1]
+        target_expiry = expiry_map[upcoming[1]]
     elif upcoming:
-        target_expiry = upcoming[0]
+        target_expiry = expiry_map[upcoming[0]]
     else:
-        target_expiry = sorted_expiries[0] if sorted_expiries else ''
-    print(f"Selected Expiry: {target_expiry} from {len(sorted_expiries)} available expiry dates")
+        target_expiry = expiry_map[sorted_norm[0]] if sorted_norm else ''
+    print(f"Selected Expiry: {target_expiry} from {len(expiries)} available expiry dates")
 
     strike_map = {}
     for row in nifty_options:
@@ -325,7 +351,7 @@ def main():
     # 1. Fetch Option Chain
     api_res = fetch_from_nse_api()
     if api_res:
-        spot_price, expiry, raw_rows = parse_option_chain_from_nse_api(api_res)
+        spot_price, expiry, raw_rows = parse_option_chain_from_nse_api(api_res, date_str=date_str)
     else:
         print("API failed/blocked; attempting Bhavcopy download...")
         bhav_res = fetch_udiff_fo_bhavcopy(date_str) or fetch_classic_fo_bhavcopy(date_str)
