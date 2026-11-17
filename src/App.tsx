@@ -46,7 +46,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
               !
             </div>
             <h2 className="text-lg font-bold text-white">Application Notice</h2>
-            <p className="text-xs font-mono text-rose-300 bg-rose-950/40 p-3 rounded-lg border border-rose-900/50 break-words text-left">
+            <p className="text-xs font-mono text-rose-300 bg-rose-950/40 p-3 rounded-lg border border-rose-900/50 wrap-break-word text-left">
               {this.state.error?.message || 'Unexpected application error'}
             </p>
             <div className="flex gap-2">
