@@ -1,4 +1,4 @@
-﻿# Automated 20:30 PM NSE Derivatives Daily Sync & Deployment Script
+# Automated 20:30 PM NSE Derivatives Daily Sync & Deployment Script
 # Can be executed automatically via Windows Task Scheduler or manually anytime.
 param (
     [string]$TargetDate = ""
