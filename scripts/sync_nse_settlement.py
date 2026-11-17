@@ -336,6 +336,48 @@ def compute_institutional_formulas(rows, spot_price):
 
     return processed, closest_strike, formula_atm, min_avg
 
+def update_typescript_verified_data(date_str, spot_price, spot_change, spot_change_pct, prev_close, expiry, rows):
+    ts_file = 'src/data/verifiedMarketData.ts'
+    if not os.path.exists(ts_file):
+        return
+    date_ident = date_str.replace('-', '_')
+    var_name = f"RAW_MARKET_CLOSE_{date_ident}"
+
+    with open(ts_file, 'r', encoding='utf-8') as f:
+        content = f.read()
+
+    if var_name in content:
+        print(f"TypeScript constant {var_name} already exists in {ts_file}.")
+        return
+
+    # Filter strikes within ± 1500 of ATM
+    atm = round(spot_price / 50) * 50
+    filtered = [r for r in rows if abs(r['strike'] - atm) <= 1500]
+    if not filtered:
+        filtered = rows
+
+    ts_chunk = f"\n\n/**\n * Official Verified Dataset from {date_str} (NSE Derivatives Settlement Report)\n * Spot: {spot_price:,.2f} ({spot_change:+,.2f}, {spot_change_pct:+.2f}%), Prev Close: {prev_close:,.2f}, Expiry: {expiry}\n */\nexport const RAW_MARKET_CLOSE_{date_ident}: RawOptionData[] = [\n"
+    for r in filtered:
+        call_cl = r.get('call_close', 0)
+        put_cl = r.get('put_close', 0)
+        call_prev = r.get('call_prev_close', call_cl)
+        put_prev = r.get('put_prev_close', put_cl)
+        call_hi = r.get('call_high', call_cl)
+        call_lo = r.get('call_low', call_cl)
+        put_hi = r.get('put_high', put_cl)
+        put_lo = r.get('put_low', put_cl)
+        call_ltp = r.get('call_ltp', call_cl)
+        put_ltp = r.get('put_ltp', put_cl)
+        call_vol = r.get('call_volume', 0)
+        put_vol = r.get('put_volume', 0)
+        ts_chunk += f"  {{ strike: {r['strike']}, call_prev_close: {call_prev}, call_high: {call_hi}, call_low: {call_lo}, call_close: {call_cl}, call_ltp: {call_ltp}, call_volume: {call_vol}, put_prev_close: {put_prev}, put_high: {put_hi}, put_low: {put_lo}, put_close: {put_cl}, put_ltp: {put_ltp}, put_volume: {put_vol}, call_settlement_close: {call_cl}, put_settlement_close: {put_cl} }},\n"
+
+    ts_chunk += f"""];\n\nexport const VERIFIED_MARKET_CLOSE_{date_ident}: ProcessedOptionRow[] =\n  RAW_MARKET_CLOSE_{date_ident}.map(r => processRawOptionRow(r));\n"""
+
+    with open(ts_file, 'a', encoding='utf-8') as f:
+        f.write(ts_chunk)
+    print(f"Appended {var_name} and VERIFIED_MARKET_CLOSE_{date_ident} to {ts_file}")
+
 def main():
     parser = argparse.ArgumentParser(description="NSE Settlement Automatic Sync Engine")
     parser.add_argument('--date', type=str, help="Target Date YYYY-MM-DD (defaults to latest trading day)")
@@ -435,6 +477,20 @@ def main():
     with open(dated_path, 'w', encoding='utf-8') as f:
         json.dump(payload, f, indent=2)
     print(f"Saved: {dated_path}")
+
+    # 4. Also update TypeScript verifiedMarketData.ts for code-level resilience
+    try:
+        update_typescript_verified_data(
+            date_str=date_str,
+            spot_price=spot_price,
+            spot_change=spot_change,
+            spot_change_pct=spot_change_pct,
+            prev_close=prev_close,
+            expiry=expiry,
+            rows=processed_rows
+        )
+    except Exception as ts_err:
+        print(f"Notice updating verifiedMarketData.ts: {ts_err}")
 
     print("=== Automated NSE Settlement Sync Completed Successfully! ===")
 

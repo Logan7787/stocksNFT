@@ -36,6 +36,7 @@ import {
   saveStoredTradeSettings, 
   evaluateAllTradeSignals 
 } from '../../utils/tradeEngine';
+import { getActiveWeeklyExpiryDate, formatExpiryDisplay } from '../../utils/marketSchedule';
 import { CheckCircle2, AlertTriangle, Key } from 'lucide-react';
 import { useMemo } from 'react';
 
@@ -155,7 +156,7 @@ export const OptionChainDashboard: React.FC = () => {
         contractName: symbol,
         optionType: type,
         strike,
-        expiryDate: '17-Nov-2026',
+        expiryDate: brokerConfig.expiryDate || getActiveWeeklyExpiryDate(),
         entryPrice: price,
         quantity: 65,
         lotSize: 65,
@@ -451,7 +452,7 @@ export const OptionChainDashboard: React.FC = () => {
         isMobileCompact={isMobileCompact}
         onToggleMobileCompact={() => setIsMobileCompact(!isMobileCompact)}
         currentRoute={currentRoute}
-        expiryDate={brokerConfig.expiryDate || '17-Nov-2026'}
+        expiryDate={brokerConfig.expiryDate || getActiveWeeklyExpiryDate()}
         onNavigate={handleNavigate}
       />
 

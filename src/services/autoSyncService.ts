@@ -16,6 +16,8 @@ import {
 } from '../utils/formulas';
 import { fetchNseLiveOptionChain, parseNseDerivativesReport } from './nseService';
 import { 
+  VERIFIED_MARKET_CLOSE_2026_11_17,
+  VERIFIED_MARKET_CLOSE_2026_11_16,
   RAW_MARKET_CLOSE_2026_10_30,
   VERIFIED_MARKET_CLOSE_2026_10_30,
   RAW_MARKET_CLOSE_2026_10_29,
@@ -206,45 +208,89 @@ class AutoSyncService {
       let spotChangePct = 0.75;
       let finalRows: ProcessedOptionRow[] = [];
 
-      // 0. Check if target date matches official verified report
-      if (effectiveDate === '2026-10-30' || effectiveDate === '2026-10-31') {
-        closingSpot = 23053.10;
-        spotChange = 116.35;
-        spotChangePct = 0.51;
-        finalRows = VERIFIED_MARKET_CLOSE_2026_10_30;
-      } else if (effectiveDate === '2026-10-29') {
-        closingSpot = 22936.75;
-        spotChange = 237.90;
-        spotChangePct = 1.05;
-        finalRows = (syncType === 'evening_settlement_2030' ? VERIFIED_MARKET_CLOSE_2026_10_29_SETTLED : VERIFIED_MARKET_CLOSE_2026_10_29);
-      } else if (effectiveDate === '2026-10-28') {
-        closingSpot = 22698.85;
-        spotChange = -50.90;
-        spotChangePct = -0.22;
-        const processed = RAW_MARKET_CLOSE_2026_10_28.map((r) => processRawOptionRow(r));
-        const { highlightedRows } = applyConditionalHighlights(processed, closingSpot);
-        finalRows = highlightedRows;
-      } else if (effectiveDate === '2026-10-27') {
-        closingSpot = 22749.75;
-        spotChange = -18.90;
-        spotChangePct = -0.08;
-        const processed = RAW_MARKET_CLOSE_2026_10_27.map((r) => processRawOptionRow(r));
-        const { highlightedRows } = applyConditionalHighlights(processed, closingSpot);
-        finalRows = highlightedRows;
-      } else if (effectiveDate === '2026-10-26') {
-        closingSpot = 22768.65;
-        spotChange = 168.65;
-        spotChangePct = 0.75;
-        const processed = RAW_MARKET_CLOSE_2026_10_26.map((r) => processRawOptionRow(r));
-        const { highlightedRows } = applyConditionalHighlights(processed, closingSpot);
-        finalRows = highlightedRows;
-      } else if (effectiveDate === '2026-10-23') {
-        closingSpot = 22600.00;
-        spotChange = -87.65;
-        spotChangePct = -0.39;
-        const processed = RAW_MARKET_CLOSE_2026_10_23.map((r) => processRawOptionRow(r));
-        const { highlightedRows } = applyConditionalHighlights(processed, closingSpot);
-        finalRows = highlightedRows;
+      // 0a. Try loading official daily settlement file (/data/settlement_DATE.json or /data/latest_settlement.json)
+      try {
+        const fileUrls = [
+          `/data/settlement_${effectiveDate}.json`,
+          `/data/latest_settlement.json`
+        ];
+        for (const u of fileUrls) {
+          const cacheBuster = `?t=${Date.now()}`;
+          const res = await fetch(`${u}${cacheBuster}`, {
+            cache: 'no-store',
+            headers: {
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache',
+            },
+          });
+          if (res.ok) {
+            const payload = await res.json();
+            if (payload && (payload.date === effectiveDate || u.includes(effectiveDate) || u.includes('latest_settlement')) && Array.isArray(payload.rows) && payload.rows.length > 0) {
+              closingSpot = Number(payload.spotPrice) || closingSpot;
+              spotChange = payload.spotChange !== undefined ? Number(payload.spotChange) : spotChange;
+              spotChangePct = payload.spotChangePercent !== undefined ? Number(payload.spotChangePercent) : spotChangePct;
+              const processed = payload.rows.map((r: any) => processRawOptionRow(r));
+              const { highlightedRows } = applyConditionalHighlights(processed, closingSpot);
+              finalRows = highlightedRows;
+              break;
+            }
+          }
+        }
+      } catch (fileErr) {
+        console.warn('[AutoSync] Static file check notice:', fileErr);
+      }
+
+      // 0b. Check if target date matches official verified report
+      if (finalRows.length === 0) {
+        if (effectiveDate === '2026-11-17' || effectiveDate >= '2026-11-17') {
+          closingSpot = 25387.40;
+          spotChange = 96.30;
+          spotChangePct = 0.38;
+          finalRows = VERIFIED_MARKET_CLOSE_2026_11_17;
+        } else if (effectiveDate === '2026-11-16') {
+          closingSpot = 25291.10;
+          spotChange = 146.80;
+          spotChangePct = 0.58;
+          finalRows = VERIFIED_MARKET_CLOSE_2026_11_16;
+        } else if (effectiveDate === '2026-10-30' || effectiveDate === '2026-10-31') {
+          closingSpot = 23053.10;
+          spotChange = 116.35;
+          spotChangePct = 0.51;
+          finalRows = VERIFIED_MARKET_CLOSE_2026_10_30;
+        } else if (effectiveDate === '2026-10-29') {
+          closingSpot = 22936.75;
+          spotChange = 237.90;
+          spotChangePct = 1.05;
+          finalRows = (syncType === 'evening_settlement_2030' ? VERIFIED_MARKET_CLOSE_2026_10_29_SETTLED : VERIFIED_MARKET_CLOSE_2026_10_29);
+        } else if (effectiveDate === '2026-10-28') {
+          closingSpot = 22698.85;
+          spotChange = -50.90;
+          spotChangePct = -0.22;
+          const processed = RAW_MARKET_CLOSE_2026_10_28.map((r) => processRawOptionRow(r));
+          const { highlightedRows } = applyConditionalHighlights(processed, closingSpot);
+          finalRows = highlightedRows;
+        } else if (effectiveDate === '2026-10-27') {
+          closingSpot = 22749.75;
+          spotChange = -18.90;
+          spotChangePct = -0.08;
+          const processed = RAW_MARKET_CLOSE_2026_10_27.map((r) => processRawOptionRow(r));
+          const { highlightedRows } = applyConditionalHighlights(processed, closingSpot);
+          finalRows = highlightedRows;
+        } else if (effectiveDate === '2026-10-26') {
+          closingSpot = 22768.65;
+          spotChange = 168.65;
+          spotChangePct = 0.75;
+          const processed = RAW_MARKET_CLOSE_2026_10_26.map((r) => processRawOptionRow(r));
+          const { highlightedRows } = applyConditionalHighlights(processed, closingSpot);
+          finalRows = highlightedRows;
+        } else if (effectiveDate === '2026-10-23') {
+          closingSpot = 22600.00;
+          spotChange = -87.65;
+          spotChangePct = -0.39;
+          const processed = RAW_MARKET_CLOSE_2026_10_23.map((r) => processRawOptionRow(r));
+          const { highlightedRows } = applyConditionalHighlights(processed, closingSpot);
+          finalRows = highlightedRows;
+        }
       }
 
       // 1. Try pulling official Live / Settled Option Chain directly from NSE India API via proxy

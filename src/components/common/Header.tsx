@@ -1,6 +1,7 @@
 import React from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { formatExpiryDisplay, getActiveWeeklyExpiryDate } from '../../utils/marketSchedule';
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -69,7 +70,7 @@ export const Header: React.FC<HeaderProps> = ({
   isMobileCompact: _isMobileCompact,
   onToggleMobileCompact,
   currentRoute = '/',
-  expiryDate = '17-Nov-2026',
+  expiryDate = getActiveWeeklyExpiryDate(),
   onNavigate,
 }) => {
   const { user, logout } = useAuth();
@@ -100,7 +101,7 @@ export const Header: React.FC<HeaderProps> = ({
             NSE NIFTY 50 INDEX
           </span>
           <span className="text-slate-400 dark:text-slate-600">|</span>
-          <span className="text-slate-800 dark:text-slate-300 font-semibold">EXPIRY: CURRENT WEEKLY ({expiryDate.toUpperCase()})</span>
+          <span className="text-slate-800 dark:text-slate-300 font-semibold">EXPIRY: CURRENT WEEKLY ({formatExpiryDisplay(expiryDate).toUpperCase()})</span>
           <span className="text-slate-400 dark:text-slate-600 hidden sm:inline">|</span>
           <span className="text-slate-800 dark:text-slate-300 font-semibold hidden sm:inline">LOT SIZE: 65</span>
         </div>
