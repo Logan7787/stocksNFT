@@ -27,29 +27,40 @@ export const KNOWN_WEEKLY_EXPIRIES: string[] = [
 /**
  * Format date string to DD-MMM-YYYY (e.g. "2026-11-23" -> "23-Nov-2026")
  */
-export function formatExpiryDisplay(dateStr: string): string {
-  if (!dateStr) return '';
+export function formatExpiryDisplay(dateStr?: string | null): string {
+  if (!dateStr || typeof dateStr !== 'string') return '';
   const clean = dateStr.trim();
-  // If already formatted like "23-Nov-2026", return as is
-  if (/^\d{1,2}-[A-Za-z]{3}-\d{4}$/.test(clean)) return clean;
-  // If "Current Weekly (23-Nov-2026)", extract
+
+  // If already formatted like "23-Nov-2026"
+  if (/^\d{1,2}-[A-Za-z]{3}-\d{4}$/i.test(clean)) {
+    return clean;
+  }
+
+  // Extract date part if enclosed in text like "Current Weekly (23-Nov-2026)" or "Current Weekly (2026-11-23)"
+  let rawDate = clean;
   const match = clean.match(/(\d{1,2}-[A-Za-z]{3}-\d{4}|\d{4}-\d{2}-\d{2})/);
   if (match) {
-    return formatExpiryDisplay(match[1]);
+    rawDate = match[1];
   }
-  try {
-    const parts = clean.split('-');
-    if (parts.length === 3 && parts[0].length === 4) {
-      const year = parseInt(parts[0], 10);
-      const monthIdx = parseInt(parts[1], 10) - 1;
-      const day = parseInt(parts[2], 10);
-      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+  // If extracted part is already DD-MMM-YYYY
+  if (/^\d{1,2}-[A-Za-z]{3}-\d{4}$/i.test(rawDate)) {
+    return rawDate;
+  }
+
+  // Parse YYYY-MM-DD
+  const parts = rawDate.split('-');
+  if (parts.length === 3 && parts[0].length === 4) {
+    const year = parseInt(parts[0], 10);
+    const monthIdx = parseInt(parts[1], 10) - 1;
+    const day = parseInt(parts[2], 10);
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    if (monthIdx >= 0 && monthIdx < 12) {
       return `${String(day).padStart(2, '0')}-${months[monthIdx]}-${year}`;
     }
-  } catch {
-    // fallback
   }
-  return clean;
+
+  return rawDate;
 }
 
 /**
