@@ -124,7 +124,9 @@ import {
   RAW_MARKET_CLOSE_2026_11_16,
   VERIFIED_MARKET_CLOSE_2026_11_16,
   RAW_MARKET_CLOSE_2026_11_17,
-  VERIFIED_MARKET_CLOSE_2026_11_17
+  VERIFIED_MARKET_CLOSE_2026_11_17,
+  RAW_MARKET_CLOSE_2026_11_18,
+  VERIFIED_MARKET_CLOSE_2026_11_18
 } from '../data/verifiedMarketData';
 export {
   RAW_MARKET_CLOSE_2026_10_28,
@@ -148,7 +150,9 @@ export {
   RAW_MARKET_CLOSE_2026_11_16,
   VERIFIED_MARKET_CLOSE_2026_11_16,
   RAW_MARKET_CLOSE_2026_11_17,
-  VERIFIED_MARKET_CLOSE_2026_11_17
+  VERIFIED_MARKET_CLOSE_2026_11_17,
+  RAW_MARKET_CLOSE_2026_11_18,
+  VERIFIED_MARKET_CLOSE_2026_11_18
 };
 
 /**
@@ -541,13 +545,13 @@ export async function getPreviousCloseOptionChain(
       if (res.ok) {
         const payload = await res.json();
         if (payload && (payload.date === effectiveDate || u.includes(effectiveDate) || u.includes('latest_settlement')) && Array.isArray(payload.rows) && payload.rows.length > 0) {
-          const spot = Number(payload.spotPrice) || referenceSpot || (effectiveDate >= '2026-11-17' ? 25387.40 : (effectiveDate >= '2026-11-16' ? 25291.10 : (effectiveDate >= '2026-11-12' ? 25299.35 : (effectiveDate >= '2026-11-11' ? 25255.05 : (effectiveDate >= '2026-11-09' ? 25044.65 : 24536.60)))));
+          const spot = Number(payload.spotPrice) || referenceSpot || (effectiveDate >= '2026-11-18' ? 25227.95 : (effectiveDate >= '2026-11-17' ? 25387.40 : (effectiveDate >= '2026-11-16' ? 25291.10 : (effectiveDate >= '2026-11-12' ? 25299.35 : (effectiveDate >= '2026-11-11' ? 25255.05 : (effectiveDate >= '2026-11-09' ? 25044.65 : 24536.60))))));
           const spotChange = payload.spotChange !== undefined
             ? Number(payload.spotChange)
-            : (spot === 25387.40 ? 96.30 : (spot === 25291.10 ? 146.80 : (spot === 25299.35 ? 44.30 : (spot === 25255.05 ? 210.40 : (spot === 25044.65 ? 58.25 : (spot === 24536.60 ? 576.00 : (spot === 23960.60 ? 149.75 : (spot === 23053.10 ? 116.35 : 0))))))));
+            : (spot === 25227.95 ? -159.45 : (spot === 25387.40 ? 96.30 : (spot === 25291.10 ? 146.80 : (spot === 25299.35 ? 44.30 : (spot === 25255.05 ? 210.40 : (spot === 25044.65 ? 58.25 : (spot === 24536.60 ? 576.00 : (spot === 23960.60 ? 149.75 : (spot === 23053.10 ? 116.35 : 0)))))))));
           const spotChangePercent = payload.spotChangePercent !== undefined
             ? Number(payload.spotChangePercent)
-            : (spot === 25387.40 ? 0.38 : (spot === 25291.10 ? 0.58 : (spot === 25299.35 ? 0.18 : (spot === 25255.05 ? 0.84 : (spot === 25044.65 ? 0.23 : (spot === 24536.60 ? 2.40 : (spot === 23960.60 ? 0.63 : (spot === 23053.10 ? 0.51 : 0))))))));
+            : (spot === 25227.95 ? -0.63 : (spot === 25387.40 ? 0.38 : (spot === 25291.10 ? 0.58 : (spot === 25299.35 ? 0.18 : (spot === 25255.05 ? 0.84 : (spot === 25044.65 ? 0.23 : (spot === 24536.60 ? 2.40 : (spot === 23960.60 ? 0.63 : (spot === 23053.10 ? 0.51 : 0)))))))));
           const rowsToHighlight = payload.rows.map((r: any) => processRawOptionRow(r));
           const { highlightedRows, metrics } = applyConditionalHighlights(rowsToHighlight, spot);
           return buildCloseChainResult(
@@ -567,10 +571,29 @@ export async function getPreviousCloseOptionChain(
     // Continue with static fallback
   }
 
-  // 1. Official Verified Dataset for 2026-11-17+ (NSE Derivatives Settlement Report)
-  // Spot: 25,387.40 (+96.30, +0.38%), Prev Close: 25,291.10, Expiry: 23-Nov-2026 (Rolled Over)
-  // Exact real data matching official NSE Derivatives Quote & 20:30 PM Settlement
-  if (effectiveDate === '2026-11-17' || effectiveDate >= '2026-11-17') {
+  // 1. Official Verified Dataset for 2026-11-18+ (NSE Derivatives Settlement Report)
+  // Spot: 25,227.95 (-159.45, -0.63%), Prev Close: 25,387.40, Expiry: 23-Nov-2026
+  if (effectiveDate === '2026-11-18' || effectiveDate >= '2026-11-18') {
+    const verifiedSpot = 25227.95;
+    const sourceRows = isSettled
+      ? VERIFIED_MARKET_CLOSE_2026_11_18
+      : RAW_MARKET_CLOSE_2026_11_18.map(r => processRawOptionRow({ ...r, call_settlement_close: 0, put_settlement_close: 0 }));
+    const { highlightedRows, metrics } = applyConditionalHighlights(sourceRows, verifiedSpot);
+    return buildCloseChainResult(
+      effectiveDate,
+      isSettled ? '20:30 Settlement' : '15:30 Close',
+      verifiedSpot,
+      -159.45,
+      -0.63,
+      highlightedRows,
+      metrics,
+      'database'
+    );
+  }
+
+  // 1b. Official Verified Dataset for 2026-11-17 (NSE Derivatives Settlement Report)
+  // Spot: 25,387.40 (+96.30, +0.38%), Prev Close: 25,291.10, Expiry: 23-Nov-2026
+  if (effectiveDate === '2026-11-17') {
     const verifiedSpot = 25387.40;
     const sourceRows = isSettled
       ? VERIFIED_MARKET_CLOSE_2026_11_17

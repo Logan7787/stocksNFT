@@ -34,5 +34,5 @@ if ([string]::IsNullOrWhiteSpace($DiffCheck)) {
     Write-Host "Committing and pushing changes: $CommitMsg" -ForegroundColor Cyan
     git commit -m $CommitMsg
     git push origin main
-    Write-Host "`n✓ Successfully synced and pushed to GitHub! Vercel is now deploying updated data automatically." -ForegroundColor Green
+    Write-Host "Successfully synced and pushed to GitHub! Vercel is deploying updated data automatically." -ForegroundColor Green
 }
