@@ -373,10 +373,11 @@ export async function fetchNseLiveOptionChain(symbol: string = 'NIFTY'): Promise
 
 export interface NseRetrieveResult {
   success: boolean;
-  source: 'NSE India Official API' | 'NSE Official Settlement (Bhavcopy)';
+  source: 'NSE India Official API' | 'NSE Official Settlement (Bhavcopy)' | string;
   timestamp: string;
   underlying: string;
   expiryDate: string;
+  availableExpiries?: string[];
   spotPrice: number;
   spotChange: number;
   spotChangePercent: number;
@@ -394,13 +395,18 @@ export interface NseRetrieveResult {
  * Retrieve comprehensive data from NSE with full contract collection,
  * strategy breakdown (BU, BD, BE, Formula ATM, Min AVG), and fallback settlement support.
  */
-export async function retrieveNseOptionDataWithSummary(symbol: string = 'NIFTY'): Promise<NseRetrieveResult> {
+export async function retrieveNseOptionDataWithSummary(
+  symbol: string = 'NIFTY',
+  requestedExpiry?: string,
+  targetDate?: string
+): Promise<NseRetrieveResult> {
   const istNow = getISTNow();
   const day = istNow.getDay();
   const totalMin = istNow.getHours() * 60 + istNow.getMinutes();
   const isMarketHours = day >= 1 && day <= 5 && totalMin >= (9 * 60 + 15) && totalMin <= (15 * 60 + 30);
   const timeFormatted = istNow.toLocaleTimeString('en-IN', { hour12: false }) + ' IST';
-  const todayYMD = formatDateYMD(istNow);
+  const effectiveDate = targetDate || formatDateYMD(istNow);
+  const todayYMD = effectiveDate;
 
   // 1. Attempt Live Fetch from NSE API
   try {
@@ -446,8 +452,8 @@ export async function retrieveNseOptionDataWithSummary(symbol: string = 'NIFTY')
   // 2. Attempt Loading Daily Settlement from Live Serverless API or Cached JSON
   try {
     const urls = [
-      `/api/settlement?date=${todayYMD}`,
-      `/data/settlement_${todayYMD}.json`,
+      `/api/settlement?date=${effectiveDate}${requestedExpiry ? `&expiry=${encodeURIComponent(requestedExpiry)}` : ''}`,
+      `/data/settlement_${effectiveDate}.json`,
       `/data/latest_settlement.json`
     ];
     for (const u of urls) {
@@ -470,10 +476,11 @@ export async function retrieveNseOptionDataWithSummary(symbol: string = 'NIFTY')
 
           return {
             success: true,
-            source: 'NSE Official Settlement (Bhavcopy)',
+            source: payload.source || 'NSE Official Settlement (Bhavcopy)',
             timestamp: `${payload.date || todayYMD} 15:30:00 IST (Final Bhavcopy Close)`,
             underlying: payload.underlying || `NSE ${symbol} 50 INDEX`,
-            expiryDate: payload.expiryDate ? `Current Weekly (${payload.expiryDate})` : 'Current Weekly (17-Nov-2026)',
+            expiryDate: payload.expiryDate ? `Current Weekly (${payload.expiryDate})` : (requestedExpiry || 'Current Weekly (23-Nov-2026)'),
+            availableExpiries: payload.availableExpiries || ['23-Nov-2026', '26-Nov-2026', '03-Dec-2026', '17-Nov-2026'],
             spotPrice: spot,
             spotChange,
             spotChangePercent,
@@ -489,7 +496,7 @@ export async function retrieveNseOptionDataWithSummary(symbol: string = 'NIFTY')
             },
             breakLevels,
             totalStrikes: payload.rows.length,
-            message: `Official NSE Derivative Settlement Data retrieved: Spot ₹${spot.toLocaleString('en-IN', { minimumFractionDigits: 2 })} • ATM ${metrics.atmStrike} • Expiry ${payload.expiryDate || '17-Nov-2026'}`,
+            message: `Official NSE Derivative Settlement Data retrieved: Spot ₹${spot.toLocaleString('en-IN', { minimumFractionDigits: 2 })} • ATM ${metrics.atmStrike} • Expiry ${payload.expiryDate || requestedExpiry || '23-Nov-2026'}`,
           };
         }
       }

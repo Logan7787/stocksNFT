@@ -129,6 +129,7 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
 
   // Cache key ref to ensure we load exactly once per date/mode and never blink or re-fetch on background ticks
   const loadedKeyRef = React.useRef<string>('');
+  const [selectedExpiry, setSelectedExpiry] = useState<string>('23-Nov-2026');
 
   const loadData = useCallback((forceRefresh = false) => {
     const isToday = statusInfo.effectiveCloseDate === formatDateYMD(getISTNow());
@@ -444,6 +445,27 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
               <UploadCloud className="w-3.5 h-3.5 text-cyan-400" />
               <span>Import / Paste NSE Data</span>
             </button>
+
+            {/* Mark / Select Expiry Date Dropdown */}
+            <div className="flex items-center bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-xl px-2.5 py-1 shadow-xs gap-1.5">
+              <Calendar className="w-3.5 h-3.5 text-cyan-500" />
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase font-mono">Expiry:</span>
+              <select
+                value={selectedExpiry}
+                onChange={(e) => {
+                  const newExp = e.target.value;
+                  setSelectedExpiry(newExp);
+                  setIsNseRetrieveOpen(true);
+                }}
+                className="bg-transparent text-xs font-bold font-mono text-cyan-600 dark:text-cyan-400 cursor-pointer focus:outline-none"
+                title="Select active contract expiry date or click to sync"
+              >
+                <option value="23-Nov-2026">23-Nov-2026 (Current Weekly)</option>
+                <option value="26-Nov-2026">26-Nov-2026 (Monthly)</option>
+                <option value="03-Dec-2026">03-Dec-2026 (Next Weekly)</option>
+                <option value="17-Nov-2026">17-Nov-2026 (Past Expiry)</option>
+              </select>
+            </div>
 
             {/* Font Size Selector */}
             <div className="flex items-center bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-xl p-0.5 shadow-xs">
@@ -1117,11 +1139,17 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
       <NseDataRetrieveModal
         isOpen={isNseRetrieveOpen}
         onClose={() => setIsNseRetrieveOpen(false)}
+        initialExpiry={selectedExpiry}
+        initialDate={statusInfo.effectiveCloseDate}
         onApplyToClosePage={(res) => {
           if (res && res.processedRows && res.processedRows.length > 0) {
+            if (res.expiryDate) {
+              const cleanExp = res.expiryDate.replace(/Current Weekly \(|\)/g, '');
+              setSelectedExpiry(cleanExp);
+            }
             setDataResult({
               date: statusInfo.effectiveCloseDate,
-              slot: '20:30 Settlement (Live Retrieved)',
+              slot: `20:30 Settlement (${res.expiryDate})`,
               spotPrice: res.spotPrice,
               spotChange: res.spotChange,
               spotChangePercent: res.spotChangePercent,
@@ -1130,7 +1158,7 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
               source: 'database',
               breakLevels: res.breakLevels,
             });
-            showToast('Applied live NSE settlement directly to table', 'success');
+            showToast(`Applied live NSE settlement (${res.expiryDate}) directly to table`, 'success');
           } else {
             loadData(true);
           }

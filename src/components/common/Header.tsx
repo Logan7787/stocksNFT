@@ -103,7 +103,14 @@ export const Header: React.FC<HeaderProps> = ({
             NSE NIFTY 50 INDEX
           </span>
           <span className="text-slate-400 dark:text-slate-600">|</span>
-          <span className="text-slate-800 dark:text-slate-300 font-semibold">EXPIRY: CURRENT WEEKLY ({displayExpiry.toUpperCase()})</span>
+          <button
+            onClick={onOpenNseRetrieveModal}
+            title="Click to select or change active contract expiry date"
+            className="flex items-center gap-1.5 text-slate-800 dark:text-cyan-300 font-bold hover:underline cursor-pointer transition-all"
+          >
+            <span>EXPIRY: CURRENT WEEKLY ({displayExpiry.toUpperCase()})</span>
+            <span className="text-[9px] text-cyan-600 dark:text-cyan-400 font-bold bg-cyan-100 dark:bg-cyan-500/20 px-1 py-0.2 rounded-md border border-cyan-300 dark:border-cyan-500/30">Change</span>
+          </button>
           <span className="text-slate-400 dark:text-slate-600 hidden sm:inline">|</span>
           <span className="text-slate-800 dark:text-slate-300 font-semibold hidden sm:inline">LOT SIZE: 65</span>
         </div>
@@ -277,15 +284,15 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           )}
 
-          {/* Retrieve from NSE Button */}
+          {/* Retrieve / Sync from NSE Button */}
           {onOpenNseRetrieveModal && (
             <button
               onClick={onOpenNseRetrieveModal}
-              title="Retrieve official NSE live/settlement option chain data in a dialogue box"
+              title="Retrieve and sync official NSE live or settlement option chain data with expiry selection"
               className="px-2.5 sm:px-3 py-2 bg-linear-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-bold text-xs rounded-xl shadow-md shadow-cyan-500/20 flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer"
             >
               <Download className="w-3.5 h-3.5 stroke-[2.5]" />
-              <span className="hidden md:inline">Retrieve from NSE</span>
+              <span className="hidden md:inline">Sync NSE / Expiry</span>
             </button>
           )}
 

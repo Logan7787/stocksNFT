@@ -157,6 +157,7 @@ export default async function handler(req: any, res: any) {
   }
 
   const queryDate = req.query?.date as string | undefined;
+  const queryExpiry = req.query?.expiry as string | undefined;
   const targetDate = queryDate && /^\d{4}-\d{2}-\d{2}$/.test(queryDate)
     ? queryDate
     : getISTDateString();
@@ -196,13 +197,22 @@ export default async function handler(req: any, res: any) {
         const sortedNorm = Array.from(expiryMap.keys()).sort();
         const upcoming = sortedNorm.filter(e => e >= targetDate);
         let targetExpiry = '';
-        if (upcoming.length > 1 && upcoming[0] === targetDate) {
+        if (queryExpiry) {
+          const normQuery = normalizeDateStr(queryExpiry);
+          for (const e of expiries) {
+            if (e.toLowerCase() === queryExpiry.toLowerCase() || normalizeDateStr(e) === normQuery) {
+              targetExpiry = e;
+              break;
+            }
+          }
+          if (!targetExpiry) targetExpiry = queryExpiry;
+        } else if (upcoming.length > 1 && upcoming[0] === targetDate) {
           // On expiry day at settlement (20:30 IST), active contract rolls over to next weekly!
           targetExpiry = expiryMap.get(upcoming[1]) || upcoming[1];
         } else if (upcoming.length > 0) {
           targetExpiry = expiryMap.get(upcoming[0]) || upcoming[0];
         } else {
-          targetExpiry = (sortedNorm.length > 0 ? expiryMap.get(sortedNorm[0]) : undefined) || '2026-11-17';
+          targetExpiry = (sortedNorm.length > 0 ? expiryMap.get(sortedNorm[0]) : undefined) || '2026-11-23';
         }
 
         // Build strike map
@@ -311,6 +321,7 @@ export default async function handler(req: any, res: any) {
           source: 'NSE Official Archives Bhavcopy (Live Serverless)',
           date: targetDate,
           expiryDate: targetExpiry,
+          availableExpiries: Array.from(expiries).sort(),
           spotPrice,
           spotChange,
           spotChangePercent,
