@@ -383,14 +383,25 @@ def git_auto_push(date_str):
     print("\n[Git Auto-Push] Checking git status and preparing push...")
     import subprocess
     try:
+        # 1. First pull latest remote commits to prevent 'fetch first' push rejection
+        print("[Git Auto-Push] Fetching and syncing latest remote state from origin main...")
+        subprocess.run(['git', 'pull', '--rebase', '--autostash', 'origin', 'main'], check=False)
+
+        # 2. Stage updated settlement files
         subprocess.run(['git', 'add', 'public/data/', 'src/data/'], check=True)
         diff_res = subprocess.run(['git', 'diff', '--staged', '--name-only'], capture_output=True, text=True, check=True)
         if not diff_res.stdout.strip():
             print("[Git Auto-Push] No staged changes. Everything already up to date on GitHub!")
             return True
+
         commit_msg = f"Auto-sync NSE 20:30 PM settlement for {date_str} [automated]"
         print(f"[Git Auto-Push] Committing: {commit_msg}")
         subprocess.run(['git', 'commit', '-m', commit_msg], check=True)
+
+        # 3. Pull rebase once more in case another commit arrived while processing
+        subprocess.run(['git', 'pull', '--rebase', 'origin', 'main'], check=False)
+
+        # 4. Push to origin main
         print("[Git Auto-Push] Pushing to origin main...")
         push_res = subprocess.run(['git', 'push', 'origin', 'main'], capture_output=True, text=True)
         if push_res.returncode == 0:

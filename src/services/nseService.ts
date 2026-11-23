@@ -12,7 +12,8 @@ import {
   RAW_MARKET_CLOSE_2026_11_12,
   RAW_MARKET_CLOSE_2026_11_16,
   RAW_MARKET_CLOSE_2026_11_17,
-  RAW_MARKET_CLOSE_2026_11_18
+  RAW_MARKET_CLOSE_2026_11_18,
+  RAW_MARKET_CLOSE_2026_11_23
 } from '../data/verifiedMarketData';
 import { getISTNow, formatDateYMD, isPost830PMSettlementTime } from './previousCloseService';
 
@@ -506,54 +507,59 @@ export async function retrieveNseOptionDataWithSummary(
   }
 
   // 3. Fallback to Verified Official Settlement Dataset
-  const isNov18 = todayYMD === '2026-11-18' || todayYMD >= '2026-11-18';
-  const isNov17 = !isNov18 && (todayYMD === '2026-11-17');
-  const isNov16 = !isNov18 && !isNov17 && todayYMD === '2026-11-16';
-  const isNov12 = !isNov18 && !isNov17 && !isNov16 && todayYMD >= '2026-11-12';
-  const isNov11 = !isNov18 && !isNov17 && !isNov16 && !isNov12 && (todayYMD === '2026-11-11');
-  const isNov9 = !isNov18 && !isNov17 && !isNov16 && !isNov12 && !isNov11 && (todayYMD === '2026-11-09' || todayYMD === '2026-11-10');
-  const isNov5 = !isNov18 && !isNov17 && !isNov16 && !isNov12 && !isNov11 && !isNov9 && (todayYMD === '2026-11-05' || todayYMD >= '2026-11-05');
-  const isNov4 = !isNov18 && !isNov17 && !isNov16 && !isNov12 && !isNov11 && !isNov9 && !isNov5 && (todayYMD === '2026-11-04' || todayYMD >= '2026-11-01');
+  const isNov23 = todayYMD === '2026-11-23' || todayYMD >= '2026-11-23';
+  const isNov18 = !isNov23 && (todayYMD === '2026-11-18');
+  const isNov17 = !isNov23 && !isNov18 && (todayYMD === '2026-11-17');
+  const isNov16 = !isNov23 && !isNov18 && !isNov17 && todayYMD === '2026-11-16';
+  const isNov12 = !isNov23 && !isNov18 && !isNov17 && !isNov16 && todayYMD >= '2026-11-12';
+  const isNov11 = !isNov23 && !isNov18 && !isNov17 && !isNov16 && !isNov12 && (todayYMD === '2026-11-11');
+  const isNov9 = !isNov23 && !isNov18 && !isNov17 && !isNov16 && !isNov12 && !isNov11 && (todayYMD === '2026-11-09' || todayYMD === '2026-11-10');
+  const isNov5 = !isNov23 && !isNov18 && !isNov17 && !isNov16 && !isNov12 && !isNov11 && !isNov9 && (todayYMD === '2026-11-05' || todayYMD >= '2026-11-05');
+  const isNov4 = !isNov23 && !isNov18 && !isNov17 && !isNov16 && !isNov12 && !isNov11 && !isNov9 && !isNov5 && (todayYMD === '2026-11-04' || todayYMD >= '2026-11-01');
   const is30Oct = todayYMD === '2026-10-30' || todayYMD === '2026-10-31';
   const is29Oct = todayYMD === '2026-10-29';
 
-  const spot = isNov18 ? 25227.95 : (isNov17 ? 25387.40 : (isNov16 ? 25291.10 : (isNov12 ? 25299.35 : (isNov11 ? 25255.05 : (isNov9 ? 25044.65 : (isNov5 ? 24536.60 : (isNov4 ? 23960.60 : (is30Oct ? 23053.10 : (is29Oct ? 22936.75 : 22698.85)))))))));
-  const prevClose = isNov18 ? 25387.40 : (isNov17 ? 25291.10 : (isNov16 ? 25144.30 : (isNov12 ? 25255.05 : (isNov11 ? 25044.65 : (isNov9 ? 24986.40 : (isNov5 ? 23960.60 : (isNov4 ? 23810.85 : (is30Oct ? 22936.75 : (is29Oct ? 22698.85 : 22749.75)))))))));
-  const spotChange = isNov18 ? -159.45 : (isNov17 ? 96.30 : (isNov16 ? 146.80 : (isNov12 ? 44.30 : (isNov11 ? 210.40 : (isNov9 ? 58.25 : (isNov5 ? 576.00 : (isNov4 ? 149.75 : (is30Oct ? 116.35 : (is29Oct ? 237.90 : -50.90)))))))));
-  const spotChangePercent = isNov18 ? -0.63 : (isNov17 ? 0.38 : (isNov16 ? 0.58 : (isNov12 ? 0.18 : (isNov11 ? 0.84 : (isNov9 ? 0.23 : (isNov5 ? 2.40 : (isNov4 ? 0.63 : (is30Oct ? 0.51 : (is29Oct ? 1.05 : -0.22)))))))));
-  const isSettled = isPost830PMSettlementTime(istNow) || !isMarketHours || isNov18 || isNov17 || isNov16 || isNov12 || isNov11 || isNov9 || isNov5 || isNov4 || is30Oct;
+  const spot = isNov23 ? 25349.65 : (isNov18 ? 25227.95 : (isNov17 ? 25387.40 : (isNov16 ? 25291.10 : (isNov12 ? 25299.35 : (isNov11 ? 25255.05 : (isNov9 ? 25044.65 : (isNov5 ? 24536.60 : (isNov4 ? 23960.60 : (is30Oct ? 23053.10 : (is29Oct ? 22936.75 : 22698.85))))))))));
+  const prevClose = isNov23 ? 25800.60 : (isNov18 ? 25387.40 : (isNov17 ? 25291.10 : (isNov16 ? 25144.30 : (isNov12 ? 25255.05 : (isNov11 ? 25044.65 : (isNov9 ? 24986.40 : (isNov5 ? 23960.60 : (isNov4 ? 23810.85 : (is30Oct ? 22936.75 : (is29Oct ? 22698.85 : 22749.75))))))))));
+  const spotChange = isNov23 ? -450.95 : (isNov18 ? -159.45 : (isNov17 ? 96.30 : (isNov16 ? 146.80 : (isNov12 ? 44.30 : (isNov11 ? 210.40 : (isNov9 ? 58.25 : (isNov5 ? 576.00 : (isNov4 ? 149.75 : (is30Oct ? 116.35 : (is29Oct ? 237.90 : -50.90))))))))));
+  const spotChangePercent = isNov23 ? -1.75 : (isNov18 ? -0.63 : (isNov17 ? 0.38 : (isNov16 ? 0.58 : (isNov12 ? 0.18 : (isNov11 ? 0.84 : (isNov9 ? 0.23 : (isNov5 ? 2.40 : (isNov4 ? 0.63 : (is30Oct ? 0.51 : (is29Oct ? 1.05 : -0.22))))))))));
+  const isSettled = isPost830PMSettlementTime(istNow) || !isMarketHours || isNov23 || isNov18 || isNov17 || isNov16 || isNov12 || isNov11 || isNov9 || isNov5 || isNov4 || is30Oct;
 
-  const rawRows = isNov18
-    ? [...RAW_MARKET_CLOSE_2026_11_18]
-    : (isNov17
-      ? [...RAW_MARKET_CLOSE_2026_11_17]
-      : (isNov16
-        ? [...RAW_MARKET_CLOSE_2026_11_16]
-        : (isNov12
-          ? [...RAW_MARKET_CLOSE_2026_11_12]
-          : (isNov11
-            ? [...RAW_MARKET_CLOSE_2026_11_11]
-            : (isNov9
-              ? [...RAW_MARKET_CLOSE_2026_11_09]
-              : (isNov5
-                ? [...RAW_MARKET_CLOSE_2026_11_05]
-                : (isNov4
-                  ? [...RAW_MARKET_CLOSE_2026_11_04]
-                  : (is30Oct
-                    ? [...RAW_MARKET_CLOSE_2026_10_30]
-                    : (is29Oct ? (isSettled ? [...RAW_MARKET_CLOSE_2026_10_29_SETTLED] : [...RAW_MARKET_CLOSE_2026_10_29]) : [...RAW_MARKET_CLOSE_2026_10_28])))))))));
+  const rawRows = isNov23
+    ? [...RAW_MARKET_CLOSE_2026_11_23]
+    : (isNov18
+      ? [...RAW_MARKET_CLOSE_2026_11_18]
+      : (isNov17
+        ? [...RAW_MARKET_CLOSE_2026_11_17]
+        : (isNov16
+          ? [...RAW_MARKET_CLOSE_2026_11_16]
+          : (isNov12
+            ? [...RAW_MARKET_CLOSE_2026_11_12]
+            : (isNov11
+              ? [...RAW_MARKET_CLOSE_2026_11_11]
+              : (isNov9
+                ? [...RAW_MARKET_CLOSE_2026_11_09]
+                : (isNov5
+                  ? [...RAW_MARKET_CLOSE_2026_11_05]
+                  : (isNov4
+                    ? [...RAW_MARKET_CLOSE_2026_11_04]
+                    : (is30Oct
+                      ? [...RAW_MARKET_CLOSE_2026_10_30]
+                      : (is29Oct ? (isSettled ? [...RAW_MARKET_CLOSE_2026_10_29_SETTLED] : [...RAW_MARKET_CLOSE_2026_10_29]) : [...RAW_MARKET_CLOSE_2026_10_28]))))))))));
 
   const processed = rawRows.map(r => processRawOptionRow(r));
   const { highlightedRows, metrics } = applyConditionalHighlights(processed, spot);
   const breakLevels = calculateBreakLevels(highlightedRows, spot);
 
-  const expiryDate = (isNov18 || isNov17)
-    ? 'Current Weekly (23-Nov-2026)'
-    : ((isNov16 || isNov12 || isNov11 || isNov9)
-      ? 'Current Weekly (17-Nov-2026)'
-      : (isNov5 || isNov4)
-        ? 'Current Weekly (09-Nov-2026)'
-        : (is30Oct ? 'Current Weekly (03-Nov-2026)' : (is29Oct ? 'Current Weekly (03-Nov-2026)' : 'Current Weekly (28-Oct-2026)')));
+  const expiryDate = isNov23
+    ? 'Current Weekly (01-Dec-2026)'
+    : ((isNov18 || isNov17)
+      ? 'Current Weekly (23-Nov-2026)'
+      : ((isNov16 || isNov12 || isNov11 || isNov9)
+        ? 'Current Weekly (17-Nov-2026)'
+        : (isNov5 || isNov4)
+          ? 'Current Weekly (09-Nov-2026)'
+          : (is30Oct ? 'Current Weekly (03-Nov-2026)' : (is29Oct ? 'Current Weekly (03-Nov-2026)' : 'Current Weekly (28-Oct-2026)'))));
 
   return {
     success: true,

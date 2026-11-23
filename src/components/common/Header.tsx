@@ -91,7 +91,7 @@ export const Header: React.FC<HeaderProps> = ({
     .filter(s => s.snapshot_date === selectedDate)
     .map(s => s.hour_slot);
 
-  const displayExpiry = formatExpiryDisplay(expiryDate) || '23-Nov-2026';
+  const displayExpiry = formatExpiryDisplay(expiryDate) || getActiveWeeklyExpiryDate() || '01-Dec-2026';
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 dark:bg-[#0a0e1a]/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800/90 shadow-sm dark:shadow-xl transition-colors print:hidden">

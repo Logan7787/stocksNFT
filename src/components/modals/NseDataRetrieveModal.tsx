@@ -41,8 +41,8 @@ export const NseDataRetrieveModal: React.FC<NseDataRetrieveModalProps> = ({
   onApplyToLiveChain,
   onApplyToClosePage,
   onToast,
-  initialExpiry = '23-Nov-2026',
-  initialDate = '2026-11-18',
+  initialExpiry = '01-Dec-2026',
+  initialDate = '2026-11-23',
 }) => {
   const [loading, setLoading] = useState<boolean>(true);
   const [dataResult, setDataResult] = useState<NseRetrieveResult | null>(null);
@@ -54,7 +54,7 @@ export const NseDataRetrieveModal: React.FC<NseDataRetrieveModalProps> = ({
 
   // Available expiries list
   const availableExpiries = useMemo(() => {
-    const defaultList = ['23-Nov-2026', '26-Nov-2026', '03-Dec-2026', '10-Dec-2026', '17-Nov-2026'];
+    const defaultList = ['01-Dec-2026', '26-Nov-2026', '08-Dec-2026', '15-Dec-2026', '23-Nov-2026'];
     const fromApi = dataResult?.availableExpiries || [];
     return Array.from(new Set([selectedExpiry, ...fromApi, ...defaultList]));
   }, [dataResult?.availableExpiries, selectedExpiry]);
@@ -248,7 +248,7 @@ export const NseDataRetrieveModal: React.FC<NseDataRetrieveModalProps> = ({
                 Mark Expiry:
               </span>
               <div className="flex items-center gap-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-0.5 shadow-xs">
-                {['23-Nov-2026', '26-Nov-2026', '17-Nov-2026'].map((exp) => (
+                {['01-Dec-2026', '26-Nov-2026', '23-Nov-2026'].map((exp) => (
                   <button
                     key={exp}
                     onClick={() => handleSelectExpiry(exp)}
@@ -258,7 +258,7 @@ export const NseDataRetrieveModal: React.FC<NseDataRetrieveModalProps> = ({
                         : 'text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800'
                     }`}
                   >
-                    {exp} {exp === '23-Nov-2026' ? '(Weekly)' : exp === '26-Nov-2026' ? '(Monthly)' : '(Past)'}
+                    {exp} {exp === '01-Dec-2026' ? '(Weekly)' : exp === '26-Nov-2026' ? '(Monthly)' : '(Past)'}
                   </button>
                 ))}
                 {/* Full dropdown for any other expiry */}
@@ -288,9 +288,9 @@ export const NseDataRetrieveModal: React.FC<NseDataRetrieveModalProps> = ({
                 }}
                 className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white font-bold rounded-xl px-2.5 py-1 text-xs cursor-pointer focus:outline-none shadow-xs"
               >
-                <option value="2026-11-18">18-Nov-2026 (Today)</option>
-                <option value="2026-11-17">17-Nov-2026 (Yesterday)</option>
-                <option value="2026-11-16">16-Nov-2026</option>
+                <option value="2026-11-23">23-Nov-2026 (Today)</option>
+                <option value="2026-11-20">20-Nov-2026 (Friday)</option>
+                <option value="2026-11-18">18-Nov-2026</option>
               </select>
             </div>
           </div>

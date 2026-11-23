@@ -129,12 +129,14 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
 
   // Cache key ref to ensure we load exactly once per date/mode and never blink or re-fetch on background ticks
   const loadedKeyRef = React.useRef<string>('');
-  const [selectedExpiry, setSelectedExpiry] = useState<string>('23-Nov-2026');
+  const [selectedExpiry, setSelectedExpiry] = useState<string>('01-Dec-2026');
 
   const loadData = useCallback((forceRefresh = false) => {
     const isToday = statusInfo.effectiveCloseDate === formatDateYMD(getISTNow());
-    const effectiveSpot = (statusInfo.effectiveCloseDate === '2026-11-18' || statusInfo.effectiveCloseDate >= '2026-11-18')
-      ? (referenceSpotPrice || 25227.95)
+    const effectiveSpot = (statusInfo.effectiveCloseDate === '2026-11-23' || statusInfo.effectiveCloseDate >= '2026-11-23')
+      ? (referenceSpotPrice || 25349.65)
+      : (statusInfo.effectiveCloseDate === '2026-11-18')
+        ? (referenceSpotPrice || 25227.95)
       : (statusInfo.effectiveCloseDate === '2026-11-17')
         ? (referenceSpotPrice || 25387.40)
       : (statusInfo.effectiveCloseDate === '2026-11-16')
@@ -460,9 +462,10 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
                 className="bg-transparent text-xs font-bold font-mono text-cyan-600 dark:text-cyan-400 cursor-pointer focus:outline-none"
                 title="Select active contract expiry date or click to sync"
               >
-                <option value="23-Nov-2026">23-Nov-2026 (Current Weekly)</option>
+                <option value="01-Dec-2026">01-Dec-2026 (Current Weekly)</option>
                 <option value="26-Nov-2026">26-Nov-2026 (Monthly)</option>
-                <option value="03-Dec-2026">03-Dec-2026 (Next Weekly)</option>
+                <option value="08-Dec-2026">08-Dec-2026 (Next Weekly)</option>
+                <option value="23-Nov-2026">23-Nov-2026 (Expired Today)</option>
                 <option value="17-Nov-2026">17-Nov-2026 (Past Expiry)</option>
               </select>
             </div>

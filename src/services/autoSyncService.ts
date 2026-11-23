@@ -16,6 +16,7 @@ import {
 } from '../utils/formulas';
 import { fetchNseLiveOptionChain, parseNseDerivativesReport } from './nseService';
 import { 
+  VERIFIED_MARKET_CLOSE_2026_11_23,
   VERIFIED_MARKET_CLOSE_2026_11_18,
   VERIFIED_MARKET_CLOSE_2026_11_17,
   VERIFIED_MARKET_CLOSE_2026_11_16,
@@ -243,7 +244,12 @@ class AutoSyncService {
 
       // 0b. Check if target date matches official verified report
       if (finalRows.length === 0) {
-        if (effectiveDate === '2026-11-18' || effectiveDate >= '2026-11-18') {
+        if (effectiveDate === '2026-11-23' || effectiveDate >= '2026-11-23') {
+          closingSpot = 25349.65;
+          spotChange = -450.95;
+          spotChangePct = -1.75;
+          finalRows = VERIFIED_MARKET_CLOSE_2026_11_23;
+        } else if (effectiveDate === '2026-11-18') {
           closingSpot = 25227.95;
           spotChange = -159.45;
           spotChangePct = -0.63;

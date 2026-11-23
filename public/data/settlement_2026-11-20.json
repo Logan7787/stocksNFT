@@ -2,9 +2,9 @@
   "date": "2026-11-20",
   "expiryDate": "2026-11-23",
   "spotPrice": 25800.6,
-  "spotChange": 0.0,
-  "spotChangePercent": 0.0,
-  "previousClose": 25800.6,
+  "spotChange": 286.3,
+  "spotChangePercent": 1.12,
+  "previousClose": 25514.3,
   "atmStrike": 25800,
   "formulaAtmStrike": 25750,
   "minAvg": 115.95,
@@ -4118,5 +4118,5 @@
       "isMinPutPremium": false
     }
   ],
-  "timestamp": "2026-11-20T22:46:54.030977"
+  "timestamp": "2026-11-21T09:43:43.200978"
 }
