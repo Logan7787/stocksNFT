@@ -65,7 +65,6 @@ body {
   body {
     background: #ffffff !important;
     color: #000000 !important;
-    font-size: 13px !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
@@ -95,34 +94,12 @@ body {
     display: none !important;
   }
 
-  /* High contrast table borders and rows with significantly larger, crisp print typography */
+  /* High contrast table borders and structure */
   table {
     width: 100% !important;
     min-width: 100% !important;
     border-collapse: collapse !important;
     page-break-inside: auto;
-  }
-
-  th {
-    padding: 6px 6px !important;
-    font-size: 12px !important;
-    font-weight: 800 !important;
-    color: #000000 !important;
-    border: 1px solid #94a3b8 !important;
-  }
-
-  td {
-    padding: 5px 6px !important;
-    font-size: 13px !important;
-    font-weight: 700 !important;
-    border: 1px solid #cbd5e1 !important;
-    color: #000000 !important;
-  }
-
-  /* Highlight strike price clearly in print */
-  td:nth-child(5), th:nth-child(5) {
-    font-size: 14px !important;
-    font-weight: 900 !important;
   }
 
   thead {
@@ -132,5 +109,98 @@ body {
   tr {
     page-break-inside: avoid;
     break-inside: avoid;
+  }
+
+  th {
+    color: #000000 !important;
+    border: 1px solid #64748b !important;
+    text-align: center;
+  }
+
+  td {
+    border: 1px solid #94a3b8 !important;
+    color: #000000 !important;
+    white-space: nowrap !important;
+  }
+
+  /* Fallback defaults if no specific size class is present */
+  table th {
+    padding: 5px 6px !important;
+    font-size: 13px !important;
+    font-weight: 800 !important;
+  }
+
+  table td {
+    padding: 4px 6px !important;
+    font-size: 15px !important;
+    font-weight: 700 !important;
+  }
+
+  /* ============================================================== */
+  /* Dynamic Print Typography Matching User Font Selection          */
+  /* ============================================================== */
+
+  /* 1. Medium / Normal Print Size */
+  table.print-table-normal th {
+    font-size: 11px !important;
+    padding: 4px 4px !important;
+    font-weight: 800 !important;
+  }
+  table.print-table-normal td {
+    font-size: 12px !important;
+    padding: 3px 4px !important;
+    font-weight: 600 !important;
+  }
+  table.print-table-normal .strike-cell,
+  table.print-table-normal .strike-text {
+    font-size: 14px !important;
+    font-weight: 900 !important;
+  }
+
+  /* 2. Large Print Size */
+  table.print-table-large th {
+    font-size: 13px !important;
+    padding: 5px 5px !important;
+    font-weight: 800 !important;
+  }
+  table.print-table-large td {
+    font-size: 15px !important;
+    padding: 4px 5px !important;
+    font-weight: 700 !important;
+  }
+  table.print-table-large .strike-cell,
+  table.print-table-large .strike-text {
+    font-size: 17px !important;
+    font-weight: 900 !important;
+  }
+
+  /* 3. X-Large Print Size: Extra-Large, Bold, Maximum Visibility for Printouts */
+  table.print-table-xlarge th {
+    font-size: 14px !important;
+    padding: 5px 4px !important;
+    font-weight: 900 !important;
+  }
+  table.print-table-xlarge th.super-header {
+    font-size: 16px !important;
+  }
+  table.print-table-xlarge td {
+    font-size: 18px !important;
+    padding: 5px 4px !important;
+    font-weight: 800 !important;
+    line-height: 1.25 !important;
+  }
+  table.print-table-xlarge .strike-cell,
+  table.print-table-xlarge .strike-text {
+    font-size: 20px !important;
+    font-weight: 900 !important;
+  }
+  table.print-table-xlarge .signal-badge {
+    font-size: 12px !important;
+    padding: 2px 6px !important;
+  }
+  table.print-table-xlarge .top-badge,
+  table.print-table-xlarge .min-badge {
+    font-size: 11px !important;
+    padding: 1px 4px !important;
   }
 }

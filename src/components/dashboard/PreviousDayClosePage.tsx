@@ -571,10 +571,10 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
               onClick={handlePrint}
               disabled={loading || !dataResult}
               className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer transition-all disabled:opacity-50"
-              title={`Print to printer or PDF (Only ATM ±500 rows: ${atmStrike - 500} to ${atmStrike + 500})`}
+              title={`Print to printer or PDF (${tableFontSize === 'xlarge' ? 'X-Large Font (18px)' : tableFontSize === 'large' ? 'Large Font (15px)' : 'Medium Font (12px)'}, ATM ±500: ${atmStrike - 500} to ${atmStrike + 500})`}
             >
               <Printer className="w-3.5 h-3.5" />
-              <span>Print (ATM ±500)</span>
+              <span>Print ({tableFontSize === 'xlarge' ? 'X-Large ' : ''}ATM ±500)</span>
             </button>
             <button
               onClick={handleExportCsv}

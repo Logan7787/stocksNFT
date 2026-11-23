@@ -74,7 +74,7 @@ const OptionRowItem = memo(({
       >
         <span className="flex items-center justify-end gap-1">
           {row.isTopCallVolume && (
-            <span className={`${sizeConfig.badge} px-1.5 py-0.5 bg-black/80 text-yellow-300 rounded font-bold uppercase`}>
+            <span className={`${sizeConfig.badge} top-badge px-1.5 py-0.5 bg-black/80 text-yellow-300 rounded font-bold uppercase`}>
               TOP
             </span>
           )}
@@ -122,7 +122,7 @@ const OptionRowItem = memo(({
       >
         <div className="flex items-center justify-end gap-1">
           {row.isMinCallPremium && (
-            <span className={`${sizeConfig.badge} px-1.5 py-0.5 bg-black/80 text-sky-300 rounded font-bold uppercase`}>
+            <span className={`${sizeConfig.badge} min-badge px-1.5 py-0.5 bg-black/80 text-sky-300 rounded font-bold uppercase`}>
               MIN
             </span>
           )}
@@ -142,7 +142,7 @@ const OptionRowItem = memo(({
       >
         <div className="flex items-center justify-end gap-1">
           {row.isMinAvg && (
-            <span className={`${sizeConfig.badge} px-1.5 py-0.5 bg-black/80 text-emerald-300 rounded font-bold uppercase`}>
+            <span className={`${sizeConfig.badge} min-badge px-1.5 py-0.5 bg-black/80 text-emerald-300 rounded font-bold uppercase`}>
               MIN
             </span>
           )}
@@ -203,7 +203,7 @@ const OptionRowItem = memo(({
       {/* CENTER SECTION: STRIKE PRICE (Orange ATM Highlight)            */}
       {/* ============================================================== */}
       <td
-        className={`${sizeConfig.cell} text-center font-black transition-all border-x-2 border-slate-300 dark:border-slate-700/80 ${row.isATM
+        className={`${sizeConfig.cell} strike-cell text-center font-black transition-all border-x-2 border-slate-300 dark:border-slate-700/80 ${row.isATM
             ? 'bg-[#f97316] text-white shadow-lg shadow-orange-500/40 scale-105 z-10 ring-2 ring-orange-400'
             : row.isFormulaAtm
               ? 'bg-amber-400 dark:bg-amber-500 text-slate-950 shadow-md ring-2 ring-amber-400 font-black'
@@ -222,7 +222,7 @@ const OptionRowItem = memo(({
                 FORMULA ATM
               </span>
             )}
-            <span className={sizeConfig.strike}>{row.strike}</span>
+            <span className={`${sizeConfig.strike} strike-text`}>{row.strike}</span>
           </div>
           {row.breakLevelRole === 'ATM_MINUS_100' && (
             <span className="text-[9px] px-1.5 py-0.5 bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-400/40 rounded font-sans font-bold whitespace-nowrap">
@@ -254,13 +254,13 @@ const OptionRowItem = memo(({
       >
         <div className="flex items-center justify-center gap-1.5 flex-wrap">
           {row.ceSignal && (
-            <span className={`inline-flex items-center gap-1.5 rounded-lg font-black bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-md shadow-emerald-500/30 ring-1 ring-emerald-400/60 transition-transform scale-100 hover:scale-105 cursor-default ${sizeConfig.signal}`}>
+            <span className={`signal-badge inline-flex items-center gap-1.5 rounded-lg font-black bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-md shadow-emerald-500/30 ring-1 ring-emerald-400/60 transition-transform scale-100 hover:scale-105 cursor-default ${sizeConfig.signal}`}>
               <span className="w-1.5 h-1.5 rounded-full bg-slate-950"></span>
               BUY CE
             </span>
           )}
           {row.peSignal && (
-            <span className={`inline-flex items-center gap-1.5 rounded-lg font-black bg-rose-500 hover:bg-rose-400 text-white shadow-md shadow-rose-500/30 ring-1 ring-rose-400/60 transition-transform scale-100 hover:scale-105 cursor-default ${sizeConfig.signal}`}>
+            <span className={`signal-badge inline-flex items-center gap-1.5 rounded-lg font-black bg-rose-500 hover:bg-rose-400 text-white shadow-md shadow-rose-500/30 ring-1 ring-rose-400/60 transition-transform scale-100 hover:scale-105 cursor-default ${sizeConfig.signal}`}>
               <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
               BUY PE
             </span>
@@ -337,7 +337,7 @@ const OptionRowItem = memo(({
         <div className="flex items-center justify-start gap-1">
           <span>{row.put_avg.toFixed(2)}</span>
           {row.isMinAvg && (
-            <span className={`${sizeConfig.badge} px-1.5 py-0.5 bg-black/80 text-emerald-300 rounded font-bold uppercase`}>
+            <span className={`${sizeConfig.badge} min-badge px-1.5 py-0.5 bg-black/80 text-emerald-300 rounded font-bold uppercase`}>
               MIN
             </span>
           )}
@@ -357,7 +357,7 @@ const OptionRowItem = memo(({
         <div className="flex items-center justify-start gap-1">
           <span>{row.put_premium.toFixed(2)}</span>
           {row.isMinPutPremium && (
-            <span className={`${sizeConfig.badge} px-1.5 py-0.5 bg-black/80 text-sky-300 rounded font-bold uppercase`}>
+            <span className={`${sizeConfig.badge} min-badge px-1.5 py-0.5 bg-black/80 text-sky-300 rounded font-bold uppercase`}>
               MIN
             </span>
           )}
@@ -405,7 +405,7 @@ const OptionRowItem = memo(({
         <span className="flex items-center justify-start gap-1">
           <span>{row.put_volume.toLocaleString('en-IN')}</span>
           {row.isTopPutVolume && (
-            <span className={`${sizeConfig.badge} px-1.5 py-0.5 bg-black/80 text-yellow-300 rounded font-bold uppercase`}>
+            <span className={`${sizeConfig.badge} top-badge px-1.5 py-0.5 bg-black/80 text-yellow-300 rounded font-bold uppercase`}>
               TOP
             </span>
           )}
@@ -445,22 +445,22 @@ export const OptionChainDesktopTable: React.FC<OptionChainDesktopTableProps> = (
   const sideColSpan = 5 + (showPreviousCloseColumn ? 1 : 0) + (showHighLowColumns ? 2 : 0);
 
   return (
-    <div className="w-full overflow-x-auto shadow-2xl rounded-b-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#080b12] transition-colors">
-      <table className="w-full text-left border-collapse select-text min-w-4xl">
+    <div className={`w-full overflow-x-auto shadow-2xl rounded-b-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#080b12] transition-colors print-table-container print-font-${fontSize}`}>
+      <table className={`w-full text-left border-collapse select-text min-w-4xl print-table print-table-${fontSize}`}>
         {/* Table Header Container */}
         <thead>
           {/* Top Super Header: CALLS (CE) | STRIKE | ACTION | PUTS (PE) */}
           <tr className="border-b border-slate-300 dark:border-slate-700 uppercase tracking-wider">
-            <th colSpan={sideColSpan} className={`${headerSizes.super} text-center text-cyan-800 dark:text-cyan-400 bg-cyan-100/70 dark:bg-cyan-950/40 border-r border-slate-300 dark:border-slate-700/80`}>
+            <th colSpan={sideColSpan} className={`super-header ${headerSizes.super} text-center text-cyan-800 dark:text-cyan-400 bg-cyan-100/70 dark:bg-cyan-950/40 border-r border-slate-300 dark:border-slate-700/80`}>
               CALLS (CE)
             </th>
-            <th className={`${headerSizes.super} text-center text-amber-800 dark:text-amber-400 bg-amber-100/70 dark:bg-amber-950/40 border-r border-slate-300 dark:border-slate-700/80`}>
+            <th className={`super-header ${headerSizes.super} text-center text-amber-800 dark:text-amber-400 bg-amber-100/70 dark:bg-amber-950/40 border-r border-slate-300 dark:border-slate-700/80`}>
               STRIKE
             </th>
-            <th className={`${headerSizes.super} text-center text-emerald-800 dark:text-emerald-400 bg-emerald-100/70 dark:bg-emerald-950/40 border-r border-slate-300 dark:border-slate-700/80`}>
+            <th className={`super-header ${headerSizes.super} text-center text-emerald-800 dark:text-emerald-400 bg-emerald-100/70 dark:bg-emerald-950/40 border-r border-slate-300 dark:border-slate-700/80`}>
               ACTION SIGNALS
             </th>
-            <th colSpan={sideColSpan} className={`${headerSizes.super} text-center text-rose-800 dark:text-rose-400 bg-rose-100/70 dark:bg-rose-950/40`}>
+            <th colSpan={sideColSpan} className={`super-header ${headerSizes.super} text-center text-rose-800 dark:text-rose-400 bg-rose-100/70 dark:bg-rose-950/40`}>
               PUTS (PE)
             </th>
           </tr>
