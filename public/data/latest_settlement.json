@@ -2,9 +2,9 @@
   "date": "2026-11-27",
   "expiryDate": "2026-12-01",
   "spotPrice": 25607.2,
-  "spotChange": -277.3,
-  "spotChangePercent": -1.07,
-  "previousClose": 25884.5,
+  "spotChange": 0.0,
+  "spotChangePercent": 0.0,
+  "previousClose": 25607.2,
   "atmStrike": 25600,
   "formulaAtmStrike": 25600,
   "minAvg": 145.62,
@@ -3884,9 +3884,5 @@
       "isMinPutPremium": false
     }
   ],
-<<<<<<< Updated upstream
-  "timestamp": "2026-11-27T00:45:15.370913"
-=======
-  "timestamp": "2026-11-27T20:58:58.126393"
->>>>>>> Stashed changes
+  "timestamp": "2026-11-27T21:00:41.546834"
 }
