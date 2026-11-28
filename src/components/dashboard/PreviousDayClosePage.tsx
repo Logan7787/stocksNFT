@@ -351,6 +351,11 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
   // Handle Print to physical printer or PDF
   const handlePrint = () => {
     if (!dataResult || dataResult.rows.length === 0) return;
+    // Reset any horizontal scroll so the table starts aligned at column 1 on the left margin
+    const containers = document.querySelectorAll('.overflow-x-auto, .print-table-container');
+    containers.forEach((el) => {
+      el.scrollLeft = 0;
+    });
     window.print();
   };
 
@@ -571,10 +576,10 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
               onClick={handlePrint}
               disabled={loading || !dataResult}
               className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer transition-all disabled:opacity-50"
-              title={`Print to printer or PDF (${tableFontSize === 'xlarge' ? 'X-Large Font (18px)' : tableFontSize === 'large' ? 'Large Font (15px)' : 'Medium Font (12px)'}, ATM ±500: ${atmStrike - 500} to ${atmStrike + 500})`}
+              title={`Print to Legal Landscape paper (${tableFontSize.toUpperCase()} Font, ATM ±500: ${atmStrike - 500} to ${atmStrike + 500})`}
             >
               <Printer className="w-3.5 h-3.5" />
-              <span>Print ({tableFontSize === 'xlarge' ? 'X-Large ' : ''}ATM ±500)</span>
+              <span>Print ({tableFontSize === 'xlarge' ? 'X-Large ' : ''}Legal ATM ±500)</span>
             </button>
             <button
               onClick={handleExportCsv}
@@ -1099,6 +1104,28 @@ export const PreviousDayClosePage: React.FC<PreviousDayClosePageProps> = ({
         <>
           {/* Desktop Option Chain Table View */}
           <div className="hidden lg:block">
+            {/* Dedicated Print-Only Senior-Friendly Title Banner */}
+            <div className="hidden print:block mb-2 border-b-2 border-slate-900 pb-1.5 font-mono">
+              <div className="flex items-center justify-between text-black">
+                <div>
+                  <h1 className="text-lg font-black uppercase tracking-tight">
+                    NIFTY 50 Option Chain — {statusInfo.headline}
+                  </h1>
+                  <p className="text-xs font-bold text-slate-700 mt-0.5">
+                    Date: {statusInfo.effectiveCloseDate} | Expiry: {selectedExpiry || 'Current Weekly'} | Lot: 65 | Mode: {statusInfo.modeBadgeText}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <div className="text-base font-black">
+                    Spot Close: ₹{dataResult.spotPrice.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  </div>
+                  <div className="text-xs font-bold text-slate-800">
+                    ATM Strike: {atmStrike} | ATM ±500 ({atmStrike - 500} to {atmStrike + 500}) | Legal Landscape
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <OptionChainDesktopTable
               rows={displayedRows}
               spotPrice={dataResult.spotPrice}

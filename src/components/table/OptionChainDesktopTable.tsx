@@ -443,10 +443,11 @@ export const OptionChainDesktopTable: React.FC<OptionChainDesktopTableProps> = (
   }[fontSize];
 
   const sideColSpan = 5 + (showPreviousCloseColumn ? 1 : 0) + (showHighLowColumns ? 2 : 0);
+  const printColClass = showHighLowColumns ? 'print-cols-18' : 'print-cols-14';
 
   return (
-    <div className={`w-full overflow-x-auto shadow-2xl rounded-b-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#080b12] transition-colors print-table-container print-font-${fontSize}`}>
-      <table className={`w-full text-left border-collapse select-text min-w-4xl print-table print-table-${fontSize}`}>
+    <div className={`w-full overflow-x-auto shadow-2xl rounded-b-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#080b12] transition-colors print-table-container print-font-${fontSize} ${printColClass}`}>
+      <table className={`w-full text-left border-collapse select-text min-w-4xl print-table print-table-${fontSize} ${printColClass}`}>
         {/* Table Header Container */}
         <thead>
           {/* Top Super Header: CALLS (CE) | STRIKE | ACTION | PUTS (PE) */}
